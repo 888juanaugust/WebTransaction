@@ -7,6 +7,7 @@ namespace App\Domain\Orders;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Pricing\PriceResolver;
+use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Tax\TaxCalculator;
 use App\Models\Order;
@@ -59,7 +60,7 @@ class OrderStateMachine
      * If the credit check or the stock reservation fails, none of it lands.
      *
      * @throws CreditLimitExceededException
-     * @throws \App\Domain\Stock\InsufficientStockException
+     * @throws InsufficientStockException
      */
     public function confirm(Order $order, User $actor, ?string $catatan = null): Order
     {

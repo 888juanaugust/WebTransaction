@@ -28,6 +28,7 @@ class WebhookEvent extends Model
             'payload' => 'array',
             'signature_verified' => 'boolean',
             'received_at' => 'datetime',
+            'claimed_at' => 'datetime',
             'processed_at' => 'datetime',
             'attempts' => 'integer',
         ];
@@ -36,5 +37,11 @@ class WebhookEvent extends Model
     public function isProcessed(): bool
     {
         return $this->processed_at !== null;
+    }
+
+    /** Picked up by a worker that has not committed anything yet. */
+    public function isClaimed(): bool
+    {
+        return $this->claimed_at !== null && $this->processed_at === null;
     }
 }

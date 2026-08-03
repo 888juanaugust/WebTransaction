@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\PriceList\ParsedRow;
 use App\Domain\PriceList\PriceListImporter;
 use App\Domain\PriceList\SupplierWorkbookParser;
 use App\Models\PriceListImport;
@@ -79,13 +80,13 @@ class PriceListImportTest extends TestCase
         return ['KODE', 'TIPE', 'MOBIL', 'PART NUMBER', 'DESCRIPTION', 'QTY/CTN', 'HARGA', 'MERK'];
     }
 
-    /** @return list<\App\Domain\PriceList\ParsedRow> */
+    /** @return list<ParsedRow> */
     private function parse(string $path): array
     {
         return iterator_to_array(app(SupplierWorkbookParser::class)->parse($path), false);
     }
 
-    private function issueCodes(\App\Domain\PriceList\ParsedRow $row): array
+    private function issueCodes(ParsedRow $row): array
     {
         return array_column($row->issues, 'code');
     }

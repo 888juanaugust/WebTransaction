@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Tax\TaxCalculator;
 use App\Jobs\ReleaseStaleReservations;
+use App\Jobs\SweepStuckWebhookEvents;
 use App\Models\Company;
 use App\Observers\CompanyObserver;
 use Illuminate\Database\Eloquent\Model;
@@ -30,5 +31,9 @@ class AppServiceProvider extends ServiceProvider
         Company::observe(CompanyObserver::class);
 
         Schedule::job(new ReleaseStaleReservations)->everyFifteenMinutes();
+
+        // Recovers money stranded by a worker that died mid-callback. Nothing
+        // else will: the gateway already got its 200 and will not redeliver.
+        Schedule::job(new SweepStuckWebhookEvents)->everyFiveMinutes();
     }
 }

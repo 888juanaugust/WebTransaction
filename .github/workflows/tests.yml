@@ -1,13 +1,11 @@
 name: Tests
 
+# Every branch and every PR. The previous version of this file only watched
+# `master` and `*.x`, neither of which exists in this repository, so nothing
+# ever ran.
 on:
   push:
-    branches:
-      - master
-      - '*.x'
   pull_request:
-  schedule:
-    - cron: '0 0 * * *'
 
 permissions:
   contents: read
@@ -17,31 +15,98 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        php: [8.3, 8.4, 8.5]
+        # composer.json allows ^8.3; test the floor and the version the VPS runs.
+        php: ['8.3', '8.4']
 
     name: PHP ${{ matrix.php }}
 
+    # The suite runs against real PostgreSQL, not sqlite: the schema depends on
+    # SELECT ... FOR UPDATE row locks, partial unique indexes and jsonb.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: webtransaction
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: webtransaction_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U webtransaction"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+          # pdo_pgsql for the database; gd and zip are what phpspreadsheet
+          # needs to read the supplier workbooks.
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, gd, intl, bcmath
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            pg_isready -h 127.0.0.1 -p 5432 -U webtransaction && exit 0
+            sleep 2
+          done
+          echo "PostgreSQL never became ready" && exit 1
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: webtransaction_test
+          DB_USERNAME: webtransaction
+          DB_PASSWORD: secret
+        run: php artisan migrate --force
+
+      - name: Execute tests
+        # Database credentials come from phpunit.xml; this step only needs the
+        # service to be up, which the previous steps guaranteed.
+        run: php artisan test
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    name: Lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_pgsql, gd, intl
           coverage: none
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Copy environment file
-        run: cp .env.example .env
-
-      - name: Generate app key
-        run: php artisan key:generate
-
-      - name: Execute tests
-        run: php artisan test
+      - name: Check formatting
+        run: vendor/bin/pint --test

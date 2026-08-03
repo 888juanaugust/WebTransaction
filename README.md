@@ -15,6 +15,8 @@ the company gets an account.
 Laravel 13 · Livewire · Filament 4 · PostgreSQL 16 · Redis (queue + cache) · Xendit fixed VA.
 Single VPS in Jakarta, Caddy for TLS.
 
+Full dependency list, PHP extensions and deploy steps: **[REQUIREMENTS.md](REQUIREMENTS.md)**.
+
 ## Getting started
 
 ```bash
@@ -27,7 +29,11 @@ php artisan migrate --seed          # staff accounts, warehouse, price tiers
 
 php artisan serve
 php artisan queue:work              # supervisor-managed in production
+php artisan schedule:work           # releases stale reservations, recovers stuck callbacks
 ```
+
+Needs PostgreSQL and Redis running. Redis is on the login path — the panel
+returns 500 without it.
 
 The seeder creates one account per role at `<role>@example.test` / `password`
 (`sales`, `warehouse`, `finance`, `owner`). The admin panel is at `/admin`.
@@ -56,6 +62,24 @@ partial unique indexes.
 | `app/Domain/Payments/PaymentLedger.php` | Append-only money ledger. |
 | `app/Domain/PriceList/` | Tolerant importer, diff, versioned publishing. |
 | `app/Filament/Widgets/` | The admin worklist queues. |
+| `app/Support/BrandColors.php` | The company palette. |
+
+## Look and feel
+
+Clean white surfaces, company blue `#1D4ED8`, company red `#DC2626`.
+
+Red is not decorative anywhere in the panel: it means stock is short, an
+invoice is overdue, or the action destroys something. Rows carrying a red
+*value* get a red left edge so a manager cannot scroll past them. That only
+keeps working if red stays scarce — please don't spend it on ordinary
+buttons.
+
+Green survives in exactly one role: settled money (`Lunas`, `Selesai`). Every
+other forward action is blue.
+
+The palette lives in `app/Support/BrandColors.php`; the white-surface layer is
+`resources/css/filament/admin/theme.css`. After changing either, run
+`npm run build`.
 
 ## The invariants this code is built around
 

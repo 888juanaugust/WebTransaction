@@ -45,6 +45,8 @@ class OverdueInvoices extends TableWidget
                     ->label('Umur')
                     ->state(fn (Invoice $record) => self::ageInDays($record).' hari')
                     ->badge()
+                    // Everything in this queue is already late, so the bands
+                    // grade how late: amber, then the company red past 90 days.
                     ->color(fn (Invoice $record) => match (true) {
                         self::ageInDays($record) > 90 => 'danger',
                         self::ageInDays($record) > 30 => 'warning',

@@ -1,0 +1,134 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/*
+ * Company theme: clean white, blue, red.
+ *
+ * Most of the palette comes from ->colors() in AdminPanelProvider — buttons,
+ * links, badges, focus rings and the active nav item all derive from the blue
+ * and red set there. This file only does what a colour palette cannot: flatten
+ * the panel onto white and keep the chrome quiet, so the blue reads as the
+ * accent rather than competing with a grey background.
+ *
+ * Staff spend the whole day on these screens. The aim is a white sheet of
+ * paper with blue where you act and red where something is wrong.
+ */
+
+@theme {
+    --wt-blue: #1d4ed8;
+    --wt-blue-dark: #1e40af;
+    --wt-blue-tint: #eff6ff;
+    --wt-red: #dc2626;
+    --wt-red-tint: #fef2f2;
+    --wt-line: #e2e8f0;
+}
+
+/* --- Surfaces: white sheet, hairline separation instead of grey fills --- */
+
+.fi-body,
+.fi-main-ctn {
+    background-color: #ffffff;
+}
+
+.fi-sidebar,
+.fi-topbar > nav {
+    background-color: #ffffff;
+    border-color: var(--wt-line);
+}
+
+.fi-topbar > nav {
+    border-bottom-width: 1px;
+    /* A flat hairline rather than a drop shadow — shadows read as grey. */
+    box-shadow: none;
+}
+
+/* Cards and tables sit on white with a hairline, not a shadow stack. */
+.fi-wi-widget .fi-sc,
+.fi-ta-ctn,
+.fi-se {
+    border: 1px solid var(--wt-line);
+    box-shadow: none;
+}
+
+/* --- Blue: the brand mark and wherever the eye should land --- */
+
+.fi-logo {
+    color: var(--wt-blue);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    background-color: var(--wt-blue-tint);
+    color: var(--wt-blue-dark);
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-icon {
+    color: var(--wt-blue);
+}
+
+/* Queue headings carry a blue rule, so each worklist reads as its own block
+   on an otherwise white page. */
+.fi-wi-widget .fi-ta-header-heading {
+    color: var(--wt-blue-dark);
+    font-weight: 600;
+}
+
+.fi-ta-header {
+    border-bottom: 2px solid var(--wt-blue-tint);
+}
+
+/* Row hover in the palette, not grey. */
+.fi-ta-row:hover {
+    background-color: var(--wt-blue-tint);
+}
+
+/* --- Red: scarce, and only ever "something is wrong" --- */
+
+.fi-badge.fi-color-danger {
+    background-color: var(--wt-red-tint);
+    color: var(--wt-red);
+}
+
+/*
+ * Overdue invoices and short stock are the two things a manager must not
+ * scroll past. A left edge marks the row without shouting.
+ *
+ * Scoped to danger *data* — a text column or a badge — and deliberately not to
+ * `.fi-color-danger` in general: destructive action buttons ("Tolak") are
+ * danger-coloured too and sit on every row of the approval queue, so the
+ * looser selector marked every row red and the signal meant nothing.
+ */
+.fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
+.fi-ta-row:has(.fi-badge.fi-color-danger) {
+    box-shadow: inset 3px 0 0 0 var(--wt-red);
+}
+
+/* --- Dark mode: keep the brand, drop the glare --- */
+
+@media (prefers-color-scheme: dark) {
+    .fi-body,
+    .fi-main-ctn,
+    .fi-sidebar,
+    .fi-topbar > nav {
+        background-color: #0f172a;
+        border-color: #1e293b;
+    }
+
+    .fi-wi-widget .fi-sc,
+    .fi-ta-ctn,
+    .fi-se {
+        border-color: #1e293b;
+    }
+
+    .fi-sidebar-item-active .fi-sidebar-item-button {
+        background-color: rgba(29, 78, 216, 0.18);
+        color: #93c5fd;
+    }
+
+    .fi-ta-row:hover {
+        background-color: rgba(29, 78, 216, 0.12);
+    }
+}

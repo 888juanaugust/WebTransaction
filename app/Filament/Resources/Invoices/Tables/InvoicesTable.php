@@ -16,6 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 
 class InvoicesTable
 {
@@ -107,7 +108,7 @@ class InvoicesTable
                             actor: auth()->user(),
                             invoice: $record,
                             catatan: $data['catatan'] ?? null,
-                            paidAt: $data['paid_at'] ? \Illuminate\Support\Carbon::parse($data['paid_at']) : null,
+                            paidAt: $data['paid_at'] ? Carbon::parse($data['paid_at']) : null,
                         );
 
                         Notification::make()->title('Pembayaran dicatat')->success()->send();

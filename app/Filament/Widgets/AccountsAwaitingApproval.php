@@ -54,7 +54,7 @@ class AccountsAwaitingApproval extends TableWidget
                 Action::make('setujui')
                     ->label('Setujui')
                     ->icon('heroicon-o-check-circle')
-                    ->color('success')
+                    ->color('primary')
                     ->schema([
                         TextInput::make('credit_limit_rupiah')
                             ->label('Limit kredit (Rp)')

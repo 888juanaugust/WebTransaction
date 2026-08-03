@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Audit\AuditLogger;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
+use App\Domain\Payments\PaymentLedger;
 use App\Jobs\ProcessXenditCallback;
+use App\Jobs\SweepStuckWebhookEvents;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -194,7 +197,7 @@ class WebhookHandlingTest extends TestCase
 
         // Queue jobs must be idempotent — assume they run twice.
         (new ProcessXenditCallback($event->id))->handle(
-            app(\App\Domain\Payments\PaymentLedger::class),
+            app(PaymentLedger::class),
             app(OrderStateMachine::class),
         );
 
@@ -279,6 +282,177 @@ class WebhookHandlingTest extends TestCase
         ]);
 
         $this->assertNotNull(WebhookEvent::sole()->processed_at);
+    }
+
+    // --- crash safety ------------------------------------------------------
+
+    /**
+     * The failure this whole two-marker design exists to prevent.
+     *
+     * A worker dies partway through — OOM, SIGKILL, a deploy bouncing the
+     * queue. Nothing may be left half-written, and the money must still be
+     * recoverable, because the gateway already got its 200 and will never
+     * redeliver.
+     */
+    public function test_a_worker_dying_mid_process_commits_nothing(): void
+    {
+        [$company, $va] = $this->customerWithVa();
+        $order = $this->awaitingPaymentOrder($company, 1_110_000);
+
+        Queue::fake();
+        $this->postCallback([
+            'payment_id' => 'pay_1',
+            'amount' => 1_110_000,
+            'account_number' => $va->account_number,
+            'external_id' => $order->nomor,
+        ])->assertStatus(200);
+
+        $event = WebhookEvent::sole();
+
+        // A ledger that posts the payment and then dies, exactly as a killed
+        // worker would after writing part of the transaction.
+        $exploding = new class(app(AuditLogger::class)) extends PaymentLedger
+        {
+            public function recordGatewayPayment(
+                Company $company,
+                int $amountRupiah,
+                string $gatewayReference,
+                WebhookEvent $webhookEvent,
+                ?Invoice $invoice = null,
+                ?Order $order = null,
+                ?\DateTimeInterface $paidAt = null,
+            ): PaymentEntry {
+                parent::recordGatewayPayment(
+                    $company, $amountRupiah, $gatewayReference,
+                    $webhookEvent, $invoice, $order, $paidAt,
+                );
+
+                throw new \RuntimeException('worker killed');
+            }
+        };
+
+        try {
+            (new ProcessXenditCallback($event->id))->handle($exploding, app(OrderStateMachine::class));
+            $this->fail('Expected the simulated crash to propagate.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('worker killed', $e->getMessage());
+        }
+
+        $event->refresh();
+
+        // Nothing committed: no payment, no settled order, and — critically —
+        // the event is NOT marked processed, so it can still be recovered.
+        $this->assertDatabaseCount('payment_entries', 0);
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->refresh()->status);
+        $this->assertNull($event->processed_at);
+        $this->assertNotNull($event->process_error);
+    }
+
+    public function test_a_crashed_event_reprocesses_cleanly_on_retry(): void
+    {
+        [$company, $va] = $this->customerWithVa();
+        $order = $this->awaitingPaymentOrder($company, 1_110_000);
+
+        Queue::fake();
+        $this->postCallback([
+            'payment_id' => 'pay_1',
+            'amount' => 1_110_000,
+            'account_number' => $va->account_number,
+            'external_id' => $order->nomor,
+        ]);
+
+        $event = WebhookEvent::sole();
+
+        // Simulate the aftermath of a hard kill: claimed, never processed.
+        $event->forceFill(['claimed_at' => now()->subHour()])->save();
+
+        (new ProcessXenditCallback($event->id))->handle(
+            app(PaymentLedger::class),
+            app(OrderStateMachine::class),
+        );
+
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
+        $this->assertSame(1_110_000, (int) PaymentEntry::sum('amount_rupiah'));
+        $this->assertNotNull($event->refresh()->processed_at);
+    }
+
+    public function test_a_freshly_claimed_event_is_not_stolen_by_a_second_worker(): void
+    {
+        [$company, $va] = $this->customerWithVa();
+        $order = $this->awaitingPaymentOrder($company, 1_110_000);
+
+        Queue::fake();
+        $this->postCallback([
+            'payment_id' => 'pay_1',
+            'amount' => 1_110_000,
+            'account_number' => $va->account_number,
+            'external_id' => $order->nomor,
+        ]);
+
+        $event = WebhookEvent::sole();
+
+        // Another worker took it a moment ago and is still working.
+        $event->forceFill(['claimed_at' => now()])->save();
+
+        (new ProcessXenditCallback($event->id))->handle(
+            app(PaymentLedger::class),
+            app(OrderStateMachine::class),
+        );
+
+        $this->assertDatabaseCount('payment_entries', 0);
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->refresh()->status);
+    }
+
+    public function test_the_sweeper_recovers_events_whose_worker_died(): void
+    {
+        [$company, $va] = $this->customerWithVa();
+        $order = $this->awaitingPaymentOrder($company, 1_110_000);
+
+        Queue::fake();
+        $this->postCallback([
+            'payment_id' => 'pay_1',
+            'amount' => 1_110_000,
+            'account_number' => $va->account_number,
+            'external_id' => $order->nomor,
+        ]);
+
+        WebhookEvent::sole()->forceFill(['claimed_at' => now()->subHour()])->save();
+
+        (new SweepStuckWebhookEvents)->handle();
+
+        Queue::assertPushed(ProcessXenditCallback::class, 2); // original + sweep
+    }
+
+    public function test_the_sweeper_ignores_events_that_are_done_or_still_in_flight(): void
+    {
+        [$company, $va] = $this->customerWithVa();
+        $order = $this->awaitingPaymentOrder($company, 1_110_000);
+
+        // Fully processed.
+        $this->postCallback([
+            'payment_id' => 'pay_done',
+            'amount' => 1_110_000,
+            'account_number' => $va->account_number,
+            'external_id' => $order->nomor,
+        ]);
+
+        // Claimed seconds ago — a worker is still on it. Built directly rather
+        // than through the controller, so the only dispatch that can show up
+        // below is one the sweeper made.
+        WebhookEvent::create([
+            'gateway' => 'xendit',
+            'event_id' => 'pay_busy',
+            'event_type' => 'payment',
+            'payload' => ['payment_id' => 'pay_busy', 'amount' => 1_000],
+            'signature_verified' => true,
+            'received_at' => now()->subHour(),
+        ])->forceFill(['claimed_at' => now()])->save();
+
+        Queue::fake();
+
+        (new SweepStuckWebhookEvents)->handle();
+
+        Queue::assertNotPushed(ProcessXenditCallback::class);
     }
 
     /**

@@ -8,11 +8,13 @@ use App\Domain\Orders\IllegalTransitionException;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Payments\PaymentLedger;
+use App\Models\Company;
 use App\Models\Order;
 use App\Models\VirtualAccount;
 use App\Models\WebhookEvent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -23,9 +25,24 @@ use Throwable;
  *
  * This is the only path to `paid`.
  *
- * Assume this job runs twice. It claims the event row with a conditional
- * UPDATE inside a transaction, so a second run finds processed_at already set
- * and returns without writing anything.
+ * Crash safety is the whole design here. There are two markers, deliberately:
+ *
+ *   claimed_at   a worker has picked this up
+ *   processed_at the work is done AND committed
+ *
+ * The claim is committed on its own so two workers cannot both run. The work
+ * then happens inside a single transaction that writes the payment entry, the
+ * order transition, and processed_at together. If the worker dies at any point
+ * in that transaction — exception, OOM, SIGKILL, a deploy bouncing the queue —
+ * Postgres rolls the whole thing back, processed_at stays NULL, and
+ * SweepStuckWebhookEvents re-dispatches it once the claim goes stale.
+ *
+ * Marking processed_at up front (the obvious approach) loses money: the event
+ * looks done, no payment was ever posted, and the UNIQUE constraint on
+ * event_id means the gateway's redelivery cannot rescue it either.
+ *
+ * Second line of defence: PaymentLedger::recordGatewayPayment() is idempotent
+ * on gateway_reference, so even a re-run that races cannot double-credit.
  */
 class ProcessXenditCallback implements ShouldQueue
 {
@@ -35,6 +52,9 @@ class ProcessXenditCallback implements ShouldQueue
 
     /** @var list<int> */
     public array $backoff = [10, 30, 120, 600];
+
+    /** How long a claim may sit before the sweeper assumes the worker died. */
+    public const STALE_CLAIM_MINUTES = 15;
 
     public function __construct(public readonly int $webhookEventId) {}
 
@@ -48,30 +68,54 @@ class ProcessXenditCallback implements ShouldQueue
             return;
         }
 
-        // Claim it. Only the run that flips processed_at from NULL proceeds.
-        $claimed = DB::table('webhook_events')
-            ->where('id', $event->id)
-            ->whereNull('processed_at')
-            ->update([
-                'processed_at' => now(),
-                'attempts' => DB::raw('attempts + 1'),
-            ]);
-
-        if ($claimed === 0) {
+        if (! $this->claim($event)) {
             return;
         }
 
         try {
-            $this->process($event->fresh(), $ledger, $orders);
+            // One transaction: the money, the order, and the done-marker.
+            DB::transaction(function () use ($event, $ledger, $orders) {
+                $this->process($event->fresh(), $ledger, $orders);
+
+                DB::table('webhook_events')
+                    ->where('id', $event->id)
+                    ->update(['processed_at' => now(), 'process_error' => null]);
+            });
         } catch (Throwable $e) {
-            // Hand the event back so a retry — or a human — can pick it up.
+            // Release the claim so a retry can pick it up immediately rather
+            // than waiting out the stale window. processed_at was rolled back
+            // with everything else, so there is nothing to undo.
             DB::table('webhook_events')->where('id', $event->id)->update([
-                'processed_at' => null,
+                'claimed_at' => null,
                 'process_error' => $e->getMessage(),
             ]);
 
             throw $e;
         }
+    }
+
+    /**
+     * Take the event, if it is free.
+     *
+     * A conditional UPDATE is the lock: exactly one worker gets a row count of
+     * 1. Already-processed events are skipped outright; an event whose claim
+     * has gone stale is fair game again, because the only way that happens is
+     * the previous worker dying before it committed anything.
+     */
+    private function claim(WebhookEvent $event): bool
+    {
+        $staleBefore = now()->subMinutes(self::STALE_CLAIM_MINUTES);
+
+        $claimed = DB::table('webhook_events')
+            ->where('id', $event->id)
+            ->whereNull('processed_at')
+            ->where(fn ($q) => $q->whereNull('claimed_at')->orWhere('claimed_at', '<', $staleBefore))
+            ->update([
+                'claimed_at' => now(),
+                'attempts' => DB::raw('attempts + 1'),
+            ]);
+
+        return $claimed === 1;
     }
 
     private function process(WebhookEvent $event, PaymentLedger $ledger, OrderStateMachine $orders): void
@@ -108,7 +152,7 @@ class ProcessXenditCallback implements ShouldQueue
             webhookEvent: $event,
             invoice: $order?->invoice,
             order: $order,
-            paidAt: isset($payload['paid_at']) ? \Illuminate\Support\Carbon::parse($payload['paid_at']) : now(),
+            paidAt: isset($payload['paid_at']) ? Carbon::parse($payload['paid_at']) : now(),
         );
 
         if ($order === null) {
@@ -127,7 +171,8 @@ class ProcessXenditCallback implements ShouldQueue
         // Only settle the order when the money actually covers it. A partial
         // transfer stays on the ledger and shows up in the AR worklist.
         $invoice = $order->invoice;
-        $outstanding = $invoice?->amountOutstanding() ?? ($order->total_rupiah - $ledger->totalForOrder($order));
+        $outstanding = $invoice?->fresh()?->amountOutstanding()
+            ?? ($order->total_rupiah - $ledger->totalForOrder($order));
 
         if ($outstanding > 0) {
             Log::info('Partial payment received; order stays awaiting_payment', [
@@ -159,7 +204,7 @@ class ProcessXenditCallback implements ShouldQueue
      *
      * @param  array<string, mixed>  $payload
      */
-    private function resolveCompany(array $payload): ?\App\Models\Company
+    private function resolveCompany(array $payload): ?Company
     {
         $accountNumber = $payload['account_number'] ?? $payload['callback_virtual_account_id'] ?? null;
 

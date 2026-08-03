@@ -102,7 +102,7 @@ class StockLedger
     /** @throws InsufficientStockException */
     public function reserveLine(Order $order, OrderLine $line, ?User $actor = null): StockReservation
     {
-        return DB::transaction(function () use ($order, $line, $actor) {
+        return DB::transaction(function () use ($order, $line) {
             $level = $this->lockLevel($line->sku, $order->warehouse_id);
 
             $available = $level->qty_on_hand - $level->qty_reserved;

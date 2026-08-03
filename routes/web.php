@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\XenditWebhookController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,5 +18,5 @@ Route::get('/', fn () => view('welcome'));
  * before touching anything.
  */
 Route::post('/webhooks/xendit', XenditWebhookController::class)
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])
+    ->withoutMiddleware([ValidateCsrfToken::class])
     ->name('webhooks.xendit');

@@ -10,8 +10,8 @@ use App\Filament\Resources\Orders\Tables\OrdersTable;
 use App\Models\Order;
 use BackedEnum;
 use Filament\Resources\Resource;
-use Filament\Tables\Table;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
 
 /**
  * Orders are worked from the dashboard queues. This resource is the

@@ -12,6 +12,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 
 class PriceListImportsTable
 {
@@ -93,7 +94,7 @@ class PriceListImportsTable
                             $version = app(PriceListImporter::class)->publish(
                                 import: $record,
                                 approver: auth()->user(),
-                                effectiveFrom: \Illuminate\Support\Carbon::parse($data['effective_from']),
+                                effectiveFrom: Carbon::parse($data['effective_from']),
                                 brakeAcknowledgement: $data['brake_acknowledgement'] ?? null,
                             );
 

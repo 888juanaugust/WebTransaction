@@ -70,8 +70,10 @@ class OrdersAwaitingApproval extends TableWidget
                     ->state(fn (Order $record) => Money::format(
                         app(CreditChecker::class)->available($record->company)
                     ))
+                    // Blue means "nothing wrong here"; red is reserved for the
+                    // two conditions that should stop an approval.
                     ->color(fn (Order $record) => app(CreditChecker::class)->available($record->company) > 0
-                        ? 'success'
+                        ? 'primary'
                         : 'danger'),
 
                 TextColumn::make('stok')
@@ -79,14 +81,16 @@ class OrdersAwaitingApproval extends TableWidget
                     ->state(fn (Order $record) => $this->stockSummary($record))
                     ->color(fn (Order $record) => str_contains($this->stockSummary($record), 'kurang')
                         ? 'danger'
-                        : 'success')
+                        : 'primary')
                     ->wrap(),
             ])
             ->recordActions([
                 Action::make('setujui')
                     ->label('Setujui')
                     ->icon('heroicon-o-check-circle')
-                    ->color('success')
+                    // Blue: this is the ordinary forward action, not a
+                    // celebration. Green stays reserved for settled money.
+                    ->color('primary')
                     ->requiresConfirmation()
                     ->modalDescription(fn (Order $record) => 'Menyetujui akan mengunci harga dan memesan stok untuk '
                         .$record->company->nama.'.')
