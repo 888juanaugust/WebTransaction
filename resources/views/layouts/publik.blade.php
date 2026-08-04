@@ -11,6 +11,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    {{-- The shopfront is white by design; see color-scheme in app.css. --}}
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#1d4ed8">
+
     <title>@yield('judul', config('perusahaan.nama')) — {{ config('perusahaan.nama') }}</title>
     <meta name="description" content="@yield('deskripsi', config('perusahaan.ringkasan'))">
 

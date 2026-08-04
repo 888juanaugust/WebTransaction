@@ -101,9 +101,20 @@ buttons.
 Green survives in exactly one role: settled money (`Lunas`, `Selesai`). Every
 other forward action is blue.
 
-The palette lives in `app/Support/BrandColors.php`; the white-surface layer is
+The palette lives in `app/Support/BrandColors.php`; the surface layer is
 `resources/css/filament/admin/theme.css`. After changing either, run
 `npm run build`.
+
+**Dark mode** applies to the two panels and keys off Filament's `.dark` class
+on `<html>` — *not* `prefers-color-scheme`. Filament stops following the OS the
+moment a user picks a theme, so anything written against the media query paints
+light styles over dark chrome for anyone whose toggle disagrees with their
+laptop. Light rules are scoped `:where(html:not(.dark))`, dark rules `html.dark`,
+and `ThemeTest` fails the build if that slips.
+
+The public site is deliberately light-only and declares `color-scheme: light`,
+so a visitor on a dark-mode OS doesn't get dark browser chrome — scrollbars,
+selects, autofill — drawn over a white page.
 
 ## The invariants this code is built around
 

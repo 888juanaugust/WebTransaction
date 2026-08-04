@@ -12,84 +12,184 @@
  * the panel onto white and keep the chrome quiet, so the blue reads as the
  * accent rather than competing with a grey background.
  *
- * Staff spend the whole day on these screens. The aim is a white sheet of
- * paper with blue where you act and red where something is wrong.
+ * --- Dark mode ---
+ *
+ * Filament toggles dark mode by putting `.dark` on <html>. It does NOT follow
+ * prefers-color-scheme once a user has chosen, so every rule below keys off
+ * that class and nothing else.
+ *
+ * An earlier version of this file used @media (prefers-color-scheme: dark),
+ * which looked right only because the OS and the toggle happened to agree.
+ * A user on a light laptop switching the panel to dark got Filament's dark
+ * chrome with these light overrides still painted on top: white cards on a
+ * near-black page, and navy text on near-black.
+ *
+ * So: light rules are scoped `:where(html:not(.dark))`, dark rules `.dark`.
+ * `:where()` keeps specificity at zero so Filament's own component styles can
+ * still win where they should.
  */
 
 @theme {
+    /* Light */
     --wt-blue: #1d4ed8;
     --wt-blue-dark: #1e40af;
     --wt-blue-tint: #eff6ff;
     --wt-red: #dc2626;
     --wt-red-tint: #fef2f2;
     --wt-line: #e2e8f0;
+    --wt-surface: #ffffff;
+
+    /* Dark — same hues, re-weighted for a dark ground. Navy on near-black is
+       unreadable, so the blue lightens rather than the background darkening. */
+    --wt-blue-on-dark: #93c5fd;
+    --wt-blue-rule-dark: #1e3a8a;
+    --wt-red-on-dark: #f87171;
+    --wt-line-dark: #223049;
+    --wt-surface-dark: #131c2e;
+    --wt-ground-dark: #0b1220;
 }
 
-/* --- Surfaces: white sheet, hairline separation instead of grey fills --- */
+/* ====================================================================
+   Surfaces
+   ==================================================================== */
 
-.fi-body,
-.fi-main-ctn {
-    background-color: #ffffff;
+:where(html:not(.dark)) {
+    .fi-body,
+    .fi-main-ctn {
+        background-color: var(--wt-surface);
+    }
+
+    .fi-sidebar,
+    .fi-topbar > nav {
+        background-color: var(--wt-surface);
+        border-color: var(--wt-line);
+    }
+
+    /* Cards and tables sit on white with a hairline, not a shadow stack. */
+    .fi-wi-widget .fi-sc,
+    .fi-ta-ctn,
+    .fi-se {
+        border: 1px solid var(--wt-line);
+        box-shadow: none;
+    }
 }
 
-.fi-sidebar,
-.fi-topbar > nav {
-    background-color: #ffffff;
-    border-color: var(--wt-line);
+html.dark {
+    .fi-body,
+    .fi-main-ctn {
+        background-color: var(--wt-ground-dark);
+    }
+
+    .fi-sidebar,
+    .fi-topbar > nav {
+        background-color: var(--wt-ground-dark);
+        border-color: var(--wt-line-dark);
+    }
+
+    /*
+     * Cards lift slightly off the page rather than sharing its colour. In dark
+     * mode a border alone is not enough separation — without this the widgets
+     * dissolve into the background and the page reads as one long list.
+     */
+    .fi-wi-widget .fi-sc,
+    .fi-ta-ctn,
+    .fi-se {
+        background-color: var(--wt-surface-dark);
+        border: 1px solid var(--wt-line-dark);
+        box-shadow: none;
+    }
 }
 
+/* A flat hairline rather than a drop shadow — shadows read as grey. */
 .fi-topbar > nav {
     border-bottom-width: 1px;
-    /* A flat hairline rather than a drop shadow — shadows read as grey. */
     box-shadow: none;
 }
 
-/* Cards and tables sit on white with a hairline, not a shadow stack. */
-.fi-wi-widget .fi-sc,
-.fi-ta-ctn,
-.fi-se {
-    border: 1px solid var(--wt-line);
-    box-shadow: none;
-}
-
-/* --- Blue: the brand mark and wherever the eye should land --- */
+/* ====================================================================
+   Blue — the brand mark and wherever the eye should land
+   ==================================================================== */
 
 .fi-logo {
-    color: var(--wt-blue);
     font-weight: 700;
     letter-spacing: -0.01em;
 }
 
-.fi-sidebar-item-active .fi-sidebar-item-button {
-    background-color: var(--wt-blue-tint);
-    color: var(--wt-blue-dark);
+:where(html:not(.dark)) {
+    .fi-logo {
+        color: var(--wt-blue);
+    }
+
+    .fi-sidebar-item-active .fi-sidebar-item-button {
+        background-color: var(--wt-blue-tint);
+        color: var(--wt-blue-dark);
+    }
+
+    .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--wt-blue);
+    }
+
+    /* Each worklist reads as its own block on an otherwise white page. */
+    .fi-wi-widget .fi-ta-header-heading {
+        color: var(--wt-blue-dark);
+    }
+
+    .fi-ta-header {
+        border-bottom: 2px solid var(--wt-blue-tint);
+    }
+
+    .fi-ta-row:hover {
+        background-color: var(--wt-blue-tint);
+    }
 }
 
-.fi-sidebar-item-active .fi-sidebar-item-icon {
-    color: var(--wt-blue);
+html.dark {
+    .fi-logo {
+        color: var(--wt-blue-on-dark);
+    }
+
+    .fi-sidebar-item-active .fi-sidebar-item-button {
+        background-color: rgb(29 78 216 / 0.22);
+        color: var(--wt-blue-on-dark);
+    }
+
+    .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--wt-blue-on-dark);
+    }
+
+    .fi-wi-widget .fi-ta-header-heading {
+        color: var(--wt-blue-on-dark);
+    }
+
+    /*
+     * The rule under each queue heading. The light tint (#eff6ff) is very
+     * nearly white, so reusing it here drew a glaring bar across every widget.
+     */
+    .fi-ta-header {
+        border-bottom: 2px solid var(--wt-blue-rule-dark);
+    }
+
+    .fi-ta-row:hover {
+        background-color: rgb(29 78 216 / 0.14);
+    }
 }
 
-/* Queue headings carry a blue rule, so each worklist reads as its own block
-   on an otherwise white page. */
 .fi-wi-widget .fi-ta-header-heading {
-    color: var(--wt-blue-dark);
     font-weight: 600;
 }
 
-.fi-ta-header {
-    border-bottom: 2px solid var(--wt-blue-tint);
-}
+/* ====================================================================
+   Red — scarce, and only ever "something is wrong"
+   ==================================================================== */
 
-/* Row hover in the palette, not grey. */
-.fi-ta-row:hover {
-    background-color: var(--wt-blue-tint);
-}
-
-/* --- Red: scarce, and only ever "something is wrong" --- */
-
-.fi-badge.fi-color-danger {
+:where(html:not(.dark)) .fi-badge.fi-color-danger {
     background-color: var(--wt-red-tint);
     color: var(--wt-red);
+}
+
+html.dark .fi-badge.fi-color-danger {
+    background-color: rgb(220 38 38 / 0.18);
+    color: var(--wt-red-on-dark);
 }
 
 /*
@@ -106,29 +206,7 @@
     box-shadow: inset 3px 0 0 0 var(--wt-red);
 }
 
-/* --- Dark mode: keep the brand, drop the glare --- */
-
-@media (prefers-color-scheme: dark) {
-    .fi-body,
-    .fi-main-ctn,
-    .fi-sidebar,
-    .fi-topbar > nav {
-        background-color: #0f172a;
-        border-color: #1e293b;
-    }
-
-    .fi-wi-widget .fi-sc,
-    .fi-ta-ctn,
-    .fi-se {
-        border-color: #1e293b;
-    }
-
-    .fi-sidebar-item-active .fi-sidebar-item-button {
-        background-color: rgba(29, 78, 216, 0.18);
-        color: #93c5fd;
-    }
-
-    .fi-ta-row:hover {
-        background-color: rgba(29, 78, 216, 0.12);
-    }
+html.dark .fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
+html.dark .fi-ta-row:has(.fi-badge.fi-color-danger) {
+    box-shadow: inset 3px 0 0 0 var(--wt-red-on-dark);
 }

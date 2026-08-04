@@ -28,4 +28,15 @@
 
 html {
     scroll-behavior: smooth;
+
+    /*
+     * The public site commits to light: it is the company's shopfront, and the
+     * brand is white with blue and red.
+     *
+     * Declaring it explicitly matters. Without this, a visitor whose OS is in
+     * dark mode gets browser-drawn chrome — scrollbars, select menus, date
+     * pickers, autofill highlights — rendered dark against our white page.
+     * The panels, which do have a real dark mode, are unaffected.
+     */
+    color-scheme: light;
 }
