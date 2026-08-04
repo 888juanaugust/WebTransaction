@@ -49,6 +49,12 @@ class Company extends Model
         return $this->hasMany(Order::class);
     }
 
+    /** Buyer logins for this company's portal access. */
+    public function customerUsers(): HasMany
+    {
+        return $this->hasMany(CustomerUser::class);
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

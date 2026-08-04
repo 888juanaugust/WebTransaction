@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CustomerUser;
 use App\Models\User;
 
 return [
@@ -38,9 +39,21 @@ return [
     */
 
     'guards' => [
+        // Staff. The admin panel authenticates here.
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+
+        /*
+         * Buyers. A separate guard against a separate table, so a buyer
+         * session carries no staff identity at all — the isolation between
+         * the portal and the admin panel is structural rather than a
+         * permission check somebody can forget to write.
+         */
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'customer_users',
         ],
     ],
 
@@ -67,10 +80,10 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'customer_users' => [
+            'driver' => 'eloquent',
+            'model' => CustomerUser::class,
+        ],
     ],
 
     /*

@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Companies;
 use App\Filament\Resources\Companies\Pages\CreateCompany;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\Companies\Pages\ListCompanies;
+use App\Filament\Resources\Companies\RelationManagers\CustomerUsersRelationManager;
 use App\Filament\Resources\Companies\Schemas\CompanyForm;
 use App\Filament\Resources\Companies\Tables\CompaniesTable;
 use App\Models\Company;
@@ -51,6 +52,15 @@ class CompanyResource extends Resource
     public static function table(Table $table): Table
     {
         return CompaniesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            // Portal logins for this customer. There is no self-registration —
+            // a wholesale account exists only after staff verify the business.
+            CustomerUsersRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

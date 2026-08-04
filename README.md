@@ -62,7 +62,31 @@ partial unique indexes.
 | `app/Domain/Payments/PaymentLedger.php` | Append-only money ledger. |
 | `app/Domain/PriceList/` | Tolerant importer, diff, versioned publishing. |
 | `app/Filament/Widgets/` | The admin worklist queues. |
+| `app/Filament/Portal/Widgets/` | The buyer portal landing screen. |
 | `app/Support/BrandColors.php` | The company palette. |
+| `config/perusahaan.php` | All public-site content — profile, partners, contact, roadmap. |
+
+## The three surfaces
+
+| URL | Who | Auth |
+|---|---|---|
+| `/` | Public — company profile, partners, contact, roadmap | none |
+| `/admin` | Staff — orders, stock, billing, price lists | `web` guard, `users` |
+| `/portal` | Buyers — credit, invoices, order history | `customer` guard, `customer_users` |
+
+Staff and buyers authenticate on **different guards against different tables**,
+so a buyer session carries no staff identity at all — the isolation is
+structural rather than a permission check somebody can forget to write.
+`/masuk` is the public chooser between the two.
+
+Buyer logins are created by staff on a customer's record in the admin panel.
+There is no self-registration: a wholesale account exists only after the
+business is verified and a credit limit agreed.
+
+Public-site content lives in `config/perusahaan.php` — **the shipped text is
+placeholder and must be replaced before launch**, especially the joint-venture
+partners, since naming a company in public is a claim about a real business
+relationship.
 
 ## Look and feel
 
