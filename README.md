@@ -172,7 +172,9 @@ These are load-bearing. `CLAUDE.md` is the full statement of them; the short ver
    `stock_levels` is a cache, and `StockLedger::reconcile()` proves it can be rebuilt by
    summing `stock_movements`.
 2. **Pricing is one pure function.** `resolvePrice(company, sku, qty, date)` returns a price and
-   the reason it resolved that way. No second implementation anywhere.
+   the reason it resolved that way. No second implementation anywhere. A caller pricing a batch
+   calls `prime()` first so the cost stops scaling with the number of SKUs — that is a cache
+   hint, not a second code path, and `resolve()` returns the same price with or without it.
 3. **Order lines snapshot their price** at `confirmed`. Historical orders and invoices never
    join to the live price list.
 4. **`paid` is set only by the gateway webhook.** Never a browser redirect, never a controller
@@ -186,6 +188,16 @@ These are load-bearing. `CLAUDE.md` is the full statement of them; the short ver
 
 Tests exist for the five places where bugs cost money: price resolution, credit check, stock
 reservation, webhook handling, tax calculation.
+
+Two of those are tested in ways worth knowing about:
+
+- **Stock reservation** is raced for real. `StockReservationConcurrencyTest` forks a process per
+  order and starts them together on a Postgres advisory lock, because a single-threaded test
+  cannot tell a working `FOR UPDATE` from no lock at all. Strip the lock and it fails; that was
+  checked, not assumed.
+- **Pricing cost** is asserted, not just pricing correctness. `PricingQueryCostTest` fails if
+  anyone reintroduces a per-SKU query — the kind of change that leaves every other test green
+  while confirming an order runs eighty queries inside the stock-lock transaction.
 
 ## Tax
 

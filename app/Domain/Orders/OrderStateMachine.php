@@ -249,7 +249,23 @@ class OrderStateMachine
         $ppnTotal = 0;
         $versionId = null;
 
-        foreach ($order->lines()->with('product')->get() as $line) {
+        $lines = $order->lines()->with('product')->get();
+
+        /*
+         * Read the price list once for the whole order, not once per line.
+         *
+         * A 20-line order used to run ~80 queries here — and this runs inside
+         * the confirming transaction, the one already holding stock row locks,
+         * so every one of those queries was time another confirmation spent
+         * blocked.
+         *
+         * Each line still resolves on its own quantity: two lines can carry the
+         * same SKU at different quantities, and they may land on different
+         * quantity breaks.
+         */
+        $this->prices->prime($company, $lines->pluck('sku')->all(), $pricedOn);
+
+        foreach ($lines as $line) {
             $resolution = $this->prices->resolve($company, $line->sku, $line->qty_base, $pricedOn);
 
             $unitPrice = $resolution->requireUnitPrice();

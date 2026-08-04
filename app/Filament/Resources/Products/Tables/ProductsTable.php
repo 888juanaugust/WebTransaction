@@ -37,7 +37,7 @@ class ProductsTable
                 $showPrices
                     ? TextColumn::make('harga_list')
                         ->label('Harga list')
-                        ->state(fn (Product $record) => self::listPrice($record))
+                        ->state(fn (Product $record, $livewire) => self::listPrice($record, $livewire))
                     : null,
 
                 IconColumn::make('aktif')->label('Aktif')->boolean(),
@@ -66,17 +66,29 @@ class ProductsTable
     /**
      * List price for a SKU: resolved for a customer with no tier and no
      * overrides, which is exactly what "harga list" means.
+     *
+     * The column is evaluated once per row, so the whole page is primed on the
+     * first row rather than each row reading the price list for itself.
      */
-    private static function listPrice(Product $product): string
+    private static function listPrice(Product $product, $livewire): string
     {
-        $resolution = app(PriceResolver::class)->resolve(
-            new Company(['price_tier_id' => null]),
-            $product->kode,
-            1,
+        $resolver = app(PriceResolver::class);
+
+        $resolver->prime(
+            self::anonymousBuyer(),
+            $livewire->getTableRecords()->pluck('kode')->all(),
         );
+
+        $resolution = $resolver->resolve(self::anonymousBuyer(), $product->kode, 1);
 
         return $resolution->isPriced()
             ? Money::format($resolution->unitPrice)
             : '— belum ada harga —';
+    }
+
+    /** A customer with no tier and no overrides — the definition of list price. */
+    private static function anonymousBuyer(): Company
+    {
+        return new Company(['price_tier_id' => null]);
     }
 }

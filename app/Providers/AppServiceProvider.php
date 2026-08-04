@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Domain\Payments\LocalVirtualAccountGateway;
 use App\Domain\Payments\VirtualAccountGateway;
 use App\Domain\Payments\XenditVirtualAccountGateway;
+use App\Domain\Pricing\PriceResolver;
 use App\Domain\Tax\TaxCalculator;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepStuckWebhookEvents;
@@ -23,6 +24,16 @@ class AppServiceProvider extends ServiceProvider
         // Everything else in App\Domain is constructor-injectable as-is; only
         // the tax calculator needs config to build.
         $this->app->singleton(TaxCalculator::class, fn () => TaxCalculator::fromConfig());
+
+        /*
+         * One price resolver per request and per queue job.
+         *
+         * It caches the rows it reads, which is what keeps pricing a 20-line
+         * order from running 80 queries. `scoped` rather than `singleton` so a
+         * long-lived queue worker starts each job with an empty cache instead
+         * of pricing next week's orders from a version it read on Monday.
+         */
+        $this->app->scoped(PriceResolver::class);
 
         /*
          * VA provisioning talks to Xendit only when there is a key to talk

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\PriceList;
 
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Pricing\PriceResolver;
 use App\Models\PriceListImport;
 use App\Models\PriceListImportRow;
 use App\Models\PriceListItem;
@@ -29,6 +30,7 @@ class PriceListImporter
         private readonly SupplierWorkbookParser $supplierParser,
         private readonly CanonicalFileParser $canonicalParser,
         private readonly AuditLogger $audit,
+        private readonly PriceResolver $prices,
     ) {}
 
     /**
@@ -372,6 +374,11 @@ class PriceListImporter
                 ],
                 actor: $approver,
             );
+
+            // The resolver caches the effective version and the rows under it
+            // for the life of the request. Publishing is the one thing that
+            // invalidates that, so tell it before anything prices again.
+            $this->prices->forget();
 
             return $version;
         });
