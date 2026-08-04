@@ -88,6 +88,29 @@ placeholder and must be replaced before launch**, especially the joint-venture
 partners, since naming a company in public is a claim about a real business
 relationship.
 
+### Language
+
+| Surface | Language |
+|---|---|
+| Home page (`/`) | English |
+| Every other public page | Bahasa Indonesia |
+| Admin panel and buyer portal | Bahasa Indonesia |
+
+The app locale stays `id` throughout. Switching it per route would also flip
+Filament, date formatting and validation messages, so instead prose that
+appears in both languages is stored as `['id' => …, 'en' => …]` in
+`config/perusahaan.php` and read through `App\Support\Perusahaan`, which sets
+`<html lang>` per page and falls back to Indonesian when a translation is
+missing.
+
+Values that read the same either way — company name, brand names, phone
+numbers, category names like `HYDRAULIC PART` — stay plain strings and are not
+duplicated.
+
+Note the home page's nav is English but every link on it leads to an
+Indonesian page. That follows from "home page in English, the rest in Bahasa";
+say so if you'd rather the nav labels stayed Indonesian throughout.
+
 ## Look and feel
 
 Clean white surfaces, company blue `#1D4ED8`, company red `#DC2626`.

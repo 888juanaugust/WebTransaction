@@ -60,7 +60,9 @@
 
                     <div>
                         <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">Jam operasional</dt>
-                        <dd class="mt-1 text-slate-800">{{ config('perusahaan.kontak.jam_operasional') }}</dd>
+                        <dd class="mt-1 text-slate-800">
+                            {{ \App\Support\Perusahaan::text('kontak.jam_operasional') }}
+                        </dd>
                     </div>
                 </dl>
             </div>

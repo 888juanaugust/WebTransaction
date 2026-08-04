@@ -8,7 +8,9 @@
     <section class="border-b border-slate-100 bg-brand-50">
         <div class="mx-auto max-w-6xl px-4 py-16">
             <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Tentang Kami</h1>
-            <p class="mt-4 max-w-2xl text-lg text-slate-600">{{ config('perusahaan.tagline') }}</p>
+            <p class="mt-4 max-w-2xl text-lg text-slate-600">
+                {{ \App\Support\Perusahaan::text('tagline') }}
+            </p>
         </div>
     </section>
 
@@ -19,7 +21,7 @@
                 <h2 class="text-xl font-bold text-slate-900">Profil perusahaan</h2>
 
                 <div class="mt-6 space-y-5">
-                    @foreach (config('perusahaan.profil') as $paragraf)
+                    @foreach (\App\Support\Perusahaan::list('profil') as $paragraf)
                         <p class="leading-relaxed text-slate-600">{{ $paragraf }}</p>
                     @endforeach
                 </div>

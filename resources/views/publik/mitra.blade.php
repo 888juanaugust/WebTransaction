@@ -16,7 +16,7 @@
 
     <section class="mx-auto max-w-6xl px-4 py-16">
         <div class="grid gap-6 md:grid-cols-2">
-            @forelse (config('perusahaan.mitra') as $mitra)
+            @forelse (\App\Support\Perusahaan::records('mitra') as $mitra)
                 <article class="rounded-xl border border-slate-200 p-7 transition hover:border-brand-200">
                     <div class="flex items-start justify-between gap-4">
                         <div>
