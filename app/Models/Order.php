@@ -21,6 +21,19 @@ class Order extends Model
 {
     use HasFactory;
 
+    /**
+     * `status` is deliberately absent from the fillable list — only
+     * OrderStateMachine may write it, so no form or controller can move an
+     * order by mass assignment.
+     *
+     * A new order is a draft. Declaring it here rather than relying on the
+     * column default means a freshly created instance reports its own status
+     * honestly before it is reloaded, without opening it to mass assignment.
+     */
+    protected $attributes = [
+        'status' => 'draft',
+    ];
+
     protected function casts(): array
     {
         return [

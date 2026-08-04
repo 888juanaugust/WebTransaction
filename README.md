@@ -60,6 +60,8 @@ partial unique indexes.
 | `app/Domain/Credit/CreditChecker.php` | Credit exposure and limit checks. |
 | `app/Domain/Orders/OrderStateMachine.php` | Every order transition. |
 | `app/Domain/Payments/PaymentLedger.php` | Append-only money ledger. |
+| `app/Domain/Billing/InvoiceIssuer.php` | Confirmed order → invoice, from line snapshots only. |
+| `app/Domain/Documents/` | Gapless per-period document numbering. |
 | `app/Domain/PriceList/` | Tolerant importer, diff, versioned publishing. |
 | `app/Filament/Widgets/` | The admin worklist queues. |
 | `app/Filament/Portal/Widgets/` | The buyer portal landing screen. |
@@ -138,6 +140,29 @@ and `ThemeTest` fails the build if that slips.
 The public site is deliberately light-only and declares `color-scheme: light`,
 so a visitor on a dark-mode OS doesn't get dark browser chrome — scrollbars,
 selects, autofill — drawn over a white page.
+
+## The order lifecycle
+
+```
+draft  →  submitted  →  confirmed  →  awaiting_payment  →  paid  →  shipped  →  completed
+  ↑            ↑             ↑                ↑              ↑         ↑
+order       "Ajukan"     "Setujui"       "Tagihkan"      Xendit    "Tandai
+ form                    prices lock,     invoice +      webhook    dikirim"
+                         stock held      VA issued                 stock out
+```
+
+Three of those steps are where the money is decided, and each does its work in
+a single transaction:
+
+- **confirmed** — every line snapshots its price, discount, DPP, PPN and price
+  list version; credit is checked; stock is reserved under a row lock.
+- **awaiting_payment** — the invoice is issued from those snapshots and the
+  buyer is given a fixed Virtual Account to pay into.
+- **paid** — reachable *only* from the gateway webhook.
+
+Without a Xendit key, virtual accounts are minted locally so the whole chain
+runs on a laptop. A flow you cannot complete locally is one people end up
+testing on production data.
 
 ## The invariants this code is built around
 

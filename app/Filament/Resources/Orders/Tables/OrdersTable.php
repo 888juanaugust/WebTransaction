@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Orders\Tables;
 
 use App\Domain\Money;
+use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
+use App\Models\Order;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -61,6 +66,48 @@ class OrdersTable
             ])
             ->recordActions([
                 ViewAction::make()->label('Lihat'),
+                // Only shows on drafts — canEdit() closes the form the moment
+                // an order carries price snapshots and a stock reservation.
+                EditAction::make()->label('Ubah'),
+
+                /*
+                 * Bill the customer.
+                 *
+                 * Confirmed means the prices are locked and the stock is held;
+                 * this is the step that turns that into money owed — it issues
+                 * the invoice and makes sure the buyer has a virtual account to
+                 * pay into. Without it a confirmed order has no bill, and the
+                 * whole AR side has nothing to work on.
+                 */
+                Action::make('tagihkan')
+                    ->label('Tagihkan')
+                    ->icon('heroicon-o-document-currency-dollar')
+                    ->color('primary')
+                    ->visible(fn (Order $record) => $record->status === OrderStatus::Confirmed
+                        && (auth()->user()?->role()->canSeeCreditData() ?? false))
+                    ->requiresConfirmation()
+                    ->modalHeading('Terbitkan faktur')
+                    ->modalDescription(fn (Order $record) => 'Faktur akan diterbitkan sebesar '
+                        .Money::format($record->total_rupiah)
+                        .' dan pelanggan akan diberi nomor Virtual Account untuk pembayaran.')
+                    ->action(function (Order $record) {
+                        try {
+                            app(OrderStateMachine::class)->awaitPayment($record, auth()->user());
+                            $record->refresh();
+
+                            Notification::make()
+                                ->title("Faktur {$record->invoice->nomor} diterbitkan")
+                                ->body('Jatuh tempo '.$record->invoice->due_date->format('d/m/Y'))
+                                ->success()
+                                ->send();
+                        } catch (\DomainException $e) {
+                            Notification::make()
+                                ->title('Tidak bisa ditagihkan')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->defaultSort('created_at', 'desc');
     }

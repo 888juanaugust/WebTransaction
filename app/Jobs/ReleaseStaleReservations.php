@@ -15,9 +15,20 @@ use Illuminate\Support\Facades\Log;
 /**
  * Release stock held by orders that were confirmed but never paid.
  *
+ * Two different endings, because the two states mean different things:
+ *
+ *   awaiting_payment  the customer was billed and did not pay  → expired
+ *   confirmed         never billed at all                      → rejected
+ *
+ * Routing a stale `confirmed` order through awaiting_payment first — which an
+ * earlier version did, purely to satisfy the state machine — now issues an
+ * invoice, so it would bill a customer for an order expiring in the same
+ * breath and leave a phantom debt on their account and in their portal.
+ * `confirmed → rejected` is a legal transition and the honest one.
+ *
  * Idempotent by construction: it only looks at orders still sitting in a
- * reservation-holding state with an expiry in the past, and expiring one moves
- * it out of that set. Running twice releases nothing the second time.
+ * reservation-holding state with an expiry in the past, and resolving one
+ * moves it out of that set.
  */
 class ReleaseStaleReservations implements ShouldQueue
 {
@@ -34,11 +45,14 @@ class ReleaseStaleReservations implements ShouldQueue
 
         foreach ($stale as $order) {
             try {
-                // A confirmed order has to pass through awaiting_payment
-                // before it can expire — the state machine says so, and the
-                // event log should show both steps.
                 if ($order->status === OrderStatus::Confirmed) {
-                    $orders->awaitPayment($order, catatan: 'Otomatis sebelum kedaluwarsa.');
+                    $orders->reject(
+                        $order,
+                        actor: null,
+                        alasan: 'Dibatalkan otomatis: belum ditagihkan dan reservasi stok kedaluwarsa.',
+                    );
+
+                    continue;
                 }
 
                 $orders->expire($order);

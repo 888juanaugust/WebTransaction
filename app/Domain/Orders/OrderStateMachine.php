@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Credit\CreditChecker;
+use App\Domain\Payments\VirtualAccountProvisioner;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
@@ -36,6 +38,8 @@ class OrderStateMachine
         private readonly StockLedger $stock,
         private readonly CreditChecker $credit,
         private readonly AuditLogger $audit,
+        private readonly InvoiceIssuer $invoices,
+        private readonly VirtualAccountProvisioner $virtualAccounts,
     ) {}
 
     public function submit(Order $order, User $actor, ?string $catatan = null): Order
@@ -96,10 +100,42 @@ class OrderStateMachine
         });
     }
 
-    /** A null actor means the system moved it — the stale-order sweep does. */
+    /**
+     * Bill the customer: issue the invoice and make sure they have a virtual
+     * account to pay into.
+     *
+     * This is the moment the order becomes money owed, so both happen in the
+     * same transaction as the transition — an order sitting at
+     * `awaiting_payment` with no invoice would be a bill nobody can pay, and
+     * it is exactly the state the AR queues and the buyer portal read from.
+     *
+     * Idempotent on both counts: re-running returns the existing invoice and
+     * the existing VA rather than billing twice.
+     *
+     * A null actor means the system moved it — the stale-order sweep does.
+     */
     public function awaitPayment(Order $order, ?User $actor = null, ?string $catatan = null): Order
     {
-        return $this->transition($order, OrderStatus::AwaitingPayment, $actor, $catatan);
+        $this->assertCan($order, OrderStatus::AwaitingPayment);
+
+        return DB::transaction(function () use ($order, $actor, $catatan) {
+            $invoice = $this->invoices->issueFor($order, $actor);
+            $va = $this->virtualAccounts->ensureFor($order->company);
+
+            return $this->transition(
+                $order,
+                OrderStatus::AwaitingPayment,
+                $actor,
+                $catatan,
+                meta: [
+                    'invoice_id' => $invoice->id,
+                    'invoice_nomor' => $invoice->nomor,
+                    'total_rupiah' => $invoice->total_rupiah,
+                    'due_date' => $invoice->due_date->toDateString(),
+                    'virtual_account' => $va->account_number,
+                ],
+            );
+        });
     }
 
     /**
@@ -149,8 +185,13 @@ class OrderStateMachine
         });
     }
 
-    /** Rejecting a confirmed order hands its reserved stock back. */
-    public function reject(Order $order, User $actor, string $alasan): Order
+    /**
+     * Rejecting a confirmed order hands its reserved stock back.
+     *
+     * A null actor means the system rejected it — the stale-reservation sweep
+     * does that for orders confirmed but never billed.
+     */
+    public function reject(Order $order, ?User $actor, string $alasan): Order
     {
         $this->assertCan($order, OrderStatus::Rejected);
 
