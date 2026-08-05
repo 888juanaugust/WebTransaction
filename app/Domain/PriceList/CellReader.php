@@ -35,8 +35,18 @@ class CellReader
     }
 
     /**
-     * A QTY/CTN cell may hold two values ("18 / 10"), which means the supplier
-     * changed the carton size and left both in. Ambiguous, so: blocker.
+     * A QTY/CTN cell may hold more than one number, and it means different
+     * things depending on the row. Either way it is ambiguous, so the caller
+     * makes it a blocker.
+     *
+     *   "18 / 10"      the supplier changed the carton size and left both in
+     *   "26-22-55"     not a carton size at all — a CV joint's dimensions in mm
+     *
+     * The hyphen matters. Without it in this list, "26-22-55" is not split, the
+     * non-digits are stripped, and the cell yields a carton size of 262,255 —
+     * a plausible-looking integer that would put a quarter of a million units
+     * through the stock ledger the first time anyone ordered a single dus. It
+     * published exactly once before this separator was added.
      *
      * @return list<int>
      */
@@ -48,7 +58,7 @@ class CellReader
             return [];
         }
 
-        $parts = preg_split('#[/,;]+#', $value) ?: [];
+        $parts = preg_split('#\s*[/,;\-x×]\s*#iu', $value) ?: [];
 
         $numbers = [];
 
@@ -123,9 +133,17 @@ class CellReader
         return (int) round((float) $value);
     }
 
+    /**
+     * A text cell, with its whitespace flattened.
+     *
+     * Some cells in the supplier file hold two values on two lines — a part
+     * number that covers a superseded one, for instance. Left as-is the line
+     * break travels all the way to a printed surat jalan and to the CSV
+     * export, where it breaks the row.
+     */
     public function text(mixed $raw): ?string
     {
-        $value = trim((string) ($raw ?? ''));
+        $value = trim(preg_replace('/\s+/u', ' ', (string) ($raw ?? '')) ?? '');
 
         return $value === '' ? null : $value;
     }

@@ -22,6 +22,13 @@ class RowClassifier
 
     public const DATA = 'data';
 
+    /** What a TITLE row turned out to name — see titleKind(). */
+    public const TITLE_CATEGORY = 'title_category';
+
+    public const TITLE_TIPE = 'title_tipe';
+
+    public const TITLE_BANNER = 'title_banner';
+
     /** @var list<string> */
     private array $headerTokens;
 
@@ -77,21 +84,66 @@ class RowClassifier
     }
 
     /**
-     * Title rows name the category. The known list is preferred, but an
-     * unrecognised title is still carried forward — the importer flags rows
-     * whose category never got detected rather than inventing one.
+     * What a title row is.
+     *
+     * The workbook stacks two levels of title above each block, plus a banner
+     * at the top of every sheet:
+     *
+     *     PRICE LIST YUHOLI                  <- banner, ignore
+     *     *HARGA SEWAKTU WAKTU BISA BERUBAH  <- banner, ignore
+     *     HYDRAULIC PART                     <- category
+     *     BRAKE MASTER / BM ASSY / PUSAT     <- product type
+     *
+     * Only a title naming one of the four known categories is a category.
+     * Everything else is a product type — and it must not be allowed to
+     * overwrite the category, or every row ends up filed under BRAKE MASTER
+     * with the real category thrown away.
      */
-    public function categoryFromTitle(string $title): string
+    public function titleKind(string $title): string
     {
-        $normalised = strtoupper(preg_replace('/\s+/', ' ', trim($title)));
+        $normalised = self::normaliseTitle($title);
 
-        foreach ((array) config('pricelist.known_categories') as $known) {
-            if (str_contains($normalised, strtoupper($known))) {
-                return strtoupper($known);
+        foreach ((array) config('pricelist.title_ignore_patterns') as $pattern) {
+            if (preg_match($pattern, $normalised) === 1) {
+                return self::TITLE_BANNER;
             }
         }
 
-        return $normalised;
+        return $this->categoryFromTitle($title) === null
+            ? self::TITLE_TIPE
+            : self::TITLE_CATEGORY;
+    }
+
+    /**
+     * The category a title names, or null when it names none.
+     *
+     * Null rather than "the title, uppercased": returning the text meant a
+     * product-type row was carried forward as a category, so the row looked
+     * categorised when it was not. A row whose category was never detected is
+     * a blocker, and it can only be one if this is allowed to say "no".
+     */
+    public function categoryFromTitle(string $title): ?string
+    {
+        $normalised = self::normaliseTitle($title);
+
+        foreach ((array) config('pricelist.known_categories') as $known) {
+            if (str_contains($normalised, strtoupper((string) $known))) {
+                return strtoupper((string) $known);
+            }
+        }
+
+        return null;
+    }
+
+    /** The product type a title names, tidied but otherwise as written. */
+    public function tipeFromTitle(string $title): string
+    {
+        return self::normaliseTitle($title);
+    }
+
+    private static function normaliseTitle(string $title): string
+    {
+        return strtoupper(trim(preg_replace('/\s+/', ' ', $title) ?? ''));
     }
 
     private function normalise(string $cell): string

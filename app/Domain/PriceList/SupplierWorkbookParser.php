@@ -13,19 +13,26 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
  * The file is messy in known ways, and each one is handled deliberately:
  *
  *   · Sheet names do not match brands — the MERK column is authoritative and
- *     the sheet name is never used to infer a brand.
- *   · ~55 repeated header rows scattered mid-file — detected by shape and
+ *     the sheet name is never used to infer a brand. The sheet called
+ *     "STAVO STAVIX ASTRO" also carries every BDAX and SERVO row in the file.
+ *   · 56 repeated header rows scattered mid-file — detected by shape and
  *     skipped wherever they appear.
- *   · Category is not a column — it is the nearest title-only row above, which
- *     the parser carries forward.
- *   · Two header rows are mislabeled — so columns are mapped by POSITION and
- *     then validated against the data, never by reading header text.
+ *   · Neither KATEGORI nor TIPE_PRODUK is a column. Both are title-only rows,
+ *     stacked two deep, and the parser carries each forward independently.
+ *   · Two header rows are mislabeled (872 and 884) — so columns are mapped by
+ *     POSITION and then validated, never by reading header text.
  *   · 183 phantom columns on one sheet — trimmed to a sane width first.
  *   · KODE cells holding 2+ SKUs split by "/" — blocker, not an auto-split.
  *   · QTY/CTN cells holding two values ("18 / 10") — blocker.
- *   · ~724 blank QTY/CTN — defaulted to 1 with a note in CATATAN.
+ *   · 724 blank QTY/CTN — defaulted to 1 with a note in CATATAN.
+ *   · Line breaks inside cells — normalised to single spaces.
  *   · No effective date anywhere in the file — the operator supplies it at
  *     upload; the parser never invents one.
+ *
+ * The counts above are from the real file, not estimates. PriceListFixture
+ * builds a small workbook reproducing every one of these shapes, which is what
+ * the tests run against — the live price list is commercial data and does not
+ * belong in git.
  */
 class SupplierWorkbookParser
 {
@@ -55,7 +62,10 @@ class SupplierWorkbookParser
 
         foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
             $sheetName = $sheet->getTitle();
+
+            // Both are carried forward from the nearest title row above.
             $currentCategory = null;
+            $currentTipe = null;
 
             foreach ($sheet->toArray(null, true, false, false) as $index => $cells) {
                 $rowNumber = $index + 1;
@@ -69,14 +79,28 @@ class SupplierWorkbookParser
                         continue 2;
 
                     case RowClassifier::TITLE:
-                        $currentCategory = $this->classifier->categoryFromTitle(
-                            (string) $this->firstFilled($cells)
-                        );
+                        $title = (string) $this->firstFilled($cells);
+
+                        switch ($this->classifier->titleKind($title)) {
+                            case RowClassifier::TITLE_CATEGORY:
+                                $currentCategory = $this->classifier->categoryFromTitle($title);
+                                // A new category starts a new run of product
+                                // types; carrying the last one across would
+                                // label brake parts as bearings.
+                                $currentTipe = null;
+                                break;
+
+                            case RowClassifier::TITLE_TIPE:
+                                $currentTipe = $this->classifier->tipeFromTitle($title);
+                                break;
+
+                                // A banner names nothing and changes nothing.
+                        }
 
                         continue 2;
                 }
 
-                yield $this->buildRow($cells, $sheetName, $rowNumber, $currentCategory);
+                yield $this->buildRow($cells, $sheetName, $rowNumber, $currentCategory, $currentTipe);
             }
         }
     }
@@ -84,12 +108,19 @@ class SupplierWorkbookParser
     /**
      * @param  list<string|null>  $cells
      */
-    private function buildRow(array $cells, string $sheetName, int $rowNumber, ?string $category): ParsedRow
-    {
+    private function buildRow(
+        array $cells,
+        string $sheetName,
+        int $rowNumber,
+        ?string $category,
+        ?string $tipeProduk,
+    ): ParsedRow {
         $at = fn (string $field) => $cells[$this->layout[$field]] ?? null;
 
         $row = new ParsedRow(
-            tipeProduk: $this->cells->text($at('tipe_produk')),
+            // Not a column in this file — it is the nearest product-type title
+            // row above.
+            tipeProduk: $tipeProduk,
             mobil: $this->cells->text($at('mobil')),
             partNumber: $this->cells->text($at('part_number')),
             description: $this->cells->text($at('description')),
@@ -180,11 +211,34 @@ class SupplierWorkbookParser
     private function readQtyPerCtn(ParsedRow $row, mixed $raw): void
     {
         $values = $this->cells->splitQtyPerCtn($raw === null ? null : (string) $raw);
+        $text = $this->cells->text($raw);
 
         if ($values === []) {
-            // ~724 rows in the supplier file are blank here.
             $row->qtyPerCtn = 1;
-            $row->note('qty_ctn_kosong', 'QTY/CTN kosong, dipakai 1.');
+
+            if ($text === null) {
+                // 724 rows in the real file are simply blank here.
+                $row->note('qty_ctn_kosong', 'QTY/CTN kosong, dipakai 1.');
+
+                return;
+            }
+
+            /*
+             * The cell is not empty — it just is not a number. In the real file
+             * this is 16 rows reading "FULL KIT" or "MINOR KIT": the supplier
+             * used the carton column to say what kind of kit the SKU is.
+             *
+             * Annotating that as "kosong" would be a lie, and would throw away
+             * the one place the file says these are kits. They are worth a
+             * human's attention for another reason too: a kit is very likely
+             * sold as a SET rather than PCS, and unit of measure is modeled,
+             * not assumed. This parser will not guess it — see satuanDasar
+             * below — so the text is carried through for staff to act on.
+             */
+            $row->note(
+                'qty_ctn_bukan_angka',
+                "QTY/CTN bukan angka: \"{$text}\". Dipakai 1 — periksa satuan dasar (mungkin SET)."
+            );
 
             return;
         }
@@ -193,7 +247,28 @@ class SupplierWorkbookParser
             $row->qtyPerCtn = $values[0];
             $row->blocker(
                 'qty_ctn_ganda',
-                'QTY/CTN berisi dua nilai: '.implode(' / ', $values).'. Pilih salah satu.'
+                "QTY/CTN berisi lebih dari satu nilai: \"{$text}\". Pilih salah satu."
+            );
+
+            return;
+        }
+
+        /*
+         * A backstop for shapes nobody has anticipated.
+         *
+         * qty_per_ctn is trusted arithmetic everywhere downstream — it converts
+         * a dus into base units for the stock ledger — so a wrong value here is
+         * not a display bug, it is stock and money. Anything implausibly large
+         * is something other than a carton size that landed in the column, and
+         * it stops at a human.
+         */
+        $max = (int) config('pricelist.max_qty_per_ctn');
+
+        if ($values[0] > $max) {
+            $row->qtyPerCtn = 1;
+            $row->blocker(
+                'qty_ctn_tidak_masuk_akal',
+                "QTY/CTN tidak masuk akal: \"{$text}\" terbaca {$values[0]}, batas wajar {$max}."
             );
 
             return;

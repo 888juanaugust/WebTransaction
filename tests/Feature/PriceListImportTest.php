@@ -65,19 +65,37 @@ class PriceListImportTest extends TestCase
         return $this->path;
     }
 
-    /** Columns follow config('pricelist.supplier_layout'). */
+    /**
+     * A data row in the supplier's real column order, verified against
+     * PL_JAVA_IMPORT.xlsx:
+     *
+     *     MOBIL | PART NUMBER | DESCRIPTION | QTY/CTN | KODE | HARGA | MERK
+     *
+     * Note there is no TIPE_PRODUK column. It is a title row — see
+     * tipeRow() — and building the fixture as though it were a column is
+     * exactly the mistake this file used to make.
+     */
     private function dataRow(
         string $kode,
         string $merk = 'YUHOLI',
         string|int $qtyPerCtn = 12,
         string|int $harga = 150000,
+        string $description = 'Deskripsi',
+        string $partNumber = 'PN-1',
     ): array {
-        return [$kode, 'SHOCK ABSORBER', 'AVANZA', 'PN-1', 'Deskripsi', $qtyPerCtn, $harga, $merk];
+        return ['AVANZA', $partNumber, $description, $qtyPerCtn, $kode, $harga, $merk];
     }
 
+    /** The header exactly as the supplier writes it. */
     private function headerRow(): array
     {
-        return ['KODE', 'TIPE', 'MOBIL', 'PART NUMBER', 'DESCRIPTION', 'QTY/CTN', 'HARGA', 'MERK'];
+        return ['MOBIL', 'PART NUMBER', 'DESCRIPTION', 'QTY/CTN', 'KODE', 'HARGA', 'MERK'];
+    }
+
+    /** A product-type title row — the second of the file's two title levels. */
+    private function tipeRow(string $tipe = 'BRAKE MASTER / BM ASSY / PUSAT'): array
+    {
+        return [$tipe];
     }
 
     /** @return list<ParsedRow> */
@@ -184,6 +202,62 @@ class PriceListImportTest extends TestCase
         $this->assertContains('qty_ctn_ganda', $this->issueCodes($rows[0]));
     }
 
+    /**
+     * Fourteen rows in the real file hold a CV joint's dimensions in the carton
+     * column — "26-22-55", millimetres. With the hyphen not treated as a
+     * separator the non-digits were stripped and the cell yielded a carton size
+     * of 262,255.
+     *
+     * Nothing downstream would have questioned it. qty_per_ctn is trusted
+     * arithmetic: it converts a dus into base units for the stock ledger, so
+     * ordering one carton would have moved a quarter of a million units. This
+     * published once before the separator was added.
+     */
+    public function test_dimensions_in_the_carton_column_do_not_become_a_carton_size(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['SUSPENSION PART'],
+            $this->headerRow(),
+            $this->dataRow('ASCJH-005', qtyPerCtn: '26-22-55'),
+            $this->dataRow('ASCJD-003', qtyPerCtn: '26-29-55,5'),
+        ]));
+
+        foreach ($rows as $row) {
+            $this->assertTrue($row->hasBlocker(), "{$row->kode} must not publish");
+            $this->assertContains('qty_ctn_ganda', $this->issueCodes($row));
+            $this->assertLessThan(1_000, $row->qtyPerCtn);
+        }
+
+        // And the human working the review queue sees what the cell actually
+        // said, not just the number it parsed to.
+        $this->assertStringContainsString(
+            '26-22-55',
+            implode(' ', array_column($rows[0]->issues, 'message')),
+        );
+    }
+
+    /**
+     * The backstop, for shapes nobody has thought of yet. A single number too
+     * large to be a carton is something else in the wrong column.
+     */
+    public function test_an_implausibly_large_carton_size_is_a_blocker(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->headerRow(),
+            $this->dataRow('YH-1', qtyPerCtn: '262255'),
+            $this->dataRow('YH-2', qtyPerCtn: '400'),
+        ]));
+
+        $this->assertTrue($rows[0]->hasBlocker());
+        $this->assertContains('qty_ctn_tidak_masuk_akal', $this->issueCodes($rows[0]));
+        $this->assertSame(1, $rows[0]->qtyPerCtn, 'never carry the absurd number forward');
+
+        // 400 is the largest real carton in the supplier file — still fine.
+        $this->assertFalse($rows[1]->hasBlocker());
+        $this->assertSame(400, $rows[1]->qtyPerCtn);
+    }
+
     public function test_a_blank_qty_per_ctn_defaults_to_one_and_is_annotated(): void
     {
         $rows = $this->parse($this->workbook([
@@ -196,6 +270,47 @@ class PriceListImportTest extends TestCase
         $this->assertSame(1, $rows[0]->qtyPerCtn);
         $this->assertContains('qty_ctn_kosong', $this->issueCodes($rows[0]));
         $this->assertStringContainsString('QTY/CTN kosong', $rows[0]->catatanWithNotes());
+    }
+
+    /**
+     * 16 rows in the real file put "FULL KIT" or "MINOR KIT" in the carton
+     * column. Calling that "kosong" would be untrue, and would throw away the
+     * only place the file says these SKUs are kits — which matters, because a
+     * kit is probably sold as a SET and unit of measure is modeled, not assumed.
+     */
+    public function test_a_non_numeric_qty_per_ctn_keeps_what_the_cell_actually_said(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->headerRow(),
+            $this->dataRow('YLCKD-K01', qtyPerCtn: 'FULL KIT'),
+            $this->dataRow('YLCKD-K02', qtyPerCtn: ''),
+        ]));
+
+        $this->assertFalse($rows[0]->hasBlocker(), 'a kit still imports');
+        $this->assertSame(1, $rows[0]->qtyPerCtn);
+        $this->assertContains('qty_ctn_bukan_angka', $this->issueCodes($rows[0]));
+        $this->assertStringContainsString('FULL KIT', $rows[0]->catatanWithNotes());
+        $this->assertStringNotContainsString('kosong', $rows[0]->catatanWithNotes());
+
+        // A genuinely blank cell keeps saying so.
+        $this->assertContains('qty_ctn_kosong', $this->issueCodes($rows[1]));
+    }
+
+    /**
+     * The file has no SATUAN_DASAR column, and the parser does not invent one
+     * — not even for a row that says "FULL KIT". Guessing a unit of measure is
+     * how a customer receives one piece where they expected a set.
+     */
+    public function test_the_parser_never_guesses_a_base_unit(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->headerRow(),
+            $this->dataRow('YLCKD-K01', qtyPerCtn: 'FULL KIT'),
+        ]));
+
+        $this->assertSame('PCS', $rows[0]->satuanDasar);
     }
 
     public function test_a_non_numeric_price_is_a_blocker(): void
@@ -247,20 +362,168 @@ class PriceListImportTest extends TestCase
         );
     }
 
+    /**
+     * The two mislabeled headers, copied verbatim from the real file.
+     *
+     * Row 872 says the second column is KODE and the fifth is HARGA. It is
+     * lying: underneath it, column 1 holds part numbers and column 4 holds the
+     * SKU, exactly like every other block. Row 884 labels its last column HARGA
+     * where the data is MERK.
+     *
+     * A parser that read the header text would file part numbers as SKUs and
+     * prices as carton sizes for every row beneath — silently, since all the
+     * values are plausible. This is the whole reason columns are positional.
+     */
     public function test_columns_are_mapped_by_position_even_when_the_header_lies(): void
     {
-        // A mislabeled header of the kind found around rows 872 and 884: the
-        // text says HARGA where the data is a part number. Mapping by header
-        // text would put a part number in the price column.
         $rows = $this->parse($this->workbook([
-            ['HYDRAULIC PART'],
-            ['HARGA', 'KODE', 'QTY/CTN', 'MERK', 'DESCRIPTION', 'MOBIL', 'TIPE', 'PART NUMBER'],
-            $this->dataRow('YH-1', harga: 150000),
+            ['ELECTRIC PART'],
+            ['FUEL PUMP'],
+            // row 872, verbatim
+            ['MOBIL', 'KODE', 'DESCRIPTION', 'PART NUMBER', 'HARGA', 'QTY/CTN', 'MERK'],
+            ['DAIHATSU', '056200-0570J', 'S89', null, 'JFPD-001', 119000, 'SERVO'],
+
+            ['FUEL TANK GAUGE / PELAMPUNG'],
+            // row 884, verbatim
+            ['MOBIL', 'PART NUMBER', 'DESCRIPTION', 'QTY/CTN', 'KODE', 'HARGA', 'HARGA'],
+            ['DAIHATSU', '77501-87501', 'CHARADE G10 / G11', null, 'JPTD-001', 79000, 'SERVO'],
         ]));
 
-        $this->assertSame('YH-1', $rows[0]->kode);
-        $this->assertSame(150_000, $rows[0]->harga);
-        $this->assertSame('YUHOLI', $rows[0]->merk);
+        $this->assertCount(2, $rows);
+
+        // The SKU is the SKU, not the part number the header pointed at.
+        $this->assertSame('JFPD-001', $rows[0]->kode);
+        $this->assertSame(119_000, $rows[0]->harga);
+        $this->assertSame('SERVO', $rows[0]->merk);
+        $this->assertSame('056200-0570J', $rows[0]->partNumber);
+
+        $this->assertSame('JPTD-001', $rows[1]->kode);
+        $this->assertSame(79_000, $rows[1]->harga);
+        $this->assertSame('SERVO', $rows[1]->merk);
+    }
+
+    // --- the two levels of title row ---------------------------------------
+
+    /**
+     * Category and product type are both title-only rows, stacked. Only the
+     * four known categories are categories; anything else is a product type
+     * and must leave the category alone.
+     */
+    public function test_a_product_type_title_does_not_overwrite_the_category(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->tipeRow('BRAKE MASTER / BM ASSY / PUSAT'),
+            $this->headerRow(),
+            $this->dataRow('YH-1'),
+            $this->tipeRow('CYLINDER MASTER / CM ASSY'),
+            $this->dataRow('YH-2'),
+        ]));
+
+        $this->assertSame('HYDRAULIC PART', $rows[0]->kategori);
+        $this->assertSame('HYDRAULIC PART', $rows[1]->kategori, 'the product type is not a category');
+
+        $this->assertSame('BRAKE MASTER / BM ASSY / PUSAT', $rows[0]->tipeProduk);
+        $this->assertSame('CYLINDER MASTER / CM ASSY', $rows[1]->tipeProduk);
+    }
+
+    /** A new category starts a new run of product types. */
+    public function test_a_new_category_clears_the_carried_product_type(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->tipeRow('BRAKE MASTER / BM ASSY / PUSAT'),
+            $this->headerRow(),
+            $this->dataRow('YH-1'),
+            ['BEARING PART'],
+            $this->dataRow('YH-2'),
+        ]));
+
+        $this->assertSame('BRAKE MASTER / BM ASSY / PUSAT', $rows[0]->tipeProduk);
+
+        $this->assertSame('BEARING PART', $rows[1]->kategori);
+        $this->assertNull(
+            $rows[1]->tipeProduk,
+            'a brake part type must not be carried onto a bearing'
+        );
+    }
+
+    /**
+     * Every sheet opens with a banner and a disclaimer. Neither names anything,
+     * and treating them as product types would label the first block of every
+     * sheet "PRICE LIST YUHOLI".
+     */
+    public function test_the_sheet_banner_is_not_mistaken_for_a_category_or_type(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['PRICE LIST YUHOLI'],
+            ['*HARGA SEWAKTU WAKTU BISA BERUBAH'],
+            ['HYDRAULIC PART'],
+            $this->tipeRow('BRAKE MASTER / BM ASSY / PUSAT'),
+            $this->headerRow(),
+            $this->dataRow('YH-1'),
+        ]));
+
+        $this->assertSame('HYDRAULIC PART', $rows[0]->kategori);
+        $this->assertSame('BRAKE MASTER / BM ASSY / PUSAT', $rows[0]->tipeProduk);
+    }
+
+    /**
+     * A leading asterisk does not mark a banner — several real product types
+     * start with one, and a pattern keyed on punctuation would drop them.
+     */
+    public function test_a_product_type_starting_with_an_asterisk_is_still_a_product_type(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['SUSPENSION PART'],
+            $this->tipeRow('*FRONT WHEEL'),
+            $this->headerRow(),
+            $this->dataRow('YH-1'),
+        ]));
+
+        $this->assertSame('*FRONT WHEEL', $rows[0]->tipeProduk);
+        $this->assertSame('SUSPENSION PART', $rows[0]->kategori);
+    }
+
+    /**
+     * Some cells hold two values on two lines. Left alone the break travels to
+     * the CSV export, where a newline inside a field breaks the row.
+     */
+    public function test_line_breaks_inside_cells_are_flattened(): void
+    {
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            $this->headerRow(),
+            $this->dataRow(
+                'OSBPH-002',
+                partNumber: "45022-S9A-003\n45022-S9A-A02",
+                description: "CRV '03-06 /\nCIVIC TURBO '17",
+            ),
+        ]));
+
+        $this->assertSame('45022-S9A-003 45022-S9A-A02', $rows[0]->partNumber);
+        $this->assertSame("CRV '03-06 / CIVIC TURBO '17", $rows[0]->description);
+    }
+
+    /**
+     * The OSBORN sheet repeats PART NUMBER at column 7. Position 1 is the one
+     * all three sheets agree on, so the extra column is simply not read.
+     */
+    public function test_a_repeated_trailing_column_is_ignored(): void
+    {
+        $row = $this->dataRow('OSBPC-001', merk: 'OSBORN', partNumber: '96626075');
+        $row[] = '96626075';
+
+        $rows = $this->parse($this->workbook([
+            ['HYDRAULIC PART'],
+            ['MOBIL', 'PART NUMBER', 'DESCRIPTION', 'QTY/CTN', 'KODE', 'HARGA', 'MERK', 'PART NUMBER'],
+            $row,
+        ]));
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('OSBPC-001', $rows[0]->kode);
+        $this->assertSame('96626075', $rows[0]->partNumber);
+        $this->assertSame('OSBORN', $rows[0]->merk);
     }
 
     public function test_blank_rows_are_ignored(): void

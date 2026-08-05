@@ -296,10 +296,47 @@ Nothing writes to live prices. Publishing inserts a new `price_list_versions` ro
 never `UPDATE`d.
 
 The raw supplier workbook is messy in known ways, and `SupplierWorkbookParser` handles each one
-deliberately: repeated headers mid-file, categories that exist only as title rows, mislabeled
-headers (columns are mapped by position and validated, never by header text), phantom columns,
-`KODE` cells holding two SKUs, `QTY/CTN` cells holding two values, and hundreds of blank
-`QTY/CTN`. Anything ambiguous becomes a blocker for a human rather than a guess.
+deliberately. The numbers below are measured from the real `PL_JAVA_IMPORT.xlsx`, not estimates:
+
+| Quirk | Count | Handling |
+|---|---|---|
+| Repeated header rows mid-file | 56 | detected by shape, skipped |
+| **Mislabeled headers** (rows 872, 884) | 2 | columns mapped by position, never by header text |
+| Sheet names that aren't brands | 3 sheets | `MERK` column is the only authority |
+| Category *and* product type as title rows | 4 + 35 | carried forward independently |
+| Phantom columns | 183 wide | trimmed before parsing |
+| Blank `QTY/CTN` | 724 | default 1, note in `CATATAN` |
+| `KODE` holding 2+ SKUs | 22 | blocker |
+| `QTY/CTN` holding 2+ values | 28 | blocker |
+| `QTY/CTN` reading "FULL KIT" / "MINOR KIT" | 16 | note, text preserved — likely SET, not PCS |
+| Zero prices | 4 | blocker |
+| Line breaks inside cells | 2 | flattened |
+| Effective date | none | operator supplies it; never invented |
+
+**The mislabeled headers are the reason for the positional rule**, and the real file proves it:
+
+```
+row 872  MOBIL | KODE        | DESCRIPTION | PART NUMBER | HARGA | QTY/CTN | MERK
+row 884  MOBIL | PART NUMBER | DESCRIPTION | QTY/CTN     | KODE  | HARGA   | HARGA
+```
+
+In both cases the data underneath is in the standard order — the *header text* is wrong. A parser
+that trusted it would file part numbers as SKUs and prices as carton sizes for every row beneath,
+silently, because every value would still look plausible.
+
+**`QTY/CTN` is bounded, and that bound is load-bearing.** Fourteen rows carry a CV joint's
+dimensions in that column (`26-22-55`, millimetres). Treated as a number, that is a carton size of
+262,255 — and `qty_per_ctn` is trusted arithmetic, so ordering one dus would move a quarter of a
+million units through the stock ledger. Hyphens now split like any other separator, and
+`max_qty_per_ctn` catches whatever shape nobody has thought of yet.
+
+One operational consequence worth knowing: a row that becomes a blocker is "missing from this
+file", and missing SKUs are left alone by design. So a bad value already live on a product is
+**not** corrected by a later import that blocks the row — it has to be fixed on the product.
+
+Anything ambiguous becomes a blocker for a human rather than a guess. Tests run against a
+synthetic workbook reproducing every shape above; the live price list is commercial data and is
+not committed.
 
 Two safety rules worth knowing before you touch the importer:
 
