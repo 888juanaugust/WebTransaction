@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +34,24 @@ Route::view('/kontak', 'publik.kontak')->name('publik.kontak');
  *   /portal  buyers  (customer guard, customer_users)
  */
 Route::view('/masuk', 'publik.masuk')->name('masuk');
+
+/*
+|--------------------------------------------------------------------------
+| Dokumen cetak
+|--------------------------------------------------------------------------
+|
+| Surat jalan. Behind the staff guard, and the controller additionally checks
+| the role — picking and shipping is the warehouse's job, and this document
+| carries no prices precisely because it is handed to a driver and then to
+| whoever signs for the goods.
+|
+| A route rather than a Filament page: it renders its own bare HTML so it
+| prints identically from any machine, with no panel chrome to strip.
+|
+*/
+Route::middleware(['web', 'auth'])
+    ->get('/dokumen/surat-jalan/{order}', SuratJalanController::class)
+    ->name('dokumen.surat-jalan');
 
 /*
 |--------------------------------------------------------------------------

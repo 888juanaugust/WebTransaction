@@ -4,13 +4,23 @@
 @source '../../../../resources/views/filament/**/*';
 
 /*
- * Company theme: clean white, blue, red.
+ * Company theme: navy, coral, powder blue, cream.
  *
- * Most of the palette comes from ->colors() in AdminPanelProvider — buttons,
- * links, badges, focus rings and the active nav item all derive from the blue
- * and red set there. This file only does what a colour palette cannot: flatten
- * the panel onto white and keep the chrome quiet, so the blue reads as the
- * accent rather than competing with a grey background.
+ *   #2B3467  navy    the sidebar, headings, primary buttons
+ *   #EB455F  coral   danger, and the mark on a row that needs attention
+ *   #BAD7E9  powder  table headers, hover, hairlines
+ *   #FCFFE7  cream   the page under everything
+ *
+ * Most of the palette comes from ->colors() in the panel providers — buttons,
+ * links, badges, focus rings and the active nav item all derive from the ramps
+ * in App\Support\BrandColors. This file does what a colour palette cannot: it
+ * decides what the page itself is made of.
+ *
+ * The page is cream and the cards are white. That inversion is the whole trick:
+ * a white page with white cards needs shadows and grey borders to show where
+ * anything begins, which is what made the panel read as flat and colourless.
+ * Cream underneath means a white card is visible because it is *lighter* than
+ * the page, and the borders can be a soft powder blue instead of grey.
  *
  * --- Dark mode ---
  *
@@ -31,44 +41,61 @@
 
 @theme {
     /* Light */
-    --wt-blue: #1d4ed8;
-    --wt-blue-dark: #1e40af;
-    --wt-blue-tint: #eff6ff;
-    --wt-red: #dc2626;
-    --wt-red-tint: #fef2f2;
-    --wt-line: #e2e8f0;
+    --wt-navy: #2b3467;
+    --wt-navy-deep: #1e2549;
+    --wt-navy-soft: #3d4a8a;
+    --wt-coral: #eb455f;
+    --wt-coral-tint: #fdecef;
+    --wt-powder: #bad7e9;
+    --wt-powder-tint: #e8f2f8;
+    --wt-cream: #fcffe7;
+    --wt-line: #cfe0ec;
     --wt-surface: #ffffff;
 
-    /* Dark — same hues, re-weighted for a dark ground. Navy on near-black is
-       unreadable, so the blue lightens rather than the background darkening. */
-    --wt-blue-on-dark: #93c5fd;
-    --wt-blue-rule-dark: #1e3a8a;
-    --wt-red-on-dark: #f87171;
-    --wt-line-dark: #223049;
-    --wt-surface-dark: #131c2e;
-    --wt-ground-dark: #0b1220;
+    /* Dark — same hues re-weighted for a dark ground. Navy on near-black is
+       unreadable, so the accents lighten rather than the background darkening.
+       Cream is dropped entirely: a warm page tint on a dark ground reads as a
+       stain, not as warmth. */
+    --wt-navy-on-dark: #a9b6ea;
+    --wt-navy-rule-dark: #2f3a6b;
+    --wt-coral-on-dark: #ff8095;
+    --wt-line-dark: #26304d;
+    --wt-surface-dark: #151d33;
+    --wt-ground-dark: #0c1020;
 }
 
 /* ====================================================================
-   Surfaces
+   Surfaces — cream page, white cards
    ==================================================================== */
 
 :where(html:not(.dark)) {
     .fi-body,
     .fi-main-ctn {
-        background-color: var(--wt-surface);
+        background-color: var(--wt-cream);
     }
 
-    .fi-sidebar,
+    /*
+     * The sidebar is navy, not white.
+     *
+     * It is the one element on screen that is always there, so it is the
+     * cheapest place to put the brand. It also gives the cream page an edge to
+     * sit against — without it the whole viewport is one pale wash.
+     */
+    .fi-sidebar {
+        background-color: var(--wt-navy);
+        border-color: var(--wt-navy-deep);
+    }
+
     .fi-topbar > nav {
         background-color: var(--wt-surface);
         border-color: var(--wt-line);
     }
 
-    /* Cards and tables sit on white with a hairline, not a shadow stack. */
+    /* White against cream. No shadow needed — the contrast does the work. */
     .fi-wi-widget .fi-sc,
     .fi-ta-ctn,
     .fi-se {
+        background-color: var(--wt-surface);
         border: 1px solid var(--wt-line);
         box-shadow: none;
     }
@@ -107,7 +134,80 @@ html.dark {
 }
 
 /* ====================================================================
-   Blue — the brand mark and wherever the eye should land
+   The navy sidebar
+   ====================================================================
+
+   Filament styles sidebar text for a light ground, so every piece of it has to
+   be re-pointed: labels, icons, group headings and the collapse control. Miss
+   one and it stays near-black on navy, which is invisible rather than merely
+   ugly.
+   ==================================================================== */
+
+html:not(.dark) {
+    /*
+     * The label is a span with its own colour, so re-pointing the button alone
+     * leaves the text as Filament left it: near-black, on navy, invisible.
+     * Both need saying, and neither can be scoped with :where() — Filament's
+     * own rules would win and the nav would be unreadable.
+     */
+    .fi-sidebar-item-btn,
+    .fi-sidebar-item-label {
+        color: #dbe6f2;
+    }
+
+    .fi-sidebar-item-icon {
+        color: #9fb2d8;
+    }
+
+    .fi-sidebar-item-btn:hover {
+        background-color: rgb(255 255 255 / 0.08);
+    }
+
+    .fi-sidebar-item-btn:hover .fi-sidebar-item-label,
+    .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
+        color: #ffffff;
+    }
+
+    .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+        background-color: rgb(255 255 255 / 0.14);
+    }
+
+    .fi-sidebar-item.fi-active .fi-sidebar-item-label {
+        color: #ffffff;
+        font-weight: 600;
+    }
+
+    .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+        color: var(--wt-powder);
+    }
+
+    /* The badge on a nav item — the pick queue count, mostly. */
+    .fi-sidebar-item .fi-badge {
+        background-color: var(--wt-powder);
+        color: var(--wt-navy-deep);
+    }
+
+    .fi-sidebar-group-label {
+        color: #8fa2c9;
+    }
+
+    .fi-sidebar-header,
+    .fi-sidebar-nav {
+        border-color: rgb(255 255 255 / 0.08);
+    }
+}
+
+/*
+ * The sidebar is sticky and only as tall as its contents, so on a long page
+ * the navy stopped partway down and cream showed underneath it — a ragged
+ * edge down the middle of the screen.
+ */
+:where(html:not(.dark)) .fi-sidebar {
+    min-height: 100dvh;
+}
+
+/* ====================================================================
+   Navy and powder — the brand mark and wherever the eye should land
    ==================================================================== */
 
 .fi-logo {
@@ -117,60 +217,63 @@ html.dark {
 
 :where(html:not(.dark)) {
     .fi-logo {
-        color: var(--wt-blue);
+        color: var(--wt-navy);
     }
 
-    .fi-sidebar-item-active .fi-sidebar-item-button {
-        background-color: var(--wt-blue-tint);
-        color: var(--wt-blue-dark);
-    }
-
-    .fi-sidebar-item-active .fi-sidebar-item-icon {
-        color: var(--wt-blue);
-    }
-
-    /* Each worklist reads as its own block on an otherwise white page. */
+    /* Each worklist reads as its own block rather than a run of rows. */
     .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-blue-dark);
+        color: var(--wt-navy);
+    }
+
+    /* A tinted header band, so a table has a top rather than just starting. */
+    .fi-ta-header,
+    .fi-ta-header-cell {
+        background-color: var(--wt-powder-tint);
     }
 
     .fi-ta-header {
-        border-bottom: 2px solid var(--wt-blue-tint);
+        border-bottom: 2px solid var(--wt-powder);
     }
 
     .fi-ta-row:hover {
-        background-color: var(--wt-blue-tint);
+        background-color: var(--wt-powder-tint);
+    }
+
+    /* Section headings inside forms and infolists. */
+    .fi-se-header-heading {
+        color: var(--wt-navy);
     }
 }
 
 html.dark {
     .fi-logo {
-        color: var(--wt-blue-on-dark);
+        color: var(--wt-navy-on-dark);
     }
 
-    .fi-sidebar-item-active .fi-sidebar-item-button {
-        background-color: rgb(29 78 216 / 0.22);
-        color: var(--wt-blue-on-dark);
+    .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+        background-color: rgb(43 52 103 / 0.55);
     }
 
-    .fi-sidebar-item-active .fi-sidebar-item-icon {
-        color: var(--wt-blue-on-dark);
+    .fi-sidebar-item.fi-active .fi-sidebar-item-label,
+    .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+        color: var(--wt-navy-on-dark);
     }
 
-    .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-blue-on-dark);
+    .fi-wi-widget .fi-ta-header-heading,
+    .fi-se-header-heading {
+        color: var(--wt-navy-on-dark);
     }
 
     /*
-     * The rule under each queue heading. The light tint (#eff6ff) is very
-     * nearly white, so reusing it here drew a glaring bar across every widget.
+     * The rule under each queue heading. The light tint is very nearly white,
+     * so reusing it here drew a glaring bar across every widget.
      */
     .fi-ta-header {
-        border-bottom: 2px solid var(--wt-blue-rule-dark);
+        border-bottom: 2px solid var(--wt-navy-rule-dark);
     }
 
     .fi-ta-row:hover {
-        background-color: rgb(29 78 216 / 0.14);
+        background-color: rgb(43 52 103 / 0.35);
     }
 }
 
@@ -179,17 +282,24 @@ html.dark {
 }
 
 /* ====================================================================
-   Red — scarce, and only ever "something is wrong"
+   Coral — scarce, and only ever "something is wrong"
+   ====================================================================
+
+   Coral is also the brand accent, which is exactly why it is rationed in here.
+   The public site spends it freely; this panel does not, because on this screen
+   it has a job: short stock, an overdue invoice, or an action that destroys
+   something. Decoration is navy, powder and cream — there is enough colour in
+   those three that coral never needs to be spent on ornament.
    ==================================================================== */
 
 :where(html:not(.dark)) .fi-badge.fi-color-danger {
-    background-color: var(--wt-red-tint);
-    color: var(--wt-red);
+    background-color: var(--wt-coral-tint);
+    color: var(--wt-coral);
 }
 
 html.dark .fi-badge.fi-color-danger {
-    background-color: rgb(220 38 38 / 0.18);
-    color: var(--wt-red-on-dark);
+    background-color: rgb(235 69 95 / 0.18);
+    color: var(--wt-coral-on-dark);
 }
 
 /*
@@ -203,10 +313,28 @@ html.dark .fi-badge.fi-color-danger {
  */
 .fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
 .fi-ta-row:has(.fi-badge.fi-color-danger) {
-    box-shadow: inset 3px 0 0 0 var(--wt-red);
+    box-shadow: inset 3px 0 0 0 var(--wt-coral);
 }
 
 html.dark .fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
 html.dark .fi-ta-row:has(.fi-badge.fi-color-danger) {
-    box-shadow: inset 3px 0 0 0 var(--wt-red-on-dark);
+    box-shadow: inset 3px 0 0 0 var(--wt-coral-on-dark);
+}
+
+/* ====================================================================
+   Print — surat jalan and anything else the warehouse puts on paper
+   ==================================================================== */
+
+@media print {
+    .fi-sidebar,
+    .fi-topbar,
+    .fi-header-actions,
+    .fi-btn {
+        display: none !important;
+    }
+
+    .fi-body,
+    .fi-main-ctn {
+        background: #ffffff !important;
+    }
 }

@@ -64,6 +64,8 @@ partial unique indexes.
 | `app/Domain/Documents/` | Gapless per-period document numbering. |
 | `app/Domain/PriceList/` | Tolerant importer, diff, versioned publishing. |
 | `app/Filament/Widgets/` | The admin worklist queues. |
+| `app/Filament/Actions/OrderTransitionActions.php` | Every order transition, shared by every screen. |
+| `app/Http/Controllers/SuratJalanController.php` | The delivery note. No prices on it, by design. |
 | `app/Filament/Portal/Widgets/` | The buyer portal landing screen. |
 | `app/Support/BrandColors.php` | The company palette. |
 | `config/perusahaan.php` | All public-site content — profile, partners, contact, roadmap. |
@@ -74,6 +76,7 @@ partial unique indexes.
 |---|---|---|
 | `/` | Public — company profile, partners, contact, roadmap | none |
 | `/admin` | Staff — orders, stock, billing, price lists | `web` guard, `users` |
+| `/admin/pengiriman` | Warehouse — pick list, surat jalan, ship | `web` guard, warehouse role |
 | `/portal` | Buyers — credit, invoices, order history | `customer` guard, `customer_users` |
 
 Staff and buyers authenticate on **different guards against different tables**,
@@ -157,36 +160,46 @@ relationship.
 
 ### Language
 
-| Surface | Language |
-|---|---|
-| Home page (`/`) | English |
-| Every other public page | Bahasa Indonesia |
-| Admin panel and buyer portal | Bahasa Indonesia |
+Bahasa Indonesia throughout — public site, admin panel, buyer portal.
 
-The app locale stays `id` throughout. Switching it per route would also flip
-Filament, date formatting and validation messages, so instead prose that
-appears in both languages is stored as `['id' => …, 'en' => …]` in
-`config/perusahaan.php` and read through `App\Support\Perusahaan`, which sets
-`<html lang>` per page and falls back to Indonesian when a translation is
-missing.
+The site was briefly bilingual, with an English home page in front of
+Indonesian inner pages. That meant every nav label changed language depending
+on which page you stood on, and one sentence had two copies in config to keep
+in step. One language, one copy of each sentence.
 
-Values that read the same either way — company name, brand names, phone
-numbers, category names like `HYDRAULIC PART` — stay plain strings and are not
-duplicated.
+The app locale is `id` and stays there. Public copy lives in
+`config/perusahaan.php` and is read through `App\Support\Perusahaan`.
 
-Note the home page's nav is English but every link on it leads to an
-Indonesian page. That follows from "home page in English, the rest in Bahasa";
-say so if you'd rather the nav labels stayed Indonesian throughout.
+Filament's own Indonesian translation has holes in it, and Laravel does not
+fall back to English — it renders the key, so a table footer reads
+`filament-tables::table.result_count`. The gaps are patched in `lang/vendor/`,
+and `IndonesianTranslationCoverageTest` fails the build the next time an
+upgrade adds an English key with no Indonesian one.
 
 ## Look and feel
 
-Clean white surfaces, company blue `#1D4ED8`, company red `#DC2626`.
+| | Hex | Where |
+|---|---|---|
+| Navy | `#2B3467` | Sidebar, headings, primary buttons |
+| Coral | `#EB455F` | Danger, and the accent on the public site |
+| Powder | `#BAD7E9` | Table headers, hover, hairlines |
+| Cream | `#FCFFE7` | The page itself |
 
-Red is not decorative anywhere in the panel: it means stock is short, an
-invoice is overdue, or the action destroys something. Rows carrying a red
-*value* get a red left edge so a manager cannot scroll past them. That only
-keeps working if red stays scarce — please don't spend it on ordinary
-buttons.
+**The page is cream and the cards are white.** That inversion is the whole
+trick: a white page with white cards needs shadows and grey borders to show
+where anything begins, which is what made the panel read as flat. Cream
+underneath means a white card is visible because it is *lighter* than the page,
+and the borders can be powder blue instead of grey.
+
+Coral is the brand accent *and* the danger colour, which puts pressure on a
+rule worth keeping. **In the panels, coral means something is wrong**: stock is
+short, an invoice is overdue, or the action destroys something. Rows carrying a
+coral *value* get a coral left edge so a manager cannot scroll past them.
+Decoration there is navy, powder and cream — there is enough colour in those
+three that coral never needs spending on ornament.
+
+The public site has no danger states, so it spends coral freely: the hero
+badge, the calls to action, the card edges.
 
 Green survives in exactly one role: settled money (`Lunas`, `Selesai`). Every
 other forward action is blue.
@@ -210,11 +223,17 @@ selects, autofill — drawn over a white page.
 
 ```
 draft  →  submitted  →  confirmed  →  awaiting_payment  →  paid  →  shipped  →  completed
-  ↑            ↑             ↑                ↑              ↑         ↑
-order       "Ajukan"     "Setujui"       "Tagihkan"      Xendit    "Tandai
+  ↑            ↑             ↑                ↑              ↑         ↑           ↑
+order       "Ajukan"     "Setujui"       "Tagihkan"      Xendit    "Tandai   "Selesaikan"
  form                    prices lock,     invoice +      webhook    dikirim"
                          stock held      VA issued                 stock out
 ```
+
+Every one of those transitions is available from the order list, the order's
+own detail page, and the dashboard queue — they are the same action objects in
+`app/Filament/Actions/OrderTransitionActions.php`, and each hides itself unless
+it applies. They used to live only on the queues, which meant an order could be
+found in the list and then not acted on.
 
 Three of those steps are where the money is decided, and each does its work in
 a single transaction:
@@ -370,6 +389,29 @@ credit-limit override is logged with actor, old value, new value and timestamp.
 Shipping-rate API integration · Coretax API integration · mobile app · real-time notifications ·
 multi-currency · product reviews · recommendation engine · promo/voucher engine · public price
 display.
+
+## The warehouse
+
+`/admin/pengiriman` is the warehouse's own screen: what to pick, what is out
+for delivery, what is done. Warehouse staff are the one role that cannot see
+money, and this is where they live — the price columns are never selected on
+it, so there is nothing to leak if a template changes.
+
+**Surat jalan** prints from there, and from the order list, at
+`/dokumen/surat-jalan/{order}`. It is a print-styled HTML page rather than a
+generated PDF: no dependency, prints correctly from the shared machine in a
+warehouse, and "Save as PDF" in the print dialogue produces an archival copy.
+A PDF library can be added later without changing the page — the layout is
+already the document.
+
+**It carries no prices.** That is the point of the document as much as the
+quantities: it is handed to a driver and then to whoever signs for the goods,
+and neither is party to what this customer pays. `WarehouseWorkflowTest`
+asserts no rupiah figure appears anywhere on it.
+
+It only renders for an order that has actually committed stock. Before
+`confirmed` nothing is reserved, so a delivery note would describe goods the
+warehouse has not been told to set aside.
 
 ## Before launch
 

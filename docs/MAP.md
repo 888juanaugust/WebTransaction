@@ -13,36 +13,37 @@ computes a price, moves stock, or writes an order status.
 
 ### Public site — open, indexed, no prices
 
-| URL | Page | Language | What it does |
-|---|---|---|---|
-| `/` | Beranda | **English** | Company profile, what we sell, partners, call to action |
-| `/tentang-kami` | Tentang | Indonesian | About: legal entity, brands, categories |
-| `/mitra` | Mitra | Indonesian | Joint-venture partners |
-| `/kontak` | Kontak | Indonesian | Address, phone, hours |
-| `/rencana-pengembangan` | Rencana | Indonesian | Roadmap |
-| `/masuk` | Chooser | Indonesian | Pick staff login or buyer login |
+| URL | Page | What it does |
+|---|---|---|
+| `/` | Beranda | Company profile, categories, brands, partners, call to action |
+| `/tentang-kami` | Tentang | About: legal entity, brands, categories |
+| `/mitra` | Mitra | Joint-venture partners |
+| `/kontak` | Kontak | Address, phone, hours |
+| `/rencana-pengembangan` | Rencana | Roadmap |
+| `/masuk` | Chooser | Pick staff login or buyer login |
 
 All content comes from `config/perusahaan.php` through `App\Support\Perusahaan`.
 **The shipped text is placeholder** — especially the partners, since naming a
 company in public is a claim about a real business relationship.
 
-Home is English and every link on it leads to an Indonesian page. That follows
-from "home page in English, the rest in Bahasa"; say so if you'd rather the nav
-labels stayed Indonesian.
+Colours: cream page, navy chrome, coral accent, powder panels. Coral is spent
+freely here — the shopfront has no danger states, unlike the panels.
 
 ### Admin panel — staff, `web` guard against `users`
 
 | URL | Page | Who | What it does |
 |---|---|---|---|
 | `/admin` | Dashboard | all staff | Five worklist queues, not a CRUD index |
-| `/admin/orders` | Order list | all | Filter by status; **Setujui**, **Tolak**, **Tagihkan**, **Tandai dikirim** |
+| `/admin/orders` | Order list | all | Every transition, each hiding itself unless it applies |
 | `/admin/orders/create` | Order entry | Sales, Owner | Customer, gudang, lines; live price + stock preview |
 | `/admin/orders/{id}` | Order detail | all | Lines, snapshots, full event log |
 | `/admin/orders/{id}/edit` | Edit draft | Sales, Owner | **Drafts only** — after `confirmed` the lines are locked |
 | `/admin/companies` | Customers | not Warehouse | Credit limit, terms, tax data, buyer logins |
 | `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
+| `/admin/pengiriman` | Pengiriman | Warehouse, Owner | Pick list, surat jalan, ship, complete |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
+| `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 
@@ -250,8 +251,7 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- **Invoice and surat jalan PDFs** — the warehouse role's job description says
-  "print surat jalan" and printing does not exist. Biggest gap.
+- **Invoice PDF** — the surat jalan prints; the faktur does not yet.
 - Faktur CSV export for Coretax
 - Buyer self-service password reset
 - `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)

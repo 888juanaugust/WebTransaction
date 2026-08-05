@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
+use App\Filament\Actions\OrderTransitionActions;
 use App\Models\Order;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -49,19 +47,10 @@ class OrdersReadyToPick extends TableWidget
                 TextColumn::make('paid_at')->label('Lunas')->since()->sortable(),
             ])
             ->recordActions([
-                Action::make('kirim')
-                    ->label('Tandai dikirim')
-                    ->icon('heroicon-o-truck')
-                    ->requiresConfirmation()
-                    ->modalDescription('Stok akan dikurangi dari gudang saat ini juga.')
-                    ->action(function (Order $record) {
-                        app(OrderStateMachine::class)->ship($record, auth()->user());
-
-                        Notification::make()
-                            ->title("Order {$record->nomor} dikirim")
-                            ->success()
-                            ->send();
-                    }),
+                // Print first, then ship — the order a packer actually
+                // works in.
+                OrderTransitionActions::suratJalan(),
+                OrderTransitionActions::kirim(),
             ]);
     }
 }

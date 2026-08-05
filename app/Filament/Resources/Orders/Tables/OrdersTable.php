@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Orders\Tables;
 
 use App\Domain\Money;
-use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
-use App\Models\Order;
-use Filament\Actions\Action;
+use App\Filament\Actions\OrderTransitionActions;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -71,43 +68,16 @@ class OrdersTable
                 EditAction::make()->label('Ubah'),
 
                 /*
-                 * Bill the customer.
+                 * Every transition, from the list.
                  *
-                 * Confirmed means the prices are locked and the stock is held;
-                 * this is the step that turns that into money owed — it issues
-                 * the invoice and makes sure the buyer has a virtual account to
-                 * pay into. Without it a confirmed order has no bill, and the
-                 * whole AR side has nothing to work on.
+                 * These used to exist only on the dashboard queues, which meant
+                 * an order could be found here and then not acted on — you had
+                 * to go back to the dashboard and hope it was still in the right
+                 * queue. Each action hides itself unless it applies, so a row
+                 * shows only the one or two moves that are actually available.
                  */
-                Action::make('tagihkan')
-                    ->label('Tagihkan')
-                    ->icon('heroicon-o-document-currency-dollar')
-                    ->color('primary')
-                    ->visible(fn (Order $record) => $record->status === OrderStatus::Confirmed
-                        && (auth()->user()?->role()->canSeeCreditData() ?? false))
-                    ->requiresConfirmation()
-                    ->modalHeading('Terbitkan faktur')
-                    ->modalDescription(fn (Order $record) => 'Faktur akan diterbitkan sebesar '
-                        .Money::format($record->total_rupiah)
-                        .' dan pelanggan akan diberi nomor Virtual Account untuk pembayaran.')
-                    ->action(function (Order $record) {
-                        try {
-                            app(OrderStateMachine::class)->awaitPayment($record, auth()->user());
-                            $record->refresh();
+                ...OrderTransitionActions::all(),
 
-                            Notification::make()
-                                ->title("Faktur {$record->invoice->nomor} diterbitkan")
-                                ->body('Jatuh tempo '.$record->invoice->due_date->format('d/m/Y'))
-                                ->success()
-                                ->send();
-                        } catch (\DomainException $e) {
-                            Notification::make()
-                                ->title('Tidak bisa ditagihkan')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
             ])
             ->defaultSort('created_at', 'desc');
     }

@@ -12,7 +12,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        /*
+         * Where an unauthenticated staff request is sent.
+         *
+         * Authentication lives in the Filament panels, so this app has no route
+         * named `login` — which is the name Laravel's Authenticate middleware
+         * reaches for by default. Any staff route outside a panel (the surat
+         * jalan, for one) therefore answered a logged-out visitor with a 500
+         * from RouteNotFoundException instead of a redirect.
+         *
+         * Buyers are not considered here on purpose: they authenticate on the
+         * `customer` guard against a different table, and every page they can
+         * reach is inside the portal panel, which handles its own redirect.
+         */
+        $middleware->redirectGuestsTo(fn () => route('filament.admin.auth.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

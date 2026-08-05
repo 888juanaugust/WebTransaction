@@ -16,13 +16,11 @@ declare(strict_types=1);
 |
 | LANGUAGE
 | --------
-| The home page is English; every other public page, and both panels, are
-| Bahasa Indonesia. Prose that appears in both places is therefore stored as
-| ['id' => ..., 'en' => ...] and read through App\Support\Perusahaan.
+| Bahasa Indonesia throughout — the public site, both panels, all of it.
 |
-| Fields that are the same in either language — a company name, a brand, a
-| phone number, a year — stay plain strings. The accessor passes those through
-| untouched, so there is no need to duplicate a proper noun.
+| This file used to hold ['id' => ..., 'en' => ...] pairs, because the home
+| page alone was in English. That meant one sentence had two versions to keep
+| in step, and they had already begun to drift. One language, one copy.
 |
 | Note: no prices anywhere on the public site. Public price display is
 | explicitly out of scope for v1.
@@ -34,47 +32,26 @@ return [
     'nama' => env('PERUSAHAAN_NAMA', 'PT Contoh Sukses Makmur'),
     'nama_singkat' => env('PERUSAHAAN_NAMA_SINGKAT', 'WebTransaction'),
 
-    'tagline' => [
-        'id' => 'Distributor grosir suku cadang otomotif',
-        'en' => 'Wholesale distributor of automotive spare parts',
-    ],
+    'tagline' => 'Distributor grosir suku cadang otomotif',
 
     /*
      | One paragraph for the hero. Written for bengkel, toko sparepart and
      | distributors — not retail buyers.
      */
-    'ringkasan' => [
-        'id' => 'Kami memasok suku cadang otomotif secara grosir untuk bengkel, '
-            .'toko sparepart, dan distributor di seluruh Indonesia. Stok siap kirim, '
-            .'harga khusus per pelanggan, dan penagihan yang rapi.',
-        'en' => 'We supply automotive spare parts at wholesale to workshops, parts '
-            .'retailers and distributors across Indonesia. Stock ready to ship, '
-            .'pricing agreed per customer, and billing you can reconcile.',
-    ],
+    'ringkasan' => 'Kami memasok suku cadang otomotif secara grosir untuk bengkel, '
+        .'toko sparepart, dan distributor di seluruh Indonesia. Stok siap kirim, '
+        .'harga khusus per pelanggan, dan penagihan yang rapi.',
 
     'profil' => [
-        'id' => [
-            'Perusahaan kami bergerak di bidang distribusi grosir suku cadang otomotif. '
-                .'Kami melayani bengkel, toko sparepart, dan distributor — bukan pembeli eceran.',
+        'Perusahaan kami bergerak di bidang distribusi grosir suku cadang otomotif. '
+            .'Kami melayani bengkel, toko sparepart, dan distributor — bukan pembeli eceran.',
 
-            'Dengan jaringan pemasok yang telah terjalin bertahun-tahun, kami menjaga '
-                .'ketersediaan stok untuk kategori yang paling sering dibutuhkan bengkel: '
-                .'hydraulic part, suspension part, electric part, dan bearing part.',
+        'Dengan jaringan pemasok yang telah terjalin bertahun-tahun, kami menjaga '
+            .'ketersediaan stok untuk kategori yang paling sering dibutuhkan bengkel: '
+            .'hydraulic part, suspension part, electric part, dan bearing part.',
 
-            'Setiap pelanggan terdaftar mendapat harga sesuai kesepakatan, limit kredit '
-                .'yang jelas, serta faktur pajak yang sesuai ketentuan yang berlaku.',
-        ],
-        'en' => [
-            'We are a wholesale distributor of automotive spare parts, serving workshops, '
-                .'parts retailers and distributors — not retail consumers.',
-
-            'Through supplier relationships built over many years, we hold stock in the '
-                .'categories workshops need most often: hydraulic, suspension, electric '
-                .'and bearing parts.',
-
-            'Every registered customer trades on agreed pricing, a clear credit limit, '
-                .'and tax invoices issued to the prevailing regulations.',
-        ],
+        'Setiap pelanggan terdaftar mendapat harga sesuai kesepakatan, limit kredit '
+            .'yang jelas, serta faktur pajak yang sesuai ketentuan yang berlaku.',
     ],
 
     // Legal identity. Required on the site once PSE registration is done.
@@ -91,10 +68,7 @@ return [
         'telepon' => env('PERUSAHAAN_TELEPON', '+62 21 0000 0000'),
         'whatsapp' => env('PERUSAHAAN_WHATSAPP', '+62 800 0000 0000'),
         'email' => env('PERUSAHAAN_EMAIL', 'sales@example.com'),
-        'jam_operasional' => [
-            'id' => 'Senin–Jumat 08.00–17.00, Sabtu 08.00–13.00 WIB',
-            'en' => 'Monday–Friday 08:00–17:00, Saturday 08:00–13:00 WIB',
-        ],
+        'jam_operasional' => 'Senin–Jumat 08.00–17.00, Sabtu 08.00–13.00 WIB',
     ],
 
     /*
@@ -110,31 +84,19 @@ return [
     'kategori' => [
         [
             'nama' => 'HYDRAULIC PART',
-            'deskripsi' => [
-                'id' => 'Komponen sistem hidrolik untuk kendaraan penumpang dan niaga.',
-                'en' => 'Hydraulic system components for passenger and commercial vehicles.',
-            ],
+            'deskripsi' => 'Komponen sistem hidrolik untuk kendaraan penumpang dan niaga.',
         ],
         [
             'nama' => 'SUSPENSION PART',
-            'deskripsi' => [
-                'id' => 'Komponen kaki-kaki dan sistem suspensi.',
-                'en' => 'Undercarriage and suspension system components.',
-            ],
+            'deskripsi' => 'Komponen kaki-kaki dan sistem suspensi.',
         ],
         [
             'nama' => 'ELECTRIC PART',
-            'deskripsi' => [
-                'id' => 'Komponen kelistrikan kendaraan.',
-                'en' => 'Vehicle electrical components.',
-            ],
+            'deskripsi' => 'Komponen kelistrikan kendaraan.',
         ],
         [
             'nama' => 'BEARING PART',
-            'deskripsi' => [
-                'id' => 'Bearing dan komponen putar.',
-                'en' => 'Bearings and rotating components.',
-            ],
+            'deskripsi' => 'Bearing dan komponen putar.',
         ],
     ],
 
@@ -150,40 +112,22 @@ return [
             'nama' => 'Nama Mitra Satu',
             'negara' => 'Indonesia',
             'sejak' => '2021',
-            'bidang' => [
-                'id' => 'Pemasok suku cadang',
-                'en' => 'Spare parts supplier',
-            ],
-            'deskripsi' => [
-                'id' => 'Deskripsi singkat kerja sama dengan mitra ini.',
-                'en' => 'A short description of our work with this partner.',
-            ],
+            'bidang' => 'Pemasok suku cadang',
+            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
         ],
         [
             'nama' => 'Nama Mitra Dua',
             'negara' => 'Indonesia',
             'sejak' => '2022',
-            'bidang' => [
-                'id' => 'Distribusi regional',
-                'en' => 'Regional distribution',
-            ],
-            'deskripsi' => [
-                'id' => 'Deskripsi singkat kerja sama dengan mitra ini.',
-                'en' => 'A short description of our work with this partner.',
-            ],
+            'bidang' => 'Distribusi regional',
+            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
         ],
         [
             'nama' => 'Nama Mitra Tiga',
             'negara' => 'Indonesia',
             'sejak' => '2023',
-            'bidang' => [
-                'id' => 'Logistik',
-                'en' => 'Logistics',
-            ],
-            'deskripsi' => [
-                'id' => 'Deskripsi singkat kerja sama dengan mitra ini.',
-                'en' => 'A short description of our work with this partner.',
-            ],
+            'bidang' => 'Logistik',
+            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
         ],
     ],
 

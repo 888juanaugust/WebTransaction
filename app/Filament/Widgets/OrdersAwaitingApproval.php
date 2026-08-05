@@ -6,14 +6,10 @@ namespace App\Filament\Widgets;
 
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Money;
-use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
-use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
+use App\Filament\Actions\OrderTransitionActions;
 use App\Models\Order;
-use Filament\Actions\Action;
-use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -85,57 +81,11 @@ class OrdersAwaitingApproval extends TableWidget
                     ->wrap(),
             ])
             ->recordActions([
-                Action::make('setujui')
-                    ->label('Setujui')
-                    ->icon('heroicon-o-check-circle')
-                    // Blue: this is the ordinary forward action, not a
-                    // celebration. Green stays reserved for settled money.
-                    ->color('primary')
-                    ->requiresConfirmation()
-                    ->modalDescription(fn (Order $record) => 'Menyetujui akan mengunci harga dan memesan stok untuk '
-                        .$record->company->nama.'.')
-                    ->visible(fn () => auth()->user()->role()->canCreateOrders())
-                    ->action(function (Order $record) {
-                        try {
-                            app(OrderStateMachine::class)->confirm($record, auth()->user());
-
-                            Notification::make()
-                                ->title("Order {$record->nomor} dikonfirmasi")
-                                ->success()
-                                ->send();
-                        } catch (InsufficientStockException $e) {
-                            Notification::make()
-                                ->title('Stok tidak cukup')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        } catch (\DomainException $e) {
-                            Notification::make()
-                                ->title('Tidak bisa dikonfirmasi')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-
-                Action::make('tolak')
-                    ->label('Tolak')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->schema([
-                        Textarea::make('alasan')
-                            ->label('Alasan penolakan')
-                            ->required(),
-                    ])
-                    ->visible(fn () => auth()->user()->role()->canCreateOrders())
-                    ->action(function (Order $record, array $data) {
-                        app(OrderStateMachine::class)->reject($record, auth()->user(), $data['alasan']);
-
-                        Notification::make()
-                            ->title("Order {$record->nomor} ditolak")
-                            ->success()
-                            ->send();
-                    }),
+                // The same objects the order list and detail page use, so
+                // approving from the queue and approving from the order
+                // itself cannot drift apart.
+                OrderTransitionActions::setujui(),
+                OrderTransitionActions::tolak(),
             ]);
     }
 
