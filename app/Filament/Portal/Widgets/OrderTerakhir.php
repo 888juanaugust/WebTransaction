@@ -4,20 +4,24 @@ declare(strict_types=1);
 
 namespace App\Filament\Portal\Widgets;
 
-use App\Domain\Money;
 use App\Domain\Orders\OrderStatus;
+use App\Filament\Portal\Actions\PesanUlangAction;
+use App\Filament\Portal\Resources\Orders\OrderResource;
+use App\Filament\Portal\Support\PortalLabels;
 use App\Models\Order;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 
 /**
- * Recent orders — the top of the buyer portal priority list.
+ * Recent orders, with reorder on each one — the top of the buyer portal
+ * priority list and, by the spec's estimate, 80% of what buyers come here to
+ * do.
  *
- * B2B buyers reorder the same 15–20 SKUs forever, so this is the screen they
- * actually came for. One-click reorder is not wired yet: self-service ordering
- * is a later phase, and a button that silently does nothing is worse than no
- * button. The history it needs is here and correct in the meantime.
+ * It sits on the landing screen rather than behind a menu because a restocking
+ * buyer should not have to navigate anywhere: log in, adjust two quantities,
+ * submit.
  */
 class OrderTerakhir extends TableWidget
 {
@@ -61,11 +65,13 @@ class OrderTerakhir extends TableWidget
 
                 TextColumn::make('total_rupiah')
                     ->label('Total')
-                    // Unconfirmed orders have no price snapshot yet; "Rp 0"
-                    // would read as free rather than not-yet-priced.
-                    ->formatStateUsing(fn (?int $state, Order $record) => $record->confirmed_at === null
-                        ? '— belum dihitung —'
-                        : Money::format((int) $state)),
+                    ->state(fn (Order $record) => PortalLabels::orderTotal($record)),
+            ])
+            ->recordActions([
+                PesanUlangAction::make(),
+                ViewAction::make()
+                    ->label('Lihat')
+                    ->url(fn (Order $record) => OrderResource::getUrl('view', ['record' => $record])),
             ])
             ->paginated([5, 10, 25]);
     }

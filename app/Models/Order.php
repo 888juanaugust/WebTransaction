@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'nomor', 'company_id', 'warehouse_id', 'created_by', 'sales_user_id',
-    'po_pelanggan', 'catatan',
+    'po_pelanggan', 'catatan', 'placed_by_customer_user_id',
 ])]
 class Order extends Model
 {
@@ -90,6 +90,17 @@ class Order extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** Set when the buyer placed this themselves in the portal. */
+    public function placedByCustomerUser(): BelongsTo
+    {
+        return $this->belongsTo(CustomerUser::class, 'placed_by_customer_user_id');
+    }
+
+    public function placedInPortal(): bool
+    {
+        return $this->placed_by_customer_user_id !== null;
     }
 
     public function scopeAwaitingApproval(Builder $query): Builder

@@ -65,9 +65,14 @@ class OverdueInvoices extends TableWidget
      * Carbon returns a float here, and "45.811393477072 hari" is not an
      * ageing bucket anyone can read — compare date to date, not instant to
      * instant.
+     *
+     * abs() because Carbon's diff is also signed. This widget only queries
+     * overdue invoices so the sign is positive today, but that is a property of
+     * the query rather than of this method, and the same expression without
+     * abs() printed "dalam -8 hari" in the buyer portal.
      */
     private static function ageInDays(Invoice $invoice): int
     {
-        return (int) $invoice->due_date->startOfDay()->diffInDays(now()->startOfDay());
+        return (int) abs($invoice->due_date->startOfDay()->diffInDays(now()->startOfDay()));
     }
 }

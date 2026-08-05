@@ -12,6 +12,7 @@ use App\Domain\Pricing\PriceResolver;
 use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Tax\TaxCalculator;
+use App\Models\CustomerUser;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\User;
@@ -44,13 +45,42 @@ class OrderStateMachine
 
     public function submit(Order $order, User $actor, ?string $catatan = null): Order
     {
+        return $this->doSubmit($order, $actor, null, $catatan);
+    }
+
+    /**
+     * A buyer submitting their own order from the portal.
+     *
+     * Deliberately stops at `submitted`, exactly like a sales-entered order:
+     * the buyer proposes, staff confirm. Confirmation is where credit is
+     * checked and stock is reserved, and letting a customer do that for
+     * themselves would be letting them approve their own credit.
+     */
+    public function submitAsBuyer(Order $order, CustomerUser $buyer, ?string $catatan = null): Order
+    {
+        return $this->doSubmit($order, null, $buyer, $catatan);
+    }
+
+    private function doSubmit(
+        Order $order,
+        ?User $actor,
+        ?CustomerUser $buyer,
+        ?string $catatan,
+    ): Order {
         if ($order->lines()->count() === 0) {
             throw new \DomainException('Order tanpa baris tidak bisa diajukan.');
         }
 
-        return $this->transition($order, OrderStatus::Submitted, $actor, $catatan, function (Order $order) {
-            $order->submitted_at = now();
-        });
+        return $this->transition(
+            $order,
+            OrderStatus::Submitted,
+            $actor,
+            $catatan,
+            function (Order $order) {
+                $order->submitted_at = now();
+            },
+            customerActor: $buyer,
+        );
     }
 
     /**
@@ -328,6 +358,10 @@ class OrderStateMachine
     /**
      * The single place `status` is written.
      *
+     * There are three kinds of actor, and the event row keeps them apart: a
+     * staff user, a buyer in the portal, or nobody at all — the scheduled sweep
+     * and the payment webhook, where the actor is a clock or a bank.
+     *
      * @param  (callable(Order): void)|null  $mutate
      * @param  array<string, mixed>  $meta
      */
@@ -338,12 +372,13 @@ class OrderStateMachine
         ?string $alasan = null,
         ?callable $mutate = null,
         array $meta = [],
+        ?CustomerUser $customerActor = null,
     ): Order {
         $from = $order->status;
 
         $this->assertCan($order, $to);
 
-        return DB::transaction(function () use ($order, $from, $to, $actor, $alasan, $mutate, $meta) {
+        return DB::transaction(function () use ($order, $from, $to, $actor, $alasan, $mutate, $meta, $customerActor) {
             $order->status = $to;
 
             if ($mutate !== null) {
@@ -357,6 +392,7 @@ class OrderStateMachine
                 'from_status' => $from,
                 'to_status' => $to,
                 'actor_id' => $actor?->id,
+                'customer_actor_id' => $customerActor?->id,
                 'alasan' => $alasan,
                 'meta' => $meta === [] ? null : $meta,
             ]);
@@ -365,7 +401,14 @@ class OrderStateMachine
                 action: 'order_transition',
                 subject: $order,
                 oldValue: ['status' => $from->value],
-                newValue: ['status' => $to->value],
+                newValue: array_filter([
+                    'status' => $to->value,
+                    // The audit log's actor_id is a staff user by definition.
+                    // A buyer acting on their own order is recorded here rather
+                    // than left looking like the system did it.
+                    'customer_actor_id' => $customerActor?->id,
+                    'customer_actor_email' => $customerActor?->email,
+                ], fn ($v) => $v !== null),
                 actor: $actor,
                 alasan: $alasan,
             );

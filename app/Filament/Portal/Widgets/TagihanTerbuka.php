@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Portal\Widgets;
 
 use App\Domain\Money;
+use App\Filament\Portal\Support\PortalLabels;
 use App\Models\Invoice;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -44,15 +45,16 @@ class TagihanTerbuka extends TableWidget
                     ->date('d/m/Y')
                     ->sortable()
                     // Red only when it is actually late.
-                    ->color(fn (Invoice $record) => $record->due_date->isPast() ? 'danger' : 'gray'),
+                    ->color(fn (Invoice $record) => PortalLabels::isLate($record) ? 'danger' : 'gray'),
 
                 TextColumn::make('status_jatuh_tempo')
                     ->label('Keterangan')
                     ->badge()
-                    ->state(fn (Invoice $record) => $record->due_date->isPast()
-                        ? 'Lewat jatuh tempo'
-                        : 'Jatuh tempo '.$record->due_date->diffForHumans())
-                    ->color(fn (Invoice $record) => $record->due_date->isPast() ? 'danger' : 'gray'),
+                    // Same wording as the Tagihan page. The dashboard and that
+                    // page show the same invoice, and describing one bill two
+                    // ways on one visit is a support call.
+                    ->state(fn (Invoice $record) => PortalLabels::dueLabel($record))
+                    ->color(fn (Invoice $record) => PortalLabels::dueColor($record)),
 
                 TextColumn::make('sisa')
                     ->label('Sisa tagihan')

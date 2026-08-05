@@ -85,6 +85,42 @@ Buyer logins are created by staff on a customer's record in the admin panel.
 There is no self-registration: a wholesale account exists only after the
 business is verified and a credit limit agreed.
 
+### Inside the buyer portal
+
+Built in the order `CLAUDE.md` puts them in, which is the order a restocking
+buyer needs them:
+
+| Screen | What |
+|---|---|
+| Dashboard | Available credit, recent orders each with **Pesan ulang**, open invoices |
+| `/portal/pesanan` | Order history, line detail from the price snapshots |
+| `/portal/katalog` | The catalogue at **this buyer's** resolved prices |
+| `/portal/tagihan` | Invoices, due dates, and the fixed VA to pay into |
+
+**Reorder is the feature.** A B2B buyer restocks the same 15–20 SKUs forever,
+so the modal opens with last time's quantities filled in and every line
+editable; 0 drops a line. It creates a draft and **submits** it — staff still
+confirm, because confirmation is where credit is checked and stock is reserved,
+and neither is a customer's call. A portal-placed order records the buyer in
+`orders.placed_by_customer_user_id` and `order_events.customer_actor_id` rather
+than inventing a staff `created_by`.
+
+Two structural guards, both with tests that fail if they are removed:
+
+- **`ScopedToBuyer`** scopes a resource's *base* query to the signed-in buyer's
+  company, so the list, the record route and global search are all covered at
+  once. `PortalScopingTest` reads the schema and fails if any portal resource
+  over a table with a `company_id` does not use it — the requirement is derived,
+  not remembered. It throws rather than returning null when no buyer is in
+  session, because a null would quietly become `where company_id is null`.
+- **`ReadOnlyInPortal`** means no portal resource has generic create or edit.
+  The one thing a buyer creates is an order, and that goes through the state
+  machine.
+
+The catalogue is deliberately *not* scoped — products are not customer data.
+Only the prices differ, and those come from `resolvePrice()` like everywhere
+else.
+
 Public-site content lives in `config/perusahaan.php` — **the shipped text is
 placeholder and must be replaced before launch**, especially the joint-venture
 partners, since naming a company in public is a claim about a real business

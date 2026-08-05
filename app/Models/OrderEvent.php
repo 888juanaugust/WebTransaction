@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['order_id', 'from_status', 'to_status', 'actor_id', 'alasan', 'meta'])]
+#[Fillable(['order_id', 'from_status', 'to_status', 'actor_id', 'customer_actor_id', 'alasan', 'meta'])]
 class OrderEvent extends Model
 {
     use HasFactory;
@@ -35,5 +35,23 @@ class OrderEvent extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    /** Set when a buyer moved their own order from the portal. */
+    public function customerActor(): BelongsTo
+    {
+        return $this->belongsTo(CustomerUser::class, 'customer_actor_id');
+    }
+
+    /**
+     * Who did this, in words. Three cases, and "the system" is a real answer
+     * rather than a gap: the sweep and the payment webhook have no person
+     * behind them.
+     */
+    public function actorLabel(): string
+    {
+        return $this->actor?->name
+            ?? $this->customerActor?->name
+            ?? 'Sistem';
     }
 }
