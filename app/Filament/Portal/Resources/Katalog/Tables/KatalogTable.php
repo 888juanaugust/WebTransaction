@@ -6,6 +6,7 @@ namespace App\Filament\Portal\Resources\Katalog\Tables;
 
 use App\Domain\Money;
 use App\Domain\Pricing\PriceResolver;
+use App\Filament\Portal\Actions\TambahKeKeranjangAction;
 use App\Models\Company;
 use App\Models\CustomerUser;
 use App\Models\Product;
@@ -53,6 +54,9 @@ class KatalogTable
                         config('pricelist.known_categories'),
                         config('pricelist.known_categories'),
                     )),
+            ])
+            ->recordActions([
+                TambahKeKeranjangAction::make(),
             ])
             ->paginated([25, 50, 100]);
     }

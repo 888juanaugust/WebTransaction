@@ -94,7 +94,8 @@ buyer needs them:
 |---|---|
 | Dashboard | Available credit, recent orders each with **Pesan ulang**, open invoices |
 | `/portal/pesanan` | Order history, line detail from the price snapshots |
-| `/portal/katalog` | The catalogue at **this buyer's** resolved prices |
+| `/portal/katalog` | The catalogue at **this buyer's** resolved prices, with add-to-cart |
+| `/portal/keranjang` | The basket: quantities, indicative totals, checkout |
 | `/portal/tagihan` | Invoices, due dates, and the fixed VA to pay into |
 
 **Reorder is the feature.** A B2B buyer restocks the same 15–20 SKUs forever,
@@ -120,6 +121,34 @@ Two structural guards, both with tests that fail if they are removed:
 The catalogue is deliberately *not* scoped — products are not customer data.
 Only the prices differ, and those come from `resolvePrice()` like everywhere
 else.
+
+#### The cart
+
+**There is not one money column in `carts` or `cart_items`, and there must
+never be one.** A rupiah figure stored in a basket is a second source of truth
+for a number `resolvePrice()` owns and the order line snapshots at `confirmed`
+— stale the moment a price list is published, and exactly the figure a customer
+would quote back at you. A cart holds what was asked for; what it costs is
+answered live by `CartTotals` and stored nowhere. `CartTest` reads the schema
+and fails if a money column appears.
+
+`qty_base` is absent for the same reason: it is derived from the product at
+checkout, so a carton size changed while an item sat in a basket is picked up
+rather than baked in.
+
+Two more things worth knowing:
+
+- **Checkout cannot double-submit.** The cart row is locked and emptied in the
+  same transaction that creates the order, so a double-clicked button or a
+  second tab finds an empty basket and is told so, rather than putting two
+  identical orders on a customer's account.
+- **Short stock and a tight credit limit are warnings, not gates.** Both are
+  decided at `confirmed` under a row lock; a decision made on the cart screen
+  would be stale by the time staff looked at it, and refusing an order the
+  warehouse could actually fill is worse than a warning.
+
+One basket per login rather than per company — two people at the same bengkel
+editing one set of quantities has no sensible resolution.
 
 Public-site content lives in `config/perusahaan.php` — **the shipped text is
 placeholder and must be replaced before launch**, especially the joint-venture
