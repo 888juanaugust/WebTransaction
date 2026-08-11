@@ -8,8 +8,8 @@
     <section class="mx-auto max-w-4xl px-4 py-20">
 
         <div class="text-center">
-            <h1 class="text-3xl font-bold tracking-tight text-brand-900">Masuk</h1>
-            <p class="mt-3 text-brand-900/70">Pilih jenis akun Anda.</p>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Masuk</h1>
+            <p class="mt-3 text-slate-600">Pilih jenis akun Anda.</p>
         </div>
 
         {{--
@@ -22,15 +22,15 @@
         <div class="mt-12 grid gap-6 md:grid-cols-2">
 
             <a href="{{ \Filament\Facades\Filament::getPanel('portal')->getLoginUrl() }}"
-               class="group rounded-2xl border-2 border-brand-600 bg-powder-100/40 p-8 transition
-                      hover:bg-powder-100 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2">
+               class="group rounded-2xl border-2 border-brand-600 bg-slate-50/40 p-8 transition
+                      hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2">
                 <span class="inline-flex rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
                     Pelanggan
                 </span>
 
-                <h2 class="mt-5 text-xl font-bold text-brand-900">Portal Pelanggan</h2>
+                <h2 class="mt-5 text-xl font-bold text-slate-900">Portal Pelanggan</h2>
 
-                <p class="mt-3 leading-relaxed text-brand-900/70">
+                <p class="mt-3 leading-relaxed text-slate-600">
                     Untuk bengkel, toko sparepart, dan distributor yang sudah terdaftar.
                     Lihat sisa limit kredit, tagihan, dan riwayat pesanan Anda.
                 </p>
@@ -41,28 +41,28 @@
             </a>
 
             <a href="{{ \Filament\Facades\Filament::getPanel('admin')->getLoginUrl() }}"
-               class="group rounded-2xl border-2 border-powder-200 p-8 transition hover:border-powder-300
+               class="group rounded-2xl border-2 border-slate-200 p-8 transition hover:border-slate-300
                       focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2">
                 <span class="inline-flex rounded-lg bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
                     Staf
                 </span>
 
-                <h2 class="mt-5 text-xl font-bold text-brand-900">Panel Admin</h2>
+                <h2 class="mt-5 text-xl font-bold text-slate-900">Panel Admin</h2>
 
-                <p class="mt-3 leading-relaxed text-brand-900/70">
+                <p class="mt-3 leading-relaxed text-slate-600">
                     Untuk tim sales, gudang, keuangan, dan pemilik.
                     Kelola order, stok, penagihan, dan daftar harga.
                 </p>
 
-                <span class="mt-6 inline-block font-semibold text-brand-800 group-hover:text-brand-900">
+                <span class="mt-6 inline-block font-semibold text-slate-700 group-hover:text-slate-900">
                     Masuk sebagai staf →
                 </span>
             </a>
 
         </div>
 
-        <div class="mt-12 rounded-xl border border-powder-200 bg-powder-100 p-6 text-center">
-            <p class="text-brand-900/70">
+        <div class="mt-12 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+            <p class="text-slate-600">
                 Belum punya akun pelanggan?
                 <a href="{{ route('publik.kontak') }}" class="font-semibold text-brand-600 hover:text-brand-700">
                     Hubungi kami

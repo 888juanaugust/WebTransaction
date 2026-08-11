@@ -10,6 +10,7 @@ use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
 use App\Filament\Widgets\UnmatchedPayments;
 use App\Support\BrandColors;
+use App\Support\Branding;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -33,7 +34,12 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->brandName('WebTransaction')
+            ->brandName(config('perusahaan.nama_singkat'))
+            // Null until the logo file is committed; Filament then falls back
+            // to the brand name, so a missing file is a wordmark rather than a
+            // broken image.
+            ->brandLogo(fn () => Branding::logoUrl())
+            ->brandLogoHeight('1.75rem')
             ->login()
             // Clean white surfaces, company blue, company red. See BrandColors
             // for why the ramps are declared rather than generated from hex.

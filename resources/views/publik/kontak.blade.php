@@ -5,10 +5,10 @@
 
 @section('konten')
 
-    <section class="border-b border-powder-200 bg-powder-100">
+    <section class="border-b border-slate-200 bg-slate-50">
         <div class="mx-auto max-w-6xl px-4 py-16">
-            <h1 class="text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">Kontak</h1>
-            <p class="mt-4 max-w-2xl text-lg text-brand-900/70">
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Kontak</h1>
+            <p class="mt-4 max-w-2xl text-lg text-slate-600">
                 Hubungi kami untuk pemesanan, pembukaan akun pelanggan, atau kerja sama.
             </p>
         </div>
@@ -18,16 +18,16 @@
         <div class="grid gap-10 lg:grid-cols-2">
 
             <div>
-                <h2 class="text-xl font-bold text-brand-900">Informasi kontak</h2>
+                <h2 class="text-xl font-bold text-slate-900">Informasi kontak</h2>
 
                 <dl class="mt-8 space-y-7">
                     <div>
-                        <dt class="text-sm font-semibold uppercase tracking-wide text-brand-900/60">Alamat</dt>
-                        <dd class="mt-1 leading-relaxed text-brand-900">{{ config('perusahaan.kontak.alamat') }}</dd>
+                        <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">Alamat</dt>
+                        <dd class="mt-1 leading-relaxed text-slate-900">{{ config('perusahaan.kontak.alamat') }}</dd>
                     </div>
 
                     <div>
-                        <dt class="text-sm font-semibold uppercase tracking-wide text-brand-900/60">Telepon</dt>
+                        <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">Telepon</dt>
                         <dd class="mt-1">
                             <a class="text-brand-600 hover:text-brand-700"
                                href="tel:{{ preg_replace('/[^0-9+]/', '', config('perusahaan.kontak.telepon')) }}">
@@ -37,7 +37,7 @@
                     </div>
 
                     <div>
-                        <dt class="text-sm font-semibold uppercase tracking-wide text-brand-900/60">WhatsApp</dt>
+                        <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">WhatsApp</dt>
                         <dd class="mt-1">
                             {{-- wa.me needs the number bare: no +, no spaces. --}}
                             <a class="text-brand-600 hover:text-brand-700"
@@ -49,7 +49,7 @@
                     </div>
 
                     <div>
-                        <dt class="text-sm font-semibold uppercase tracking-wide text-brand-900/60">Email</dt>
+                        <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">Email</dt>
                         <dd class="mt-1">
                             <a class="text-brand-600 hover:text-brand-700"
                                href="mailto:{{ config('perusahaan.kontak.email') }}">
@@ -59,8 +59,8 @@
                     </div>
 
                     <div>
-                        <dt class="text-sm font-semibold uppercase tracking-wide text-brand-900/60">Jam operasional</dt>
-                        <dd class="mt-1 text-brand-900">
+                        <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">Jam operasional</dt>
+                        <dd class="mt-1 text-slate-900">
                             {{ \App\Support\Perusahaan::text('kontak.jam_operasional') }}
                         </dd>
                     </div>
@@ -68,9 +68,9 @@
             </div>
 
             <div class="space-y-6">
-                <div class="rounded-xl border border-powder-200 bg-powder-100 p-7">
-                    <h2 class="text-lg font-semibold text-brand-900">Ingin membuka akun pelanggan?</h2>
-                    <p class="mt-3 leading-relaxed text-brand-900/70">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-7">
+                    <h2 class="text-lg font-semibold text-slate-900">Ingin membuka akun pelanggan?</h2>
+                    <p class="mt-3 leading-relaxed text-slate-600">
                         Akun pelanggan grosir dibuka setelah verifikasi data usaha. Hubungi kami melalui
                         WhatsApp atau email dengan menyertakan nama usaha, alamat, dan NPWP.
                     </p>
@@ -82,14 +82,14 @@
                     </a>
                 </div>
 
-                <div class="rounded-xl border border-powder-200 p-7">
-                    <h2 class="text-lg font-semibold text-brand-900">Sudah punya akun?</h2>
-                    <p class="mt-3 leading-relaxed text-brand-900/70">
+                <div class="rounded-xl border border-slate-200 p-7">
+                    <h2 class="text-lg font-semibold text-slate-900">Sudah punya akun?</h2>
+                    <p class="mt-3 leading-relaxed text-slate-600">
                         Masuk untuk melihat harga Anda, sisa limit kredit, dan faktur.
                     </p>
                     <a href="{{ route('masuk') }}"
-                       class="mt-6 inline-block rounded-md border border-powder-300 bg-white px-6 py-3 text-sm
-                              font-semibold text-brand-800 transition hover:border-brand-600 hover:text-brand-700">
+                       class="mt-6 inline-block rounded-md border border-slate-300 bg-white px-6 py-3 text-sm
+                              font-semibold text-slate-700 transition hover:border-brand-600 hover:text-brand-700">
                         Masuk ke akun
                     </a>
                 </div>

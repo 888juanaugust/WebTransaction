@@ -99,34 +99,23 @@ class ThemeTest extends TestCase
     }
 
     /**
-     * Filament paints solid buttons and active states with shade 600, so a
-     * brand colour has to sit exactly there — naming it elsewhere in the ramp
-     * produces a button that is not the brand colour at all.
+     * Filament paints solid buttons and active states with shade 600, so the
+     * company blue has to sit exactly there — naming it elsewhere in the ramp
+     * produces a washed-out button with poor contrast.
      */
-    public function test_the_brand_colours_sit_on_the_shade_filament_paints_buttons_with(): void
+    public function test_the_company_blue_sits_on_the_shade_filament_paints_buttons_with(): void
     {
-        // #2B3467 and #EB455F in oklch, as Filament's own constants are.
-        $this->assertSame('oklch(0.345 0.089 273.324)', BrandColors::Navy[600]);
-        $this->assertSame('oklch(0.636 0.201 16.300)', BrandColors::Coral[600]);
+        // #1D4ED8 in oklch, as Filament's own constants are expressed.
+        $this->assertSame('oklch(0.488 0.243 264.376)', BrandColors::Blue[600]);
     }
 
-    /**
-     * Powder blue is the exception, deliberately. It is a *tint* (L 0.864), so
-     * at 600 it would be a pale button with white text on it. It sits at 200,
-     * which is where the surfaces and badges that use it actually draw from.
-     */
-    public function test_the_powder_tint_sits_where_a_tint_belongs(): void
-    {
-        $this->assertSame('oklch(0.864 0.040 235.188)', BrandColors::Powder[200]);
-    }
-
-    public function test_the_panel_palette_uses_the_brand_ramps(): void
+    public function test_the_palette_is_blue_and_red(): void
     {
         $palette = BrandColors::panel();
 
-        $this->assertSame(BrandColors::Navy, $palette['primary']);
-        $this->assertSame(BrandColors::Powder, $palette['info']);
-        $this->assertSame(BrandColors::Coral, $palette['danger']);
+        $this->assertSame(BrandColors::Blue, $palette['primary']);
+        $this->assertSame(BrandColors::Blue, $palette['info']);
+        $this->assertSame(BrandColors::Red, $palette['danger']);
     }
 
     /** "Dasbor" is the dictionary word; "Dashboard" is what staff say. */

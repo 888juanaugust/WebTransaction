@@ -7,15 +7,6 @@
 /*
  * Public site palette — the same company colours as the admin panel.
  * See app/Support/BrandColors.php; keep these two in step.
- *
- *   #2B3467  navy    brand, headings, footer
- *   #EB455F  coral   the accent, spent freely here
- *   #BAD7E9  powder  panels and quiet fills
- *   #FCFFE7  cream   the page
- *
- * Coral is rationed inside the panels, where it has to mean "something is
- * wrong". The shopfront has no danger states, so here it is simply the brand's
- * loudest colour and gets used like one.
  */
 @theme {
     /* System stack, not a webfont: the build must not depend on a CDN, and
@@ -23,32 +14,16 @@
     --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
         Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 
-    /* Navy */
-    --color-brand-50: #f2f4fa;
-    --color-brand-100: #e2e6f3;
-    --color-brand-200: #c3cbe6;
-    --color-brand-300: #94a1cf;
-    --color-brand-600: #2b3467;
-    --color-brand-700: #232b56;
-    --color-brand-800: #1e2549;
-    --color-brand-900: #161c39;
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #dbeafe;
+    --color-brand-200: #bfdbfe;
+    --color-brand-600: #1d4ed8;
+    --color-brand-700: #1e40af;
+    --color-brand-900: #1e3a8a;
 
-    /* Coral */
-    --color-accent-50: #fdecef;
-    --color-accent-100: #fbd8de;
-    --color-accent-200: #f7b0bd;
-    --color-accent-600: #eb455f;
-    --color-accent-700: #d12c46;
-
-    /* Powder */
-    --color-powder-50: #f4f9fc;
-    --color-powder-100: #e8f2f8;
-    --color-powder-200: #bad7e9;
-    --color-powder-300: #93bfd9;
-    --color-powder-700: #3f7ea6;
-
-    /* Cream — the page itself */
-    --color-cream: #fcffe7;
+    --color-accent-50: #fef2f2;
+    --color-accent-600: #dc2626;
+    --color-accent-700: #b91c1c;
 }
 
 html {

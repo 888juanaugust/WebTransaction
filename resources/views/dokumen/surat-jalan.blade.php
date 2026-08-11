@@ -80,6 +80,9 @@
 
     <div class="head">
         <div>
+            @if (\App\Support\Branding::hasLogo())
+                <img src="{{ \App\Support\Branding::logoUrl() }}" alt="" style="height:34px;margin-bottom:6px">
+            @endif
             <div class="firm">{{ config('perusahaan.nama') }}</div>
             <div class="muted">{{ config('perusahaan.kontak.alamat') }}</div>
             <div class="muted">

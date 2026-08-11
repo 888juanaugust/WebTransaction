@@ -26,8 +26,9 @@ All content comes from `config/perusahaan.php` through `App\Support\Perusahaan`.
 **The shipped text is placeholder** — especially the partners, since naming a
 company in public is a claim about a real business relationship.
 
-Colours: cream page, navy chrome, coral accent, powder panels. Coral is spent
-freely here — the shopfront has no danger states, unlike the panels.
+Colours: white surfaces, company blue `#1D4ED8`, company red `#DC2626` kept
+scarce. The logo shows when `PERUSAHAAN_LOGO` points at a file that exists;
+otherwise every surface falls back to the wordmark.
 
 ### Admin panel — staff, `web` guard against `users`
 

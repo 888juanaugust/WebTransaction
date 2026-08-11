@@ -68,6 +68,7 @@ partial unique indexes.
 | `app/Http/Controllers/SuratJalanController.php` | The delivery note. No prices on it, by design. |
 | `app/Filament/Portal/Widgets/` | The buyer portal landing screen. |
 | `app/Support/BrandColors.php` | The company palette. |
+| `app/Support/Branding.php` | The logo, and the wordmark fallback when there isn't one. |
 | `config/perusahaan.php` | All public-site content — profile, partners, contact, roadmap. |
 
 ## The three surfaces
@@ -153,10 +154,23 @@ Two more things worth knowing:
 One basket per login rather than per company — two people at the same bengkel
 editing one set of quantities has no sensible resolution.
 
-Public-site content lives in `config/perusahaan.php` — **the shipped text is
-placeholder and must be replaced before launch**, especially the joint-venture
-partners, since naming a company in public is a claim about a real business
-relationship.
+Public-site content lives in `config/perusahaan.php`. The company name is real;
+**the rest of the shipped text is placeholder and must be replaced before
+launch** — address, phone, NPWP, NIB, and above all the joint-venture partners,
+since naming a company in public is a claim about a real business relationship.
+
+### The logo
+
+Set `PERUSAHAAN_LOGO` to a path under `public/` — `images/logo.svg`, say — and
+the mark appears in the public header, both panel sidebars and on the surat
+jalan letterhead. Until that file exists, every one of those falls back to the
+wordmark, so an unset logo looks deliberate rather than broken.
+`App\Support\Branding` checks the file is actually there before emitting a URL:
+a configured path pointing at an undeployed file would render a broken image on
+the company's own shopfront.
+
+SVG for preference — the mark is flat colour and has to stay crisp in a sidebar
+and on a printed delivery note alike.
 
 ### Language
 
@@ -178,28 +192,17 @@ upgrade adds an English key with no Indonesian one.
 
 ## Look and feel
 
-| | Hex | Where |
-|---|---|---|
-| Navy | `#2B3467` | Sidebar, headings, primary buttons |
-| Coral | `#EB455F` | Danger, and the accent on the public site |
-| Powder | `#BAD7E9` | Table headers, hover, hairlines |
-| Cream | `#FCFFE7` | The page itself |
+Clean white surfaces, company blue `#1D4ED8`, company red `#DC2626`.
 
-**The page is cream and the cards are white.** That inversion is the whole
-trick: a white page with white cards needs shadows and grey borders to show
-where anything begins, which is what made the panel read as flat. Cream
-underneath means a white card is visible because it is *lighter* than the page,
-and the borders can be powder blue instead of grey.
+The palette briefly went navy/coral/powder/cream and was taken back to white
+and blue. If it goes again, note that the panel's blue has to sit at **shade
+600** of the ramp in `BrandColors` — Filament paints solid buttons from there,
+and `Color::hex()` keeps only the hue.
 
-Coral is the brand accent *and* the danger colour, which puts pressure on a
-rule worth keeping. **In the panels, coral means something is wrong**: stock is
-short, an invoice is overdue, or the action destroys something. Rows carrying a
-coral *value* get a coral left edge so a manager cannot scroll past them.
-Decoration there is navy, powder and cream — there is enough colour in those
-three that coral never needs spending on ornament.
-
-The public site has no danger states, so it spends coral freely: the hero
-badge, the calls to action, the card edges.
+Red is not decorative anywhere in the panel: it means stock is short, an
+invoice is overdue, or the action destroys something. Rows carrying a red
+*value* get a red left edge so a manager cannot scroll past them. That only
+keeps working if red stays scarce — please don't spend it on ordinary buttons.
 
 Green survives in exactly one role: settled money (`Lunas`, `Selesai`). Every
 other forward action is blue.

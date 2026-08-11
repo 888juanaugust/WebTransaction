@@ -11,7 +11,7 @@
     versions of the company summary drifted apart in config. One language, one
     copy of each sentence.
 
-    Colours: cream page, navy chrome, coral accent, powder panels.
+    Colours: white surfaces, company blue, company red used sparingly.
 --}}
 <!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
@@ -21,7 +21,7 @@
 
     {{-- The shopfront commits to light; see color-scheme in app.css. --}}
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#2b3467">
+    <meta name="theme-color" content="#1d4ed8">
 
     <title>@yield('judul', config('perusahaan.nama')) — {{ config('perusahaan.nama') }}</title>
     <meta name="description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
@@ -35,7 +35,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="flex min-h-screen flex-col bg-cream text-brand-900 antialiased">
+<body class="flex min-h-screen flex-col bg-white text-slate-800 antialiased">
 
     <a href="#konten" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50
         focus:rounded-md focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white">
@@ -52,9 +52,15 @@
         ];
     @endphp
 
-    <header class="sticky top-0 z-40 border-b-2 border-brand-600 bg-brand-600 text-white">
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4" aria-label="Utama">
-            <a href="{{ route('publik.beranda') }}" class="text-lg font-bold tracking-tight text-white">
+            {{-- The mark if there is one, the wordmark if there is not. --}}
+            <a href="{{ route('publik.beranda') }}"
+               class="flex items-center gap-2.5 text-lg font-bold tracking-tight text-brand-600">
+                @if (\App\Support\Branding::hasLogo())
+                    <img src="{{ \App\Support\Branding::logoUrl() }}"
+                         alt="{{ config('perusahaan.nama') }}" class="h-9 w-auto">
+                @endif
                 {{ config('perusahaan.nama_singkat') }}
             </a>
 
@@ -63,8 +69,8 @@
                     <a href="{{ route($rute) }}"
                        @class([
                            'rounded-md px-3 py-2 text-sm font-medium transition',
-                           'bg-white/15 text-white' => request()->routeIs($rute),
-                           'text-powder-200 hover:bg-white/10 hover:text-white' => ! request()->routeIs($rute),
+                           'bg-brand-50 text-brand-700' => request()->routeIs($rute),
+                           'text-slate-600 hover:bg-slate-50 hover:text-brand-700' => ! request()->routeIs($rute),
                        ])
                        @if (request()->routeIs($rute)) aria-current="page" @endif>
                         {{ $label }}
@@ -72,23 +78,22 @@
                 @endforeach
             </div>
 
-            {{-- Coral against navy: the one thing on the bar to click. --}}
             <a href="{{ route('masuk') }}"
-               class="rounded-md bg-accent-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
-                      transition hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-white
-                      focus:ring-offset-2 focus:ring-offset-brand-600">
+               class="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
+                      transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600
+                      focus:ring-offset-2">
                 Masuk
             </a>
         </nav>
 
         {{-- Mobile nav: the desktop row would wrap badly on a phone. --}}
-        <div class="flex gap-1 overflow-x-auto border-t border-white/10 px-4 py-2 md:hidden">
+        <div class="flex gap-1 overflow-x-auto border-t border-slate-100 px-4 py-2 md:hidden">
             @foreach ($menu as $rute => [$label, $labelPendek])
                 <a href="{{ route($rute) }}"
                    @class([
                        'shrink-0 rounded-md px-3 py-1.5 text-sm font-medium',
-                       'bg-white/15 text-white' => request()->routeIs($rute),
-                       'text-powder-200' => ! request()->routeIs($rute),
+                       'bg-brand-50 text-brand-700' => request()->routeIs($rute),
+                       'text-slate-600' => ! request()->routeIs($rute),
                    ])>{{ $labelPendek }}</a>
             @endforeach
         </div>
@@ -98,33 +103,33 @@
         @yield('konten')
     </main>
 
-    <footer class="mt-20 bg-brand-800 text-powder-100">
+    <footer class="mt-20 border-t border-slate-200 bg-slate-50">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
             <div class="sm:col-span-2">
-                <p class="text-lg font-bold text-white">{{ config('perusahaan.nama') }}</p>
-                <p class="mt-2 max-w-md text-sm leading-relaxed text-powder-200">
+                <p class="text-lg font-bold text-brand-600">{{ config('perusahaan.nama') }}</p>
+                <p class="mt-2 max-w-md text-sm leading-relaxed text-slate-600">
                     {{ \App\Support\Perusahaan::text('ringkasan') }}
                 </p>
                 @if (config('perusahaan.legal.nib'))
-                    <p class="mt-4 text-xs text-powder-300">NIB {{ config('perusahaan.legal.nib') }}</p>
+                    <p class="mt-4 text-xs text-slate-500">NIB {{ config('perusahaan.legal.nib') }}</p>
                 @endif
             </div>
 
             <div>
-                <p class="text-sm font-semibold text-white">Halaman</p>
-                <ul class="mt-3 space-y-2 text-sm text-powder-200">
+                <p class="text-sm font-semibold text-slate-900">Halaman</p>
+                <ul class="mt-3 space-y-2 text-sm text-slate-600">
                     @foreach (array_slice($menu, 1) as $rute => [$label, $labelPendek])
-                        <li><a class="transition hover:text-white" href="{{ route($rute) }}">{{ $label }}</a></li>
+                        <li><a class="hover:text-brand-700" href="{{ route($rute) }}">{{ $label }}</a></li>
                     @endforeach
                 </ul>
             </div>
 
             <div>
-                <p class="text-sm font-semibold text-white">Kontak</p>
-                <ul class="mt-3 space-y-2 text-sm text-powder-200">
+                <p class="text-sm font-semibold text-slate-900">Kontak</p>
+                <ul class="mt-3 space-y-2 text-sm text-slate-600">
                     <li>{{ config('perusahaan.kontak.telepon') }}</li>
                     <li>
-                        <a class="transition hover:text-white" href="mailto:{{ config('perusahaan.kontak.email') }}">
+                        <a class="hover:text-brand-700" href="mailto:{{ config('perusahaan.kontak.email') }}">
                             {{ config('perusahaan.kontak.email') }}
                         </a>
                     </li>
@@ -133,8 +138,8 @@
             </div>
         </div>
 
-        <div class="border-t border-white/10">
-            <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-powder-300 sm:flex-row sm:justify-between">
+        <div class="border-t border-slate-200">
+            <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between">
                 <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. Seluruh hak cipta dilindungi.</p>
                 {{--
                     Kebijakan Privasi is required under UU PDP 27/2022 before the

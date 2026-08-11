@@ -8,6 +8,7 @@ use App\Filament\Portal\Widgets\KreditTersedia;
 use App\Filament\Portal\Widgets\OrderTerakhir;
 use App\Filament\Portal\Widgets\TagihanTerbuka;
 use App\Support\BrandColors;
+use App\Support\Branding;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -42,6 +43,8 @@ class PortalPanelProvider extends PanelProvider
             ->path('portal')
             ->authGuard('customer')
             ->brandName(config('perusahaan.nama_singkat').' — Portal Pelanggan')
+            ->brandLogo(fn () => Branding::logoUrl())
+            ->brandLogoHeight('1.75rem')
             ->login()
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors(BrandColors::panel())

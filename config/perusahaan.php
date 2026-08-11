@@ -29,8 +29,20 @@ declare(strict_types=1);
 
 return [
 
-    'nama' => env('PERUSAHAAN_NAMA', 'PT Contoh Sukses Makmur'),
-    'nama_singkat' => env('PERUSAHAAN_NAMA_SINGKAT', 'WebTransaction'),
+    'nama' => env('PERUSAHAAN_NAMA', 'PT Java Indo Intermechanika'),
+    'nama_singkat' => env('PERUSAHAAN_NAMA_SINGKAT', 'Java Indo'),
+
+    /*
+     | Path to the company mark, relative to public/ — e.g. 'images/logo.svg'.
+     |
+     | Null until the file is actually in the repository. Every surface falls
+     | back to the wordmark when this is unset, so a missing file is a plain
+     | text logo rather than a broken image on the shopfront.
+     |
+     | SVG for preference: the mark is flat colour and it has to stay crisp on
+     | a phone, in the panel sidebar, and on a printed surat jalan.
+     */
+    'logo' => env('PERUSAHAAN_LOGO'),
 
     'tagline' => 'Distributor grosir suku cadang otomotif',
 
@@ -134,9 +146,9 @@ return [
     /*
      | Rencana pengembangan — the "future works" page.
      |
-     | Indonesian only: this page is not part of the English home page, so
-     | there is nothing to translate it for. `status` is one of:
-     | selesai | berjalan | rencana.
+     | This is public, so it has to stay honest: an item marked `rencana` that
+     | actually shipped reads as a company that does not know what it built.
+     | `status` is one of: selesai | berjalan | rencana.
      */
     'rencana' => [
         [
@@ -156,13 +168,20 @@ return [
         ],
         [
             'judul' => 'Pemesanan mandiri lewat portal',
-            'status' => 'rencana',
-            'deskripsi' => 'Pelanggan dapat mengulang order sebelumnya dan memesan sendiri.',
+            'status' => 'berjalan',
+            'deskripsi' => 'Pelanggan dapat mengulang order sebelumnya, menyusun keranjang, '
+                .'dan mengajukan pesanan sendiri.',
         ],
         [
             'judul' => 'Katalog produk daring',
+            'status' => 'berjalan',
+            'deskripsi' => 'Katalog lengkap dengan harga khusus per pelanggan, '
+                .'dapat dicari berdasarkan merk, kategori, dan tipe mobil.',
+        ],
+        [
+            'judul' => 'Faktur pajak elektronik (Coretax)',
             'status' => 'rencana',
-            'deskripsi' => 'Katalog lengkap dengan pencarian berdasarkan merk, kategori, dan tipe mobil.',
+            'deskripsi' => 'Ekspor faktur pajak sesuai format impor Coretax.',
         ],
     ],
 
