@@ -29,7 +29,10 @@ class SuratJalanController extends Controller
 {
     public function __invoke(Order $order): View
     {
-        $user = auth()->user();
+        // Named guard, matching the route. `auth()` alone means "the default
+        // guard", and this application has two — a buyer resolved here would
+        // reach role() and fatal, or worse, not.
+        $user = auth('web')->user();
 
         if ($user === null || ! $user->role()->canPickAndShip()) {
             // Sales and finance have no business printing delivery notes;

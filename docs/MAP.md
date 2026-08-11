@@ -45,6 +45,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pengiriman` | Pengiriman | Warehouse, Owner | Pick list, surat jalan, ship, complete |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
+| `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 
@@ -67,6 +68,7 @@ otherwise every surface falls back to the wordmark.
 | `/portal/keranjang` | Cart | Quantities, indicative totals, checkout |
 | `/portal/tagihan` | Invoices | Due dates, sisa tagihan |
 | `/portal/tagihan/{id}` | Invoice detail | Full breakdown + **the VA to pay into** |
+| `/portal/dokumen/faktur/{id}` | Faktur | The printable invoice, **own company only** |
 
 Staff and buyers authenticate on **different guards against different tables**,
 so a buyer session carries no staff identity at all. The isolation is structural
@@ -252,8 +254,8 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- **Invoice PDF** — the surat jalan prints; the faktur does not yet.
-- Faktur CSV export for Coretax
+- Faktur CSV export for Coretax — the faktur prints, but nothing writes the
+  import file or reads an NSFP back
 - Buyer self-service password reset
 - `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)
 - Unallocated payments don't reduce credit exposure — conservative, but wrong

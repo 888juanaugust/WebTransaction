@@ -240,8 +240,41 @@ class OrderTransitionActions
             // Only once stock is actually committed to this order. Printing a
             // delivery note for an order nobody has approved is how goods leave
             // the building without a sale behind them.
-            ->visible(fn (Order $record) => $record->status->holdsReservation()
-                || in_array($record->status, [OrderStatus::Shipped, OrderStatus::Completed], true));
+            //
+            // And only for the roles the route will actually let through:
+            // picking and shipping is the warehouse's job. The controller
+            // enforces this regardless, but a button that 403s when clicked is
+            // a bug report waiting to be filed.
+            ->visible(fn (Order $record) => auth()->user()?->role()->canPickAndShip()
+                && ($record->status->holdsReservation()
+                    || in_array($record->status, [OrderStatus::Shipped, OrderStatus::Completed], true)));
+    }
+
+    /**
+     * The faktur, from the order it was issued against.
+     *
+     * The exact inverse of the surat jalan above, and deliberately so: that
+     * document is all goods and no money and belongs to the warehouse, this one
+     * is all money and no goods and belongs to everyone else. Sales and finance
+     * live on the order screen, and "which invoice was that" should not mean a
+     * trip to another resource.
+     */
+    public static function faktur(string $name = 'faktur'): Action
+    {
+        return Action::make($name)
+            ->label('Faktur')
+            // Neither a printer nor a money-document: the surat jalan above is
+            // already the printer and "Tagihkan" is already the money-document.
+            // Three identical glyphs in one action bar is a coin toss for
+            // whoever is standing at the screen.
+            ->icon('heroicon-o-document-text')
+            ->color('gray')
+            ->url(fn (Order $record) => route('dokumen.faktur', $record->invoice))
+            ->openUrlInNewTab()
+            // Nothing to print until the order has been invoiced, which happens
+            // when it moves to awaiting_payment.
+            ->visible(fn (Order $record) => auth()->user()?->role()->canSeeCreditData()
+                && $record->invoice !== null);
     }
 
     /**
@@ -260,6 +293,7 @@ class OrderTransitionActions
             self::kirim(),
             self::selesaikan(),
             self::suratJalan(),
+            self::faktur(),
             self::tolak(),
         ];
     }

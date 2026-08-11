@@ -78,7 +78,7 @@ partial unique indexes.
 | `/` | Public — company profile, partners, contact, roadmap | none |
 | `/admin` | Staff — orders, stock, billing, price lists | `web` guard, `users` |
 | `/admin/pengiriman` | Warehouse — pick list, surat jalan, ship | `web` guard, warehouse role |
-| `/portal` | Buyers — credit, invoices, order history | `customer` guard, `customer_users` |
+| `/portal` | Buyers — credit, invoices, order history, printable faktur | `customer` guard, `customer_users` |
 
 Staff and buyers authenticate on **different guards against different tables**,
 so a buyer session carries no staff identity at all — the isolation is
@@ -420,6 +420,46 @@ asserts no rupiah figure appears anywhere on it.
 It only renders for an order that has actually committed stock. Before
 `confirmed` nothing is reserved, so a delivery note would describe goods the
 warehouse has not been told to set aside.
+
+## The faktur
+
+The surat jalan's opposite number, and deliberately its exact inverse. That
+document is all goods and no money and only the warehouse may print it; this
+one is all money and no goods and the warehouse may not open it at all.
+
+It prints from the invoice list, from the order screen, and — this is the point
+— from the buyer's own portal, so a customer can send their accountant a copy
+without asking anyone. Two routes, one for each guard:
+
+| Route | Guard | Rule |
+|---|---|---|
+| `/dokumen/faktur/{invoice}` | `web` | `canSeeCreditData()` — Sales, Finance, Owner. Not Warehouse |
+| `/portal/dokumen/faktur/{invoice}` | `customer` | The buyer's own company only |
+
+Two routes rather than one with `auth:web,customer`, because a single route
+would authenticate on whichever guard answered first and the controller would
+then have to work out what kind of visitor it was talking to. One route, one
+guard, one rule — and both render the same document from the same figures, so a
+customer and the salesperson on the phone are looking at the same page.
+
+A buyer asking for another company's invoice gets a **404, not a 403**: a 403
+confirms the invoice exists, which is a slow way of telling a customer how much
+business a competitor is doing.
+
+**DPP and PPN appear on every line**, not only on the total. That is a tax rule
+rather than a layout preference — under PMK 131/2024 the DPP is 11/12 of the
+selling price, and summing rounded lines is not the same number as rounding a
+summed total. The columns are ordered so each one foots to a row in the totals
+block; an invoice whose columns do not add up is an invoice somebody has to
+phone about.
+
+The total is also written out in words (`App\Domain\Terbilang`), which is the
+line a bookkeeper checks the digits against.
+
+**It is not a Faktur Pajak**, and it says so on its face. This is the commercial
+invoice; the tax document is issued through Coretax and comes back with an NSFP,
+which is stored on the invoice record and printed here once it exists. The CSV
+export that feeds Coretax is not built yet.
 
 ## Before launch
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\FakturController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -49,9 +50,37 @@ Route::view('/masuk', 'publik.masuk')->name('masuk');
 | prints identically from any machine, with no panel chrome to strip.
 |
 */
-Route::middleware(['web', 'auth'])
+/*
+ * `auth:web`, not a bare `auth`. Bare `auth` resolves whatever the *default*
+ * guard happens to be at the time, and this application has two — so a staff
+ * document would quietly start accepting buyer sessions the day anything
+ * changed the default. Naming the guard costs four characters.
+ */
+Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/surat-jalan/{order}', SuratJalanController::class)
     ->name('dokumen.surat-jalan');
+
+/*
+ * Faktur — the invoice, and the surat jalan's opposite number: all money, down
+ * to DPP and PPN per line.
+ *
+ * Two routes rather than one, because staff and buyers are different guards
+ * against different tables. A single route carrying `auth:web,customer` would
+ * authenticate on whichever guard answered first, and the controller would then
+ * have to work out which kind of visitor it was talking to before deciding what
+ * they may see. One route, one guard, one rule.
+ *
+ * Both render the same document from the same figures — a customer and the
+ * salesperson discussing an invoice on the phone must be looking at the same
+ * page.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/faktur/{invoice}', [FakturController::class, 'staff'])
+    ->name('dokumen.faktur');
+
+Route::middleware(['web', 'auth:customer'])
+    ->get('/portal/dokumen/faktur/{invoice}', [FakturController::class, 'pelanggan'])
+    ->name('portal.dokumen.faktur');
 
 /*
 |--------------------------------------------------------------------------

@@ -15,6 +15,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'nomor', 'order_id', 'company_id', 'npwp', 'nama_wajib_pajak', 'alamat_pajak',
     'subtotal_rupiah', 'discount_rupiah', 'dpp_rupiah', 'ppn_rupiah', 'total_rupiah',
     'issued_on', 'due_date', 'kode_transaksi',
+    // Written back after the Coretax round trip, which is the one thing that
+    // legitimately changes on an already-issued invoice. `status` stays out —
+    // that follows the payment ledger, not an assignment.
+    'nsfp', 'faktur_exported_at',
 ])]
 class Invoice extends Model
 {

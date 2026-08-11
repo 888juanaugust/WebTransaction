@@ -7,6 +7,7 @@ namespace App\Filament\Portal\Resources\Tagihan\Tables;
 use App\Domain\Money;
 use App\Filament\Portal\Support\PortalLabels;
 use App\Models\Invoice;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -60,6 +61,18 @@ class TagihanTable
             ])
             ->recordActions([
                 ViewAction::make()->label('Lihat'),
+
+                /*
+                 * The thing a buyer actually came here for once they know what
+                 * they owe: a copy to forward to their own accountant. A new
+                 * tab, because the document is a print page with no way back
+                 * into the portal other than the browser's own.
+                 */
+                Action::make('cetak')
+                    ->label('Cetak')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (Invoice $record) => route('portal.dokumen.faktur', $record))
+                    ->openUrlInNewTab(),
             ])
             ->paginated([10, 25, 50]);
     }

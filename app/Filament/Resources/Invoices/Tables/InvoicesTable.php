@@ -27,7 +27,18 @@ class InvoicesTable
                 TextColumn::make('nomor')->label('Nomor')->searchable()->sortable(),
                 TextColumn::make('company.nama')->label('Pelanggan')->searchable(),
                 TextColumn::make('order.nomor')->label('Order')->searchable(),
-                TextColumn::make('issued_on')->label('Tanggal')->date('d/m/Y')->sortable(),
+                /*
+                 * Issue date off by default. This is an AR worklist: the date
+                 * finance acts on is the due date, and carrying both pushed
+                 * "Catat pembayaran" — the action this page exists for — past
+                 * the right edge of the table on a 1500px screen.
+                 */
+                TextColumn::make('issued_on')
+                    ->label('Tanggal')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('due_date')->label('Jatuh tempo')->date('d/m/Y')->sortable(),
 
                 TextColumn::make('dpp_rupiah')
@@ -64,7 +75,17 @@ class InvoicesTable
                         default => 'warning',
                     }),
 
-                TextColumn::make('nsfp')->label('NSFP')->placeholder('— belum ada —')->toggleable(),
+                /*
+                 * Hidden by default. There is no Coretax integration in v1, so
+                 * this column is "— belum ada —" on every row — and it was wide
+                 * enough to push the row actions off the right edge of the
+                 * table, which cost a button that does something for a column
+                 * that says nothing.
+                 */
+                TextColumn::make('nsfp')
+                    ->label('NSFP')
+                    ->placeholder('— belum ada —')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -80,6 +101,24 @@ class InvoicesTable
                     ->query(fn ($query) => $query->overdue()),
             ])
             ->recordActions([
+                /*
+                 * The document itself. Gated on canSeeCreditData() so the
+                 * action does not appear for a role the route would refuse —
+                 * the controller enforces it either way, but an action that
+                 * 403s when clicked is a bug report waiting to be filed.
+                 */
+                Action::make('cetak_faktur')
+                    ->label('Cetak faktur')
+                    // Icon only, with the label as its tooltip. Spelled out, it
+                    // was wide enough to shove "Catat pembayaran" — the action
+                    // finance uses all day — off the right edge of the table.
+                    ->iconButton()
+                    ->tooltip('Cetak faktur')
+                    ->icon('heroicon-o-printer')
+                    ->visible(fn () => auth()->user()->role()->canSeeCreditData())
+                    ->url(fn (Invoice $record) => route('dokumen.faktur', $record))
+                    ->openUrlInNewTab(),
+
                 /*
                  * Manual payment entry, for transfers that did not come
                  * through the gateway. Restricted to Finance and Owner, and it
