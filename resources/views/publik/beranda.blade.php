@@ -27,7 +27,7 @@
             <div class="mt-10 flex flex-wrap gap-3">
                 <a href="{{ route('masuk') }}"
                    class="rounded-md bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-sm
-                          transition hover:bg-brand-700">
+                          transition hover:bg-brand-500">
                     Masuk ke akun Anda
                 </a>
                 <a href="{{ route('publik.kontak') }}"

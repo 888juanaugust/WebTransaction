@@ -101,12 +101,28 @@ class ThemeTest extends TestCase
     /**
      * Filament paints solid buttons and active states with shade 600, so the
      * company blue has to sit exactly there — naming it elsewhere in the ramp
-     * produces a washed-out button with poor contrast.
+     * produces a button that is not the company's colour at all.
      */
     public function test_the_company_blue_sits_on_the_shade_filament_paints_buttons_with(): void
     {
-        // #1D4ED8 in oklch, as Filament's own constants are expressed.
-        $this->assertSame('oklch(0.488 0.243 264.376)', BrandColors::Blue[600]);
+        // #073185 — the logo's own blue — in oklch, as Filament's constants are.
+        $this->assertSame('oklch(0.348 0.148 262.160)', BrandColors::Blue[600]);
+    }
+
+    /**
+     * The panel and the public site draw from two separate declarations of the
+     * same palette, and they have drifted before. The logo's blue has to be in
+     * both or the shopfront and the panel are subtly different companies.
+     */
+    public function test_the_public_site_uses_the_same_blue_as_the_panel(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertStringContainsString('--color-brand-600: #073185;', $css);
+        $this->assertStringContainsString(
+            '--wt-blue: #073185',
+            file_get_contents(resource_path('css/filament/admin/theme.css')),
+        );
     }
 
     public function test_the_palette_is_blue_and_red(): void

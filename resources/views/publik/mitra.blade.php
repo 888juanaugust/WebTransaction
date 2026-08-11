@@ -50,7 +50,7 @@
             </p>
             <a href="{{ route('publik.kontak') }}"
                class="mt-6 inline-block rounded-md bg-brand-600 px-6 py-3 text-sm font-semibold text-white
-                      transition hover:bg-brand-700">
+                      transition hover:bg-brand-500">
                 Hubungi kami
             </a>
         </div>

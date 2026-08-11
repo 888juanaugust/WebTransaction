@@ -6,6 +6,7 @@
 
 /*
  * Public site palette — the same company colours as the admin panel.
+ * Company blue #073185 is the logo's own colour.
  * See app/Support/BrandColors.php; keep these two in step.
  */
 @theme {
@@ -14,12 +15,22 @@
     --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
         Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 
-    --color-brand-50: #eff6ff;
-    --color-brand-100: #dbeafe;
-    --color-brand-200: #bfdbfe;
-    --color-brand-600: #1d4ed8;
-    --color-brand-700: #1e40af;
-    --color-brand-900: #1e3a8a;
+    /* Company blue, taken from the logo. */
+    --color-brand-50: #f0f5ff;
+    --color-brand-100: #dde9ff;
+    --color-brand-200: #c2d8ff;
+    /*
+     * 500 exists so solid buttons can lighten on hover.
+     *
+     * The usual move is to darken, and every button here did — but #073185 is
+     * already dark, so brand-700 under the cursor was a luminance change of
+     * 0.012: no feedback at all. Filament reached the same conclusion for the
+     * panel and lightens; the public site now matches it.
+     */
+    --color-brand-500: #3169d7;
+    --color-brand-600: #073185;
+    --color-brand-700: #00247b;
+    --color-brand-900: #011547;
 
     --color-accent-50: #fef2f2;
     --color-accent-600: #dc2626;

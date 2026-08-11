@@ -56,10 +56,10 @@
                 display: flex; justify-content: space-between; }
         .toolbar { max-width: 760px; margin: 0 auto 16px; display: flex; gap: 8px; }
         .toolbar button, .toolbar a {
-            font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid #2b3467;
-            background: #2b3467; color: #fff; cursor: pointer; text-decoration: none;
+            font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid #073185;
+            background: #073185; color: #fff; cursor: pointer; text-decoration: none;
         }
-        .toolbar a { background: #fff; color: #2b3467; }
+        .toolbar a { background: #fff; color: #073185; }
         @media print {
             body { padding: 0; }
             .toolbar { display: none; }

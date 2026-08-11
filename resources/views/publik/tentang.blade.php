@@ -90,7 +90,7 @@
 
                     <a href="{{ route('publik.kontak') }}"
                        class="mt-6 block rounded-md bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold
-                              text-white transition hover:bg-brand-700">
+                              text-white transition hover:bg-brand-500">
                         Hubungi kami
                     </a>
                 </div>

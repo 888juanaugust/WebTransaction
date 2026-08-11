@@ -31,9 +31,9 @@
 
 @theme {
     /* Light */
-    --wt-blue: #1d4ed8;
-    --wt-blue-dark: #1e40af;
-    --wt-blue-tint: #eff6ff;
+    --wt-blue: #073185;   /* the logo */
+    --wt-blue-dark: #00247b;
+    --wt-blue-tint: #f0f5ff;
     --wt-red: #dc2626;
     --wt-red-tint: #fef2f2;
     --wt-line: #e2e8f0;
@@ -41,8 +41,8 @@
 
     /* Dark — same hues, re-weighted for a dark ground. Navy on near-black is
        unreadable, so the blue lightens rather than the background darkening. */
-    --wt-blue-on-dark: #93c5fd;
-    --wt-blue-rule-dark: #1e3a8a;
+    --wt-blue-on-dark: #9bbefd;
+    --wt-blue-rule-dark: #073185;
     --wt-red-on-dark: #f87171;
     --wt-line-dark: #223049;
     --wt-surface-dark: #131c2e;
@@ -161,7 +161,7 @@ html.dark {
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
-        background-color: rgb(29 78 216 / 0.22);
+        background-color: rgb(7 49 133 / 0.40);
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-label,
@@ -182,7 +182,7 @@ html.dark {
     }
 
     .fi-ta-row:hover {
-        background-color: rgb(29 78 216 / 0.14);
+        background-color: rgb(7 49 133 / 0.28);
     }
 }
 

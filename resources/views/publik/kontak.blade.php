@@ -77,7 +77,7 @@
                     <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', config('perusahaan.kontak.whatsapp')) }}"
                        target="_blank" rel="noopener"
                        class="mt-6 inline-block rounded-md bg-brand-600 px-6 py-3 text-sm font-semibold text-white
-                              transition hover:bg-brand-700">
+                              transition hover:bg-brand-500">
                         Hubungi via WhatsApp
                     </a>
                 </div>

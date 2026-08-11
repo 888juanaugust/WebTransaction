@@ -21,7 +21,7 @@
 
     {{-- The shopfront commits to light; see color-scheme in app.css. --}}
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#1d4ed8">
+    <meta name="theme-color" content="#073185">
 
     <title>@yield('judul', config('perusahaan.nama')) — {{ config('perusahaan.nama') }}</title>
     <meta name="description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
@@ -80,7 +80,7 @@
 
             <a href="{{ route('masuk') }}"
                class="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
-                      transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600
+                      transition hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600
                       focus:ring-offset-2">
                 Masuk
             </a>

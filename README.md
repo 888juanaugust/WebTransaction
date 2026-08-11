@@ -192,12 +192,17 @@ upgrade adds an English key with no Indonesian one.
 
 ## Look and feel
 
-Clean white surfaces, company blue `#1D4ED8`, company red `#DC2626`.
+Clean white surfaces, company blue `#073185` — the logo's own colour — and
+company red `#DC2626`.
 
-The palette briefly went navy/coral/powder/cream and was taken back to white
-and blue. If it goes again, note that the panel's blue has to sit at **shade
-600** of the ramp in `BrandColors` — Filament paints solid buttons from there,
-and `Color::hex()` keeps only the hue.
+Two things to know before touching it:
+
+- The blue has to sit at **shade 600** of the ramp in `BrandColors`. Filament
+  paints solid buttons and active states from there, and `Color::hex()` will not
+  do it: it keeps only the hue and applies a generic lightness curve.
+- **Solid buttons lighten on hover, they do not darken.** `#073185` is dark
+  enough that the usual darkening step was a luminance change of 0.012 — no
+  feedback at all. Both the panel and the public site lighten to shade 500.
 
 Red is not decorative anywhere in the panel: it means stock is short, an
 invoice is overdue, or the action destroys something. Rows carrying a red
