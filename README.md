@@ -57,6 +57,8 @@ partial unique indexes.
 | `app/Domain/Pricing/PriceResolver.php` | The one pricing function. Everything calls it. |
 | `app/Domain/Tax/TaxCalculator.php` | PPN under PMK 131/2024. |
 | `app/Domain/Stock/StockLedger.php` | Append-only stock ledger, reservations. |
+| `app/Domain/Stock/InventoryValuation.php` | Moving-average cost, COGS, inventory value. |
+| `app/Domain/Purchasing/GoodsReceiptPoster.php` | Goods in: stock rises, average cost moves. |
 | `app/Domain/Credit/CreditChecker.php` | Credit exposure and limit checks. |
 | `app/Domain/Orders/OrderStateMachine.php` | Every order transition. |
 | `app/Domain/Payments/PaymentLedger.php` | Append-only money ledger. |
@@ -78,6 +80,7 @@ partial unique indexes.
 | `/` | Public — company profile, partners, contact, roadmap | none |
 | `/admin` | Staff — orders, stock, billing, price lists | `web` guard, `users` |
 | `/admin/pengiriman` | Warehouse — pick list, surat jalan, ship | `web` guard, warehouse role |
+| `/admin/penerimaan` | Goods receipt — stock in, average cost | `web` guard, Finance/Owner |
 | `/portal` | Buyers — credit, invoices, order history, printable faktur | `customer` guard, `customer_users` |
 
 Staff and buyers authenticate on **different guards against different tables**,
@@ -377,7 +380,7 @@ Two safety rules worth knowing before you touch the importer:
 | Role | Can | Cannot |
 |---|---|---|
 | Sales | Create orders, see prices | Override credit limit, confirm payment |
-| Warehouse | Pick, ship, print surat jalan | See prices or customer credit data |
+| Warehouse | Pick, ship, print surat jalan | See prices, costs or customer credit data |
 | Finance | Confirm payments, manage credit + AR | Edit order line prices |
 | Owner | Everything + audit log | — |
 
@@ -420,6 +423,85 @@ asserts no rupiah figure appears anywhere on it.
 It only renders for an order that has actually committed stock. Before
 `confirmed` nothing is reserved, so a delivery note would describe goods the
 warehouse has not been told to set aside.
+
+## Goods receipt and costing
+
+Two gaps that made the system unable to describe its own inventory.
+
+**Stock could only go down.** `StockLedger::record()` accepts any of seven
+`MovementReason`s, and the application only ever wrote one: `Pengiriman`. There
+was no screen and no code path by which goods arrived, so a warehouse drained
+monotonically until the availability check started refusing orders — which makes
+Phase 1, "staff enter real orders", impossible to actually run.
+
+`/admin/penerimaan` is the document that fixes it. Draft until posted; posting
+writes the movements and moves the average cost in one transaction, and a posted
+receipt is never edited — a mistake is corrected with an opposing document, for
+the same reason a stock movement is never updated in place.
+
+**Nothing knew what anything cost.** There was no cost field anywhere in the
+schema, so COGS, inventory value and margin could not be computed at all.
+
+### Why cost lives on the movement
+
+A movement records what happened at a moment. If the cost that applied at that
+moment was never written down, no later migration can recover it — you would be
+guessing at history and filing the guess as an accounting record. This was the
+one gap that got more expensive every day the system ran.
+
+`stock_movements.value_rupiah` is signed and follows the quantity: summing it
+over a period is the movement of inventory value, and summing it over shipments
+is COGS.
+
+### Why a (quantity, value) pair
+
+The obvious design stores a unit cost and recomputes it on each receipt. It
+drifts: money here is integer rupiah, so every recomputation rounds, and after a
+few hundred receipts the stated cost times the quantity on hand no longer equals
+what was paid.
+
+`product_costs` holds quantity and total value instead. Value is only ever added
+to or subtracted from, never recomputed, and unit cost is derived when somebody
+asks — so rounding happens once and never accumulates. `InventoryCostingTest`
+asserts the consequence on deliberately awkward numbers: **everything paid in
+comes back out as COGS, to the rupiah, by the time the shelf is empty.**
+
+One average for the company rather than one per warehouse. Inventory is valued
+for the entity, and it makes a transfer value-neutral by construction — no
+shuffling of stock between buildings can invent or destroy value.
+
+### COGS is frozen, not derived
+
+A shipment stamps the average standing at that instant. A receipt arriving next
+week moves the average for everything after it and changes nothing before it,
+which is what stops last month's gross margin from shifting because somebody
+bought stock today.
+
+### Opening stock
+
+Stock that predates costing sits in the ledger with no value, and is reported by
+`unvaluedQuantity()` rather than counted as reconciliation drift — a check that
+always cries wolf gets ignored on the day it is right. The cure is an
+opening-balance receipt: count the shelf and enter what is on it at its known
+cost, from a supplier record standing for "saldo awal".
+
+Until that is done, inventory value is understated and shipments of that stock
+are recorded with a **null** cost rather than a zero one. Zero reads as infinite
+margin, and nobody notices until it is in front of the owner.
+
+### Who sees cost
+
+`canSeeCost()` is Finance and Owner — one role tighter than `canSeeCreditData()`,
+and the missing role is Sales. What a customer pays is a salesperson's job; what
+we paid is not, because cost plus selling price is margin, and margin in the
+hands of whoever negotiates the discount changes how the discount gets
+negotiated.
+
+A named compromise: the person who physically counts the cartons is warehouse
+staff, and they cannot enter this document, because it carries what we paid.
+Splitting it — warehouse records quantities, finance attaches costs and posts —
+is the right shape and is not built. Until it is, receipts are entered from the
+paperwork rather than from the loading bay.
 
 ## The faktur
 

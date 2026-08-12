@@ -45,6 +45,8 @@ otherwise every surface falls back to the wordmark.
 | `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
 | `/admin/pengiriman` | Pengiriman | Warehouse, Owner | Pick list, surat jalan, ship, complete |
+| `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
+| `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
@@ -152,6 +154,30 @@ and neither is a customer's call.
 
 Reserved at `confirmed`, decremented at `shipped`.
 
+### Costing — moving average, frozen at the movement
+
+| Function | Decides |
+|---|---|
+| `GoodsReceiptPoster::post` | Stock arrives and the average moves — one transaction, once |
+| `InventoryValuation::applyReceipt` | Adds quantity and value to the pair. No division |
+| `InventoryValuation::applyIssue` | **What goods cost when they leave.** For a sale, that is COGS |
+| `InventoryValuation::costOfGoodsSold` | Sums the value that left through shipments |
+| `InventoryValuation::totalValue` | What the stock is worth |
+| `InventoryValuation::unvaluedQuantity` | Ledger quantity the valuation never saw — needs an opening balance |
+| `InventoryValuation::reconcile` | Replays *valued* movements. **Must always change nothing** |
+
+Cost lives on the movement, because a movement records what happened at a
+moment: if the cost that applied then was never written down, no later
+migration can recover it.
+
+Held as a **(quantity, value) pair**, not a unit cost — integer rupiah means
+recomputing a unit cost rounds every time, and the drift compounds until
+inventory value stops tying to the ledger. One average for the company, not per
+warehouse, which makes a transfer value-neutral by construction.
+
+A shipment freezes the average standing at that instant. A later purchase moves
+the average for everything after it and changes nothing before it.
+
 ### Credit
 
 | Function | Decides |
@@ -219,7 +245,7 @@ the real file have headers that disagree with the data below them.
 | Role | Can | Cannot |
 |---|---|---|
 | Sales | Create orders, see prices | Override credit, confirm payment |
-| Warehouse | Pick, ship, print surat jalan | See prices or credit data |
+| Warehouse | Pick, ship, print surat jalan | See prices, costs or credit data |
 | Finance | Confirm payments, manage credit + AR | Edit order line prices |
 | Owner | Everything + audit log | — |
 
@@ -263,6 +289,20 @@ All idempotent — assume they run twice.
 - Unallocated payments don't reduce credit exposure — conservative, but wrong
 - Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
+
+Still absent on the buy side, and none of it is decided against — it is simply
+not built:
+
+- Purchase orders and supplier bills (accounts payable). A goods receipt records
+  what arrived; nothing records what was ordered or what is owed for it
+- Credit note / nota retur — the Syarat Penjualan describe a returns process the
+  system cannot record
+- Transfer and stock-opname documents. Both movement reasons exist with no
+  paperwork pairing an out with an in, or approving a count variance
+- General ledger and chart of accounts. `payment_entries` is a single-sided cash
+  ledger; nothing posts double entry, so there is no trial balance
+- Landed cost — duty and freight never reach unit cost
+- Fiscal period close. Nothing can be locked against a back-dated movement
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.
