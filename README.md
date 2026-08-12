@@ -461,9 +461,63 @@ invoice; the tax document is issued through Coretax and comes back with an NSFP,
 which is stored on the invoice record and printed here once it exists. The CSV
 export that feeds Coretax is not built yet.
 
+## The legal pages
+
+`/kebijakan-privasi` and `/syarat-penjualan`, both public, both linked from the
+footer of every page. The terms are also linked from the checkout dialogue,
+because they say a buyer accepts them by placing an order and that is only true
+if the buyer can reach them from the screen where they place it.
+
+**Both are a draft and need a lawyer before launch.** They are written to be
+accurate about what this software actually does — which is the part a lawyer
+cannot check for you — but that is not the same thing as legal sufficiency.
+
+### The privacy notice renders from the schema
+
+A privacy policy is a factual claim about a database. Databases change every
+week; policies get written once and quietly become false. UU PDP Pasal 21
+requires the notice to state the *types* of data processed, so "we may collect
+information about you" is not a policy — it is an admission that nobody checked.
+
+So the data lives in `app/Support/Legal/DataInventory.php`, the notice renders
+from it, and `LegalPagesTest` reads the live schema and fails the build if any
+column of any inventoried table is unclassified:
+
+```
+New column(s) on `customer_users` that the privacy notice does not account
+for: nomor_ktp.
+Add each one to App\Support\Legal\DataInventory under `personal` if it holds
+or identifies personal data, or under `bukan` if it does not.
+```
+
+Adding a column is therefore a two-line change, and forgetting the second line
+is a red build rather than a false public statement.
+
+Two things the notice would have got wrong without an audit: the audit log
+stores an **IP address**, which is an identifier under UU PDP; and raw gateway
+callbacks are kept **verbatim and permanently** for idempotency, and can name
+the payer. Both are disclosed rather than filed under "technical data".
+
+The cookie section is also asserted — a test compares it against the cookies the
+home page actually sets, because the first draft claimed there were none and
+there are two.
+
+### What the terms promise, the code has to honour
+
+Price binds at `confirmed`, because that is when the snapshot is taken. The
+stock-reservation window is read from the same setting `ReleaseStaleReservations`
+obeys, and a test asserts the two agree.
+
 ## Before launch
 
 - PSE Lingkup Privat registration with Komdigi via OSS → PB-UMKU.
-- Kebijakan Privasi page (UU PDP 27/2022).
-- Written terms of sale covering credit terms, late payment, returns, delivery.
+- **Have a lawyer review both legal pages.**
+- **Decide the two values marked `>>> PUTUSKAN` in `config/legal.php`** — the
+  late-payment rate and the claim window. They default to ordinary Indonesian
+  practice; a rate nobody intends to enforce makes the whole document look
+  decorative.
+- Set a real address for privacy requests (`LEGAL_PRIVASI_EMAIL`) and confirm
+  with counsel whether a DPO is required under UU PDP Pasal 53.
+- Fill in the real company address, phone, NPWP and NIB — the legal pages print
+  them, and a privacy policy giving `Jl. Contoh No. 1` is worse than none.
 - Nightly encrypted `pg_dump`, off-box. Test the restore.

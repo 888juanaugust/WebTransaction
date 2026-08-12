@@ -19,6 +19,8 @@ computes a price, moves stock, or writes an order status.
 | `/tentang-kami` | Tentang | About: legal entity, brands, categories |
 | `/mitra` | Mitra | Joint-venture partners |
 | `/kontak` | Kontak | Address, phone, hours |
+| `/kebijakan-privasi` | Kebijakan Privasi | UU PDP 27/2022. Renders from `DataInventory` |
+| `/syarat-penjualan` | Syarat Penjualan | B2B terms: credit, late payment, delivery, returns |
 | `/rencana-pengembangan` | Rencana | Roadmap |
 | `/masuk` | Chooser | Pick staff login or buyer login |
 
@@ -262,5 +264,7 @@ All idempotent — assume they run twice.
 - Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
 
-Launch blockers that aren't code: PSE Lingkup Privat registration, Kebijakan
-Privasi page (UU PDP 27/2022), written terms of sale.
+Launch blockers that aren't code: PSE Lingkup Privat registration, and a
+lawyer's review of the two legal pages — those are written but are a draft.
+Two commercial values in `config/legal.php` are marked `>>> PUTUSKAN` and need
+the owner's decision: the late-payment rate and the claim window.
