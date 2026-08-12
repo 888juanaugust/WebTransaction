@@ -20,7 +20,11 @@ class ProductsTable
     {
         $showPrices = auth()->user()?->role()->canSeePrices() ?? false;
 
+        $showCost = auth()->user()?->role()->canSeeCost() ?? false;
+
         return $table
+            // One query for every row's cost, not one per row.
+            ->modifyQueryUsing(fn ($query) => $showCost ? $query->with('cost') : $query)
             ->columns(array_values(array_filter([
                 TextColumn::make('kode')->label('KODE')->searchable()->sortable(),
                 TextColumn::make('merk')->label('Merk')->searchable()->sortable(),
@@ -38,6 +42,24 @@ class ProductsTable
                     ? TextColumn::make('harga_list')
                         ->label('Harga list')
                         ->state(fn (Product $record, $livewire) => self::listPrice($record, $livewire))
+                    : null,
+
+                /*
+                 * What we paid, on a tighter permission than what we sell for.
+                 * Cost beside list price is margin, and margin belongs to
+                 * finance and the owner — see Role::canSeeCost().
+                 *
+                 * Hidden by default even for them: this is the catalogue screen,
+                 * and most of the time the question is "what do we sell this
+                 * for", not "what did we pay".
+                 */
+                $showCost
+                    ? TextColumn::make('harga_pokok')
+                        ->label('HPP rata-rata')
+                        ->toggleable(isToggledHiddenByDefault: true)
+                        ->state(fn (Product $record) => $record->cost === null || $record->cost->qty_base <= 0
+                            ? '—'
+                            : Money::format($record->cost->unitCost()))
                     : null,
 
                 IconColumn::make('aktif')->label('Aktif')->boolean(),

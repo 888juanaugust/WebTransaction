@@ -49,6 +49,9 @@ class RoleMatrixTest extends TestCase
             'sales' => [Role::Sales, [
                 'canSeePrices' => true,
                 'canSeeCreditData' => true,
+                // Sales quote the customer's price; what we paid is not their business.
+                'canSeeCost' => false,
+                'canRecordPurchases' => false,
                 'canCreateOrders' => true,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => true,
@@ -59,6 +62,8 @@ class RoleMatrixTest extends TestCase
             'warehouse' => [Role::Warehouse, [
                 'canSeePrices' => false,
                 'canSeeCreditData' => false,
+                'canSeeCost' => false,
+                'canRecordPurchases' => false,
                 'canCreateOrders' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,
@@ -69,6 +74,8 @@ class RoleMatrixTest extends TestCase
             'finance' => [Role::Finance, [
                 'canSeePrices' => true,
                 'canSeeCreditData' => true,
+                'canSeeCost' => true,
+                'canRecordPurchases' => true,
                 'canCreateOrders' => false,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => false,
@@ -79,6 +86,8 @@ class RoleMatrixTest extends TestCase
             'owner' => [Role::Owner, [
                 'canSeePrices' => true,
                 'canSeeCreditData' => true,
+                'canSeeCost' => true,
+                'canRecordPurchases' => true,
                 'canCreateOrders' => true,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => true,
@@ -211,6 +220,52 @@ class RoleMatrixTest extends TestCase
             'finance' => [Role::Finance, true, true, false],
             'owner' => [Role::Owner, true, true, true],
         ];
+    }
+
+    /**
+     * Warehouse must not reach a resource nobody deliberately opened to them.
+     *
+     * The tuple list above names three resources, which means a resource added
+     * later is simply not covered — and "somebody forgot to gate the new
+     * screen" is the way the warehouse rule actually breaks, not a change to
+     * one of the three that were already thought about.
+     *
+     * So this walks every resource in the panel and requires each one to be on
+     * an explicit allowlist. A new resource is denied by default here, and
+     * opening it to the warehouse means saying so in this test.
+     */
+    public function test_warehouse_reaches_no_admin_resource_that_was_not_deliberately_opened(): void
+    {
+        $allowed = [
+            // Pick lists and shipping: the warehouse's own work. The resource
+            // hides every money column for them.
+            'OrderResource',
+            // The catalogue, so a packer can look a part number up. Prices are
+            // hidden by canSeePrices().
+            'ProductResource',
+        ];
+
+        $this->actingAs(User::factory()->role(Role::Warehouse)->create());
+
+        $reachable = [];
+
+        foreach (glob(app_path('Filament/Resources/*/*Resource.php')) as $file) {
+            $class = 'App\\Filament\\Resources\\'.basename(dirname($file)).'\\'.basename($file, '.php');
+
+            if (class_exists($class) && $class::canViewAny()) {
+                $reachable[] = class_basename($class);
+            }
+        }
+
+        sort($reachable);
+        sort($allowed);
+
+        $this->assertSame($allowed, $reachable, sprintf(
+            "Warehouse can reach: %s.\nAnything not on the allowlist in this test is a screen that "
+            .'was added without deciding whether the warehouse may see it. Warehouse must never see '
+            .'prices, costs, or customer credit data.',
+            implode(', ', $reachable),
+        ));
     }
 
     #[DataProvider('panelAccess')]

@@ -24,6 +24,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_INVOICE = 'invoice';
 
+    public const SCOPE_GOODS_RECEIPT = 'goods_receipt';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -71,5 +73,11 @@ class DocumentNumberGenerator
     public function nextInvoiceNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_INVOICE, 'INV', $date);
+    }
+
+    /** Terima Barang: TB-202608-0001. */
+    public function nextGoodsReceiptNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_GOODS_RECEIPT, 'TB', $date);
     }
 }

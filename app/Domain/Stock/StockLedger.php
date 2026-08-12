@@ -34,6 +34,22 @@ class StockLedger
      * Callers already inside a transaction get this joined to theirs, which is
      * what the order flows want.
      */
+    public function __construct(
+        private readonly InventoryValuation $valuation = new InventoryValuation,
+    ) {}
+
+    /**
+     * Record a movement and update the cached level in one transaction.
+     *
+     * Callers already inside a transaction get this joined to theirs, which is
+     * what the order flows want.
+     *
+     * `$valueRupiah` is the value the goods carry *into* stock, positive, and
+     * is only meaningful for an inbound movement — a goods receipt knows what
+     * it paid. Outbound movements do not take a value: what they are worth is
+     * decided by the running average, not by whoever is writing the movement,
+     * which is the whole reason cost cannot be argued with after the fact.
+     */
     public function record(
         string $sku,
         int $warehouseId,
@@ -43,20 +59,32 @@ class StockLedger
         ?string $referenceId = null,
         ?User $actor = null,
         ?string $catatan = null,
+        ?int $valueRupiah = null,
     ): StockMovement {
         if ($qtySigned === 0) {
             throw new LogicException('A stock movement of zero is not a movement.');
         }
 
+        if ($valueRupiah !== null && $qtySigned < 0) {
+            throw new LogicException(
+                'An outbound movement is valued by the running average, not by its caller.'
+            );
+        }
+
         return DB::transaction(function () use (
-            $sku, $warehouseId, $qtySigned, $reason, $referenceType, $referenceId, $actor, $catatan
+            $sku, $warehouseId, $qtySigned, $reason, $referenceType, $referenceId,
+            $actor, $catatan, $valueRupiah
         ) {
             $level = $this->lockLevel($sku, $warehouseId);
+
+            [$unitCost, $value] = $this->valueOf($sku, $qtySigned, $valueRupiah);
 
             $movement = StockMovement::create([
                 'sku' => $sku,
                 'warehouse_id' => $warehouseId,
                 'qty_signed' => $qtySigned,
+                'unit_cost_rupiah' => $unitCost,
+                'value_rupiah' => $value,
                 'reason' => $reason->value,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
@@ -69,6 +97,32 @@ class StockLedger
 
             return $movement;
         });
+    }
+
+    /**
+     * Move the running average for one movement, and report what to stamp on it.
+     *
+     * @return array{0: ?int, 1: ?int} unit cost and signed value
+     */
+    private function valueOf(string $sku, int $qtySigned, ?int $valueRupiah): array
+    {
+        if ($qtySigned > 0) {
+            // Inbound with no stated value — a correction or a transfer in.
+            // It enters at the average it already carries, which keeps the
+            // total value unchanged for a transfer and is the only defensible
+            // figure for an adjustment nobody paid for.
+            $value = $valueRupiah ?? ($this->valuation->unitCost($sku) * $qtySigned);
+
+            $cost = $this->valuation->applyReceipt($sku, $qtySigned, $value);
+
+            return [$cost->unitCost(), $value];
+        }
+
+        $issued = $this->valuation->applyIssue($sku, -$qtySigned);
+
+        return $issued->valued
+            ? [$issued->unitCost, -$issued->value]
+            : [null, null];
     }
 
     /**
@@ -191,10 +245,23 @@ class StockLedger
             foreach ($held as $reservation) {
                 $level = $this->lockLevel($reservation->sku, $reservation->warehouse_id);
 
+                /*
+                 * COGS, frozen here.
+                 *
+                 * The average that applies is the one standing at the moment
+                 * the goods leave. A receipt arriving tomorrow moves the
+                 * average for everything after it and changes nothing about
+                 * this shipment — which is what stops last month's gross margin
+                 * from shifting because somebody bought stock today.
+                 */
+                $issued = $this->valuation->applyIssue($reservation->sku, $reservation->qty_base);
+
                 $movements[] = StockMovement::create([
                     'sku' => $reservation->sku,
                     'warehouse_id' => $reservation->warehouse_id,
                     'qty_signed' => -$reservation->qty_base,
+                    'unit_cost_rupiah' => $issued->unitCost,
+                    'value_rupiah' => $issued->valued ? -$issued->value : null,
                     'reason' => MovementReason::Pengiriman->value,
                     'reference_type' => Order::class,
                     'reference_id' => (string) $order->id,

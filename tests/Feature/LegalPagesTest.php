@@ -14,6 +14,7 @@ use App\Support\Legal\DataInventory;
 use App\Support\Legal\Terms;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -81,6 +82,47 @@ class LegalPagesTest extends TestCase
             $table,
             implode(', ', $phantom),
         ));
+    }
+
+    /**
+     * Every table in the database must be classified, one way or the other.
+     *
+     * This is the half that was missing. The column check above only walks
+     * tables the inventory already knows about, so a brand-new table holding
+     * personal data was invisible to it — which is exactly what happened when
+     * suppliers and goods receipts arrived. A guard that only checks what it
+     * was already told about is not a guard.
+     */
+    public function test_every_table_in_the_database_is_classified(): void
+    {
+        $tables = collect(DB::select(
+            'SELECT tablename FROM pg_tables WHERE schemaname = current_schema() ORDER BY tablename'
+        ))->pluck('tablename');
+
+        $classified = [
+            ...array_keys(DataInventory::tables()),
+            ...DataInventory::tablesWithoutPersonalData(),
+        ];
+
+        $unclassified = $tables->reject(fn (string $t) => in_array($t, $classified, true))->values()->all();
+
+        $this->assertSame([], $unclassified, sprintf(
+            "Table(s) the privacy notice has never been told about: %s.\n".
+            'Add each to App\\Support\\Legal\\DataInventory — to tables() if it holds anything '.
+            'about an identifiable person, or to tablesWithoutPersonalData() if it does not.',
+            implode(', ', $unclassified),
+        ));
+    }
+
+    /** And nothing may be claimed as unclassifiable that no longer exists. */
+    public function test_the_no_personal_data_list_names_only_real_tables(): void
+    {
+        foreach (DataInventory::tablesWithoutPersonalData() as $table) {
+            $this->assertNotEmpty(
+                Schema::getColumnListing($table),
+                "the inventory lists `{$table}` as holding no personal data, but it does not exist"
+            );
+        }
     }
 
     /**

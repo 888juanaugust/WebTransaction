@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Append-only. Never UPDATE, never DELETE — insert the opposite movement.
  */
 #[Fillable([
-    'sku', 'warehouse_id', 'qty_signed', 'reason',
+    'sku', 'warehouse_id', 'qty_signed', 'unit_cost_rupiah', 'value_rupiah', 'reason',
     'reference_type', 'reference_id', 'actor_id', 'catatan',
 ])]
 class StockMovement extends Model
@@ -26,6 +26,8 @@ class StockMovement extends Model
     {
         return [
             'qty_signed' => 'integer',
+            'unit_cost_rupiah' => 'integer',
+            'value_rupiah' => 'integer',
             'created_at' => 'datetime',
         ];
     }

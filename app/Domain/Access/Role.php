@@ -37,6 +37,38 @@ enum Role: string
         return in_array($this, [self::Sales, self::Finance, self::Owner], true);
     }
 
+    /**
+     * Purchase cost, average cost, inventory value, and therefore margin.
+     *
+     * Tighter than canSeeCreditData() by one role, and the missing role is
+     * Sales. What a customer pays is a salesperson's job; what we paid is not.
+     * Cost plus selling price is margin, and margin in the hands of whoever
+     * negotiates the discount changes how the discount gets negotiated.
+     *
+     * Warehouse is excluded for the same reason it is excluded everywhere else.
+     */
+    public function canSeeCost(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /**
+     * Record goods arriving, and post the receipt that values them.
+     *
+     * Finance and Owner, because the document is entered from the supplier's
+     * invoice and carries what we paid on every line.
+     *
+     * This is a compromise worth naming: the person who physically counts the
+     * cartons is warehouse staff, and they cannot enter this. Splitting it —
+     * warehouse records quantities, finance attaches costs and posts — is the
+     * right shape and is not built. Until it is, receipts are entered from the
+     * paperwork rather than from the loading bay.
+     */
+    public function canRecordPurchases(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
     public function canCreateOrders(): bool
     {
         return in_array($this, [self::Sales, self::Owner], true);

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * KODE is the primary key. One row = one KODE.
@@ -48,5 +49,11 @@ class Product extends Model
     public function movements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'sku', 'kode');
+    }
+
+    /** Moving-average cost. Null until this SKU has ever been received. */
+    public function cost(): HasOne
+    {
+        return $this->hasOne(ProductCost::class, 'sku', 'kode');
     }
 }

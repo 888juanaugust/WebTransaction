@@ -187,6 +187,73 @@ final class DataInventory
                     'approved_at', 'brake_acknowledgement',
                 ],
             ],
+
+            /*
+             * Suppliers are businesses, but the named contact is a person, and
+             * a supplier trading as a sole proprietorship has a personal NPWP —
+             * the same distinction drawn for customers above.
+             */
+            'suppliers' => [
+                'kategori' => 'identitas_pemasok',
+                'personal' => [
+                    'nama', 'nama_kontak', 'telepon', 'email', 'alamat', 'npwp', 'catatan',
+                ],
+                'bukan' => ['kode', 'aktif'],
+            ],
+
+            'goods_receipts' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by', 'posted_by', 'catatan'],
+                'bukan' => [
+                    'nomor', 'supplier_id', 'warehouse_id', 'status',
+                    'nomor_surat_jalan_supplier', 'nomor_faktur_supplier',
+                    'tanggal_terima', 'total_value_rupiah', 'posted_at',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Tables that hold nothing about an identifiable person.
+     *
+     * This list is not documentation — it is the other half of the check. The
+     * schema test asserts that every table in the database appears either here
+     * or in tables() above, so creating a table and forgetting to classify it
+     * fails the build.
+     *
+     * That gap was real: the first version of this class only walked the tables
+     * it already knew about, so four new tables arrived completely unexamined.
+     * A guard that only checks what it was already told about is not a guard.
+     *
+     * @return list<string>
+     */
+    public static function tablesWithoutPersonalData(): array
+    {
+        return [
+            // Catalogue and commercial reference data.
+            'products', 'warehouses', 'price_tiers', 'price_tier_items',
+            'price_list_versions', 'price_list_items', 'company_price_overrides',
+            'price_list_import_rows',
+
+            // Stock and costing: quantities and money about goods, not people.
+            'stock_levels', 'stock_movements', 'stock_reservations', 'product_costs',
+            'goods_receipt_lines',
+
+            // Order and cart detail. The people are on the parent rows.
+            'order_lines', 'cart_items',
+
+            // Plumbing.
+            'document_counters', 'migrations', 'cache', 'cache_locks',
+            'jobs', 'job_batches', 'failed_jobs',
+
+            /*
+             * Framework tables that do hold personal data but are not ours to
+             * describe row by row: `sessions` carries an IP address and user
+             * agent, and `password_reset_tokens` an email address. Both are
+             * covered by the notice under activity and account data, and both
+             * are short-lived by construction.
+             */
+            'sessions', 'password_reset_tokens',
         ];
     }
 
@@ -239,6 +306,18 @@ final class DataInventory
                     .'menyangkut uang dapat dipertanggungjawabkan kepada orang tertentu.',
                 'retensi' => 'Dihapus dalam 30 hari setelah hubungan kerja berakhir, kecuali jejak '
                     .'audit yang wajib disimpan.',
+            ],
+            [
+                'kunci' => 'identitas_pemasok',
+                'judul' => 'Identitas pemasok dan narahubungnya',
+                'isi' => 'Nama badan usaha pemasok, alamat, nomor telepon, alamat email, NPWP, '
+                    .'nama narahubung, serta catatan internal mengenai pemasok tersebut.',
+                'dasar' => 'Pelaksanaan perjanjian pembelian dan kewajiban hukum perpajakan '
+                    .'(UU PDP Pasal 20 ayat 2 huruf b dan huruf c).',
+                'tujuan' => 'Mencatat asal barang yang kami terima, mencocokkan penerimaan barang '
+                    .'dengan faktur pemasok, dan memenuhi kewajiban pembukuan.',
+                'retensi' => '10 tahun sejak transaksi terakhir, mengikuti kewajiban penyimpanan '
+                    .'dokumen perusahaan dan pembukuan pajak.',
             ],
             [
                 'kunci' => 'aktivitas_transaksi',
