@@ -104,7 +104,8 @@
     </main>
 
     <footer class="mt-20 border-t border-slate-200 bg-slate-50">
-        <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        {{-- Five slots: the company blurb spans two, then pages, terms, contact. --}}
+        <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
             <div class="sm:col-span-2">
                 <p class="text-lg font-bold text-brand-600">{{ config('perusahaan.nama') }}</p>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-slate-600">
@@ -125,6 +126,14 @@
             </div>
 
             <div>
+                <p class="text-sm font-semibold text-slate-900">Ketentuan</p>
+                <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                    <li><a class="hover:text-brand-700" href="{{ route('publik.privasi') }}">Kebijakan Privasi</a></li>
+                    <li><a class="hover:text-brand-700" href="{{ route('publik.syarat') }}">Syarat Penjualan</a></li>
+                </ul>
+            </div>
+
+            <div>
                 <p class="text-sm font-semibold text-slate-900">Kontak</p>
                 <ul class="mt-3 space-y-2 text-sm text-slate-600">
                     <li>{{ config('perusahaan.kontak.telepon') }}</li>
@@ -141,12 +150,11 @@
         <div class="border-t border-slate-200">
             <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between">
                 <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. Seluruh hak cipta dilindungi.</p>
-                {{--
-                    Kebijakan Privasi is required under UU PDP 27/2022 before the
-                    system is used by real users. Not written yet — the link is
-                    deliberately absent rather than pointing at a 404.
-                --}}
-                <p>Harga grosir hanya untuk pelanggan terdaftar.</p>
+                <p class="flex flex-wrap gap-x-4 gap-y-1">
+                    <span>Harga grosir hanya untuk pelanggan terdaftar.</span>
+                    <a class="hover:text-brand-700" href="{{ route('publik.privasi') }}">Kebijakan Privasi</a>
+                    <a class="hover:text-brand-700" href="{{ route('publik.syarat') }}">Syarat Penjualan</a>
+                </p>
             </div>
         </div>
     </footer>

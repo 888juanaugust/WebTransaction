@@ -14,12 +14,14 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CustomerUser;
 use App\Models\Warehouse;
+use App\Support\Legal\Terms;
 use BackedEnum;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -230,6 +232,17 @@ class Keranjang extends Page implements HasTable
                     ->label('Catatan')
                     ->rows(3)
                     ->maxLength(500),
+
+                /*
+                 * The terms say a buyer accepts them by placing an order, so
+                 * they have to be reachable from the screen where they place
+                 * it — otherwise the document asserts agreement to something
+                 * the buyer was never shown. The sentence itself lives with the
+                 * rest of the legal copy.
+                 */
+                TextEntry::make('syarat')
+                    ->hiddenLabel()
+                    ->state(Terms::persetujuanPesanan()),
             ])
             ->action(function (array $data) {
                 try {

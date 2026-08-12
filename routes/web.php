@@ -27,6 +27,18 @@ Route::view('/rencana-pengembangan', 'publik.rencana')->name('publik.rencana');
 Route::view('/kontak', 'publik.kontak')->name('publik.kontak');
 
 /*
+ * Legal pages. Public and indexable like the rest, but kept out of the main
+ * nav — nobody navigates to a privacy policy, they follow a link to it from
+ * the footer or from a form. Putting them in the nav costs a slot that a
+ * customer looking for the catalogue needs.
+ *
+ * Kebijakan Privasi is required under UU PDP 27/2022 before the system is used
+ * by real users, and is a prerequisite for PSE Lingkup Privat registration.
+ */
+Route::view('/kebijakan-privasi', 'publik.kebijakan-privasi')->name('publik.privasi');
+Route::view('/syarat-penjualan', 'publik.syarat-penjualan')->name('publik.syarat');
+
+/*
  * Login chooser. Staff and buyers authenticate on different guards against
  * different tables, so this page routes to one of two panels rather than
  * trying to work out which kind of account an address belongs to.

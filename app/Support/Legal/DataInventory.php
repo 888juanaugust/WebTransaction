@@ -1,0 +1,308 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\Legal;
+
+/**
+ * What personal data this system actually holds, why, and for how long.
+ *
+ * This exists because a privacy policy written as prose goes stale the first
+ * time somebody adds a column. UU PDP 27/2022 Art. 21 requires the notice to
+ * state the *types* of data processed, so "we may collect information about
+ * you" is not a policy — it is an admission that nobody checked.
+ *
+ * So the notice renders from here, and DataInventoryCoversSchemaTest asserts
+ * that every column of every table below is classified: either it is personal
+ * data with a stated purpose and retention, or it is explicitly declared not to
+ * be. Add a column holding someone's phone number and forget to say so, and the
+ * build fails rather than the policy quietly becoming untrue.
+ *
+ * The legal bases are the ones in UU PDP Art. 20. Almost everything here is
+ * `kontrak` or `kewajiban_hukum`: this is a wholesale account system, and the
+ * data in it is the data required to sell goods to a business and account for
+ * the tax. Very little of it rests on consent, which matters — consent can be
+ * withdrawn, and a tax record cannot be deleted on request.
+ */
+final class DataInventory
+{
+    /**
+     * Columns that appear on nearly every table and are never personal data on
+     * their own: surrogate keys, money, quantities, and record timestamps.
+     *
+     * `created_at` on a *record* is not personal data; `last_login_at` on a
+     * person is. The distinction is drawn per table below, not here.
+     */
+    private const STRUCTURAL = ['id', 'created_at', 'updated_at'];
+
+    /**
+     * Every table that holds anything about an identifiable person.
+     *
+     * `personal` — the columns that are, or can identify, personal data.
+     * `bukan`    — columns on the same table that are not.
+     *
+     * @return array<string, array{kategori: string, personal: list<string>, bukan: list<string>}>
+     */
+    public static function tables(): array
+    {
+        return [
+            /*
+             * Staff logins. Employment data, held because someone has to be
+             * accountable for every price override and every payment confirmed.
+             */
+            'users' => [
+                'kategori' => 'identitas_staf',
+                'personal' => ['name', 'email', 'email_verified_at', 'password', 'remember_token'],
+                'bukan' => ['role', 'is_active'],
+            ],
+
+            /*
+             * Buyer logins. One person at a customer company, not the company.
+             */
+            'customer_users' => [
+                'kategori' => 'identitas_pembeli',
+                'personal' => ['name', 'email', 'telepon', 'password', 'remember_token', 'last_login_at'],
+                'bukan' => ['company_id', 'is_active', 'created_by'],
+            ],
+
+            /*
+             * The customer company itself. Mostly corporate data — which UU PDP
+             * does not cover — with two honest exceptions worth spelling out in
+             * the notice rather than hiding behind "business data":
+             *
+             *   - `nama_kontak` is a named human being.
+             *   - for a customer trading as a sole proprietorship, the NPWP,
+             *     the nama wajib pajak and the tax address are that person's,
+             *     not a legal entity's.
+             */
+            'companies' => [
+                'kategori' => 'identitas_pelanggan',
+                'personal' => [
+                    'nama', 'nama_kontak', 'telepon', 'email',
+                    'npwp', 'nama_wajib_pajak', 'alamat_pajak', 'alamat_kirim', 'kota',
+                    'catatan',
+                ],
+                'bukan' => [
+                    'kode', 'jenis_usaha', 'price_tier_id', 'credit_limit_rupiah',
+                    'payment_terms_days', 'status', 'approved_at', 'approved_by',
+                ],
+            ],
+
+            /*
+             * Who placed and handled each order. Personal in the sense that
+             * matters: it links a named person to a commercial act.
+             */
+            'orders' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by', 'sales_user_id', 'placed_by_customer_user_id', 'catatan'],
+                'bukan' => [
+                    'nomor', 'company_id', 'warehouse_id', 'status', 'po_pelanggan',
+                    'subtotal_rupiah', 'discount_rupiah', 'dpp_rupiah', 'ppn_rupiah',
+                    'total_rupiah', 'price_list_version_id', 'submitted_at',
+                    'confirmed_at', 'paid_at', 'shipped_at', 'completed_at',
+                    'reservation_expires_at',
+                ],
+            ],
+
+            'order_events' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['actor_id', 'customer_actor_id', 'alasan', 'meta'],
+                'bukan' => ['order_id', 'from_status', 'to_status'],
+            ],
+
+            /*
+             * The audit log, and the one most policies forget: it records an IP
+             * address. An IP is an identifier under UU PDP, so it is named in
+             * the notice rather than filed under "technical data".
+             */
+            'audit_logs' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['actor_id', 'actor_role', 'ip_address', 'old_value', 'new_value', 'alasan'],
+                'bukan' => ['action', 'subject_type', 'subject_id'],
+            ],
+
+            /*
+             * Tax identity, snapshotted onto the invoice at issue. Kept for as
+             * long as tax law requires the books to be kept, which is longer
+             * than the customer relationship and is not deletable on request.
+             */
+            'invoices' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['npwp', 'nama_wajib_pajak', 'alamat_pajak'],
+                'bukan' => [
+                    'nomor', 'order_id', 'company_id', 'subtotal_rupiah', 'discount_rupiah',
+                    'dpp_rupiah', 'ppn_rupiah', 'total_rupiah', 'issued_on', 'due_date',
+                    'status', 'kode_transaksi', 'nsfp', 'faktur_exported_at',
+                ],
+            ],
+
+            'payment_entries' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['actor_id', 'gateway_reference', 'catatan'],
+                'bukan' => [
+                    'company_id', 'invoice_id', 'order_id', 'amount_rupiah', 'kind',
+                    'gateway', 'webhook_event_id', 'reverses_entry_id', 'paid_at',
+                ],
+            ],
+
+            'virtual_accounts' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['account_number', 'external_id', 'gateway_id'],
+                'bukan' => ['company_id', 'bank_code', 'status'],
+            ],
+
+            /*
+             * Raw gateway callbacks, stored verbatim and permanently — that is
+             * what makes payment handling idempotent and auditable. The payload
+             * is whatever Xendit sends, which can name the payer, so the notice
+             * has to say the raw payload is kept rather than pretend we only
+             * store the amount.
+             */
+            'webhook_events' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['payload'],
+                'bukan' => [
+                    'gateway', 'event_id', 'event_type', 'signature_verified',
+                    'received_at', 'processed_at', 'process_error', 'attempts', 'claimed_at',
+                ],
+            ],
+
+            'carts' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['customer_user_id'],
+                'bukan' => ['company_id', 'warehouse_id'],
+            ],
+
+            /*
+             * Who uploaded which supplier price file. The files themselves are
+             * commercial data, not personal — but the uploader is a person.
+             */
+            'price_list_imports' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['uploaded_by', 'approved_by', 'note'],
+                'bukan' => [
+                    'original_filename', 'stored_path', 'checksum', 'status',
+                    'is_full_replacement', 'effective_from', 'row_count', 'blocker_count',
+                    'note_count', 'diff', 'parse_error', 'price_list_version_id',
+                    'approved_at', 'brake_acknowledgement',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * The categories as the notice presents them, in the order a reader needs.
+     *
+     * `dasar` values are the legal bases of UU PDP Art. 20; `retensi` states how
+     * long, and why that long — a retention period without a reason is a number
+     * somebody made up.
+     *
+     * @return list<array{kunci: string, judul: string, isi: string, dasar: string, tujuan: string, retensi: string}>
+     */
+    public static function categories(): array
+    {
+        return [
+            [
+                'kunci' => 'identitas_pelanggan',
+                'judul' => 'Identitas perusahaan pelanggan dan narahubungnya',
+                'isi' => 'Nama badan usaha, alamat pengiriman dan alamat pajak, kota, nomor '
+                    .'telepon, alamat email, NPWP dan nama wajib pajak, nama narahubung, serta '
+                    .'catatan internal mengenai akun.',
+                'dasar' => 'Pelaksanaan perjanjian jual beli dan permintaan calon pelanggan '
+                    .'sebelum perjanjian dibuat (UU PDP Pasal 20 ayat 2 huruf b), serta kewajiban '
+                    .'hukum perpajakan (huruf c).',
+                'tujuan' => 'Memverifikasi kelayakan akun grosir, menetapkan limit kredit dan '
+                    .'termin pembayaran, mengirim barang ke alamat yang benar, dan menerbitkan '
+                    .'faktur dengan identitas pajak yang benar.',
+                'retensi' => 'Selama akun aktif, lalu 10 tahun sejak transaksi terakhir mengikuti '
+                    .'kewajiban penyimpanan dokumen perusahaan dan pembukuan pajak.',
+            ],
+            [
+                'kunci' => 'identitas_pembeli',
+                'judul' => 'Akun masuk pengguna portal pelanggan',
+                'isi' => 'Nama, alamat email, nomor telepon, kata sandi yang disimpan dalam bentuk '
+                    .'hash, dan waktu masuk terakhir.',
+                'dasar' => 'Pelaksanaan perjanjian (UU PDP Pasal 20 ayat 2 huruf b).',
+                'tujuan' => 'Memberi akses ke portal pelanggan, menampilkan harga dan tagihan yang '
+                    .'benar untuk perusahaan yang bersangkutan, dan mengamankan akun.',
+                'retensi' => 'Dihapus dalam 30 hari setelah akun dinonaktifkan atau atas permintaan '
+                    .'pelanggan. Jejak transaksi yang sudah terjadi tetap tersimpan sesuai '
+                    .'kewajiban pembukuan.',
+            ],
+            [
+                'kunci' => 'identitas_staf',
+                'judul' => 'Akun masuk staf kami',
+                'isi' => 'Nama, alamat email, dan kata sandi yang disimpan dalam bentuk hash.',
+                'dasar' => 'Pelaksanaan hubungan kerja dan kepentingan sah kami untuk mengamankan '
+                    .'sistem (UU PDP Pasal 20 ayat 2 huruf b dan huruf f).',
+                'tujuan' => 'Memberi akses sesuai peran, dan memastikan setiap tindakan yang '
+                    .'menyangkut uang dapat dipertanggungjawabkan kepada orang tertentu.',
+                'retensi' => 'Dihapus dalam 30 hari setelah hubungan kerja berakhir, kecuali jejak '
+                    .'audit yang wajib disimpan.',
+            ],
+            [
+                'kunci' => 'aktivitas_transaksi',
+                'judul' => 'Catatan aktivitas dan jejak audit',
+                'isi' => 'Siapa membuat, menyetujui, menolak, mengirim dan menyelesaikan setiap '
+                    .'pesanan, beserta waktunya; perubahan harga dan limit kredit berikut nilai '
+                    .'lama dan barunya; alasan yang diketik; isi keranjang belanja; serta '
+                    .'<strong>alamat IP</strong> yang tercatat pada jejak audit.',
+                'dasar' => 'Kewajiban hukum penyelenggaraan pembukuan, dan kepentingan sah kami '
+                    .'untuk mencegah dan menelusuri penyalahgunaan (UU PDP Pasal 20 ayat 2 huruf c '
+                    .'dan huruf f).',
+                'tujuan' => 'Memastikan setiap perubahan yang berdampak pada uang dapat '
+                    .'ditelusuri, menyelesaikan sengketa mengenai pesanan, dan mendeteksi akses '
+                    .'yang tidak sah.',
+                'retensi' => '10 tahun, mengikuti kewajiban penyimpanan pembukuan. Jejak audit '
+                    .'bersifat append-only dan tidak dapat diubah, termasuk oleh kami.',
+            ],
+            [
+                'kunci' => 'pajak_dan_pembayaran',
+                'judul' => 'Data pembayaran dan perpajakan',
+                'isi' => 'Nomor Virtual Account, referensi pembayaran dari penyedia gateway, '
+                    .'jumlah dan waktu pembayaran, identitas pajak yang disalin ke faktur, serta '
+                    .'<strong>salinan mentah setiap callback</strong> yang dikirim penyedia '
+                    .'gateway pembayaran kepada kami.',
+                'dasar' => 'Pelaksanaan perjanjian dan kewajiban hukum perpajakan (UU PDP Pasal 20 '
+                    .'ayat 2 huruf b dan huruf c).',
+                'tujuan' => 'Mencocokkan pembayaran dengan tagihan, mencegah pembayaran tercatat '
+                    .'dua kali, menerbitkan faktur pajak, dan memenuhi kewajiban pelaporan pajak.',
+                'retensi' => '10 tahun sejak akhir tahun pajak yang bersangkutan. Callback mentah '
+                    .'disimpan karena menjadi bukti asal setiap pembayaran yang tercatat.',
+            ],
+        ];
+    }
+
+    /**
+     * The columns of one table that this inventory accounts for.
+     *
+     * @return list<string>
+     */
+    public static function accountedColumns(string $table): array
+    {
+        $entry = self::tables()[$table] ?? ['personal' => [], 'bukan' => []];
+
+        return array_values(array_unique([
+            ...self::STRUCTURAL,
+            ...$entry['personal'],
+            ...$entry['bukan'],
+        ]));
+    }
+
+    /**
+     * The tables holding personal data, grouped under the category that
+     * describes them in the notice.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function tablesByCategory(): array
+    {
+        $grouped = [];
+
+        foreach (self::tables() as $table => $entry) {
+            $grouped[$entry['kategori']][] = $table;
+        }
+
+        return $grouped;
+    }
+}
