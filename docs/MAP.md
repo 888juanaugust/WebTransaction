@@ -45,8 +45,10 @@ otherwise every surface falls back to the wordmark.
 | `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
 | `/admin/pengiriman` | Pengiriman | Warehouse, Owner | Pick list, surat jalan, ship, complete |
+| `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
+| `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
@@ -153,6 +155,31 @@ and neither is a customer's call.
 | `StockLedger::reconcile` | Rebuilds the cache from the ledger. **Must always change nothing** |
 
 Reserved at `confirmed`, decremented at `shipped`.
+
+### Purchasing — order, receive, bill, pay
+
+```
+draft → dikirim → selesai
+           ↓
+      dibatalkan
+```
+
+| Function | Decides |
+|---|---|
+| `PurchaseOrderFlow::send` | Locks the lines. Only a sent order can be received against |
+| `PurchaseOrderFlow::close` | Closes, recording what never came |
+| `PurchaseOrderFlow::cancel` | Refused once goods have arrived — close it instead |
+| `PurchaseOrderFlow::registerReceipt` | Received quantity, inside the receipt's transaction |
+| `SupplierBillPoster::post` | **Fixes the total and computes PPN masukan per line** |
+| `SupplierLedger::recordPayment` | Money out. Append-only; never touches the bill total |
+| `SupplierLedger::reverse` | Undo by appending the opposite; can reopen a settled bill |
+| `ThreeWayMatch::variancesFor` | Ordered vs received vs billed — only the rows that disagree |
+
+A receipt may have no PO behind it: stock sometimes simply turns up.
+
+**Price variance is not posted to inventory.** Goods stay valued at what the
+receipt said they cost. Doing it properly needs a purchase price variance
+account, and there is no general ledger to put one in.
 
 ### Costing — moving average, frozen at the movement
 
@@ -290,11 +317,8 @@ All idempotent — assume they run twice.
 - Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
 
-Still absent on the buy side, and none of it is decided against — it is simply
-not built:
+Still absent, and none of it is decided against — it is simply not built:
 
-- Purchase orders and supplier bills (accounts payable). A goods receipt records
-  what arrived; nothing records what was ordered or what is owed for it
 - Credit note / nota retur — the Syarat Penjualan describe a returns process the
   system cannot record
 - Transfer and stock-opname documents. Both movement reasons exist with no

@@ -59,6 +59,9 @@ partial unique indexes.
 | `app/Domain/Stock/StockLedger.php` | Append-only stock ledger, reservations. |
 | `app/Domain/Stock/InventoryValuation.php` | Moving-average cost, COGS, inventory value. |
 | `app/Domain/Purchasing/GoodsReceiptPoster.php` | Goods in: stock rises, average cost moves. |
+| `app/Domain/Purchasing/PurchaseOrderFlow.php` | Every purchase order transition. |
+| `app/Domain/Purchasing/SupplierLedger.php` | Append-only money-out ledger. |
+| `app/Domain/Purchasing/ThreeWayMatch.php` | Ordered vs received vs billed. |
 | `app/Domain/Credit/CreditChecker.php` | Credit exposure and limit checks. |
 | `app/Domain/Orders/OrderStateMachine.php` | Every order transition. |
 | `app/Domain/Payments/PaymentLedger.php` | Append-only money ledger. |
@@ -80,7 +83,9 @@ partial unique indexes.
 | `/` | Public — company profile, partners, contact, roadmap | none |
 | `/admin` | Staff — orders, stock, billing, price lists | `web` guard, `users` |
 | `/admin/pengiriman` | Warehouse — pick list, surat jalan, ship | `web` guard, warehouse role |
+| `/admin/pesanan-pembelian` | Purchase orders + three-way match | `web` guard, Finance/Owner |
 | `/admin/penerimaan` | Goods receipt — stock in, average cost | `web` guard, Finance/Owner |
+| `/admin/tagihan-pemasok` | Supplier bills, PPN masukan, AP | `web` guard, Finance/Owner |
 | `/portal` | Buyers — credit, invoices, order history, printable faktur | `customer` guard, `customer_users` |
 
 Staff and buyers authenticate on **different guards against different tables**,
@@ -502,6 +507,70 @@ staff, and they cannot enter this document, because it carries what we paid.
 Splitting it — warehouse records quantities, finance attaches costs and posts —
 is the right shape and is not built. Until it is, receipts are entered from the
 paperwork rather than from the loading bay.
+
+## Purchase to pay
+
+`PO → penerimaan barang → tagihan pemasok → pembayaran`, the buy-side mirror of
+order to cash. It earns its keep at the joins rather than in any one document: a
+purchase order alone is a wish, a receipt alone cannot tell a short delivery
+from a complete one, and a bill alone is whatever the supplier decided to
+charge.
+
+### The purchase order
+
+```
+draft → dikirim → selesai
+           ↓
+      dibatalkan
+```
+
+**Sending locks the lines.** From the moment an order goes to a supplier the
+document records what was agreed; receiving against a line somebody edited
+afterwards would compare deliveries to a moving target.
+
+Receiving registers against the PO line *inside the receipt's own transaction*,
+so the received quantity and the stock movement land together or not at all, and
+the order closes itself once nothing is outstanding.
+
+Closing short is allowed and records what never came — a supplier discontinuing
+a part mid-order is ordinary, and that number is the only evidence left
+afterwards. Cancelling is refused once goods have arrived, because it would
+leave the receipt pointing at a document saying nothing was ever ordered.
+
+A receipt with **no** PO behind it still works. Stock sometimes simply turns up
+— an urgent counter purchase, or the opening balance — and refusing to record
+that pushes people into recording it nowhere.
+
+### Supplier bills
+
+Shaped exactly like the customer invoice, for the same reasons: figures summed
+from line snapshots, the total fixed at posting, and never editable afterwards
+**by anybody, including the owner**. Payment appends to a ledger that never
+touches the total. That is the control, in the opposite direction: whoever pays
+cannot move the amount owed.
+
+PPN on a purchase is **pajak masukan** — input VAT creditable against the output
+VAT on our sales — so it is real money rather than a formality, and it is
+computed per line through the same `TaxCalculator` the sell side uses. The
+bills table greys the figure out when there is no faktur pajak number behind it,
+because PPN that cannot be credited is not money back.
+
+### The three-way match
+
+Ordered against received against billed, on the PO's own row. It catches the
+ordinary failures rather than exotic fraud: a short delivery billed in full, a
+price that moved after the goods were valued, the same delivery billed twice.
+
+**It reports and does not block.** A variance is usually a conversation with the
+supplier, and a control that refuses to let people record what actually happened
+gets worked around — which loses the record entirely. A partly-delivered order
+is deliberately *not* flagged: that is work in progress, and flagging it would
+bury the real ones.
+
+**Price variance is not posted to inventory.** Goods stay valued at what the
+receipt said they cost. Doing it properly needs a purchase price variance
+account and there is no general ledger to put one in, so the modal says so on
+its face rather than letting somebody assume it was handled.
 
 ## The faktur
 
