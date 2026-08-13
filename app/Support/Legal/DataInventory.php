@@ -198,16 +198,53 @@ final class DataInventory
                 'personal' => [
                     'nama', 'nama_kontak', 'telepon', 'email', 'alamat', 'npwp', 'catatan',
                 ],
-                'bukan' => ['kode', 'aktif'],
+                'bukan' => ['kode', 'aktif', 'payment_terms_days'],
             ],
 
             'goods_receipts' => [
                 'kategori' => 'aktivitas_transaksi',
                 'personal' => ['created_by', 'posted_by', 'catatan'],
                 'bukan' => [
-                    'nomor', 'supplier_id', 'warehouse_id', 'status',
+                    'nomor', 'supplier_id', 'purchase_order_id', 'warehouse_id', 'status',
                     'nomor_surat_jalan_supplier', 'nomor_faktur_supplier',
                     'tanggal_terima', 'total_value_rupiah', 'posted_at',
+                ],
+            ],
+
+            'purchase_orders' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by', 'sent_by', 'closed_by', 'catatan', 'alasan_batal'],
+                'bukan' => [
+                    'nomor', 'supplier_id', 'warehouse_id', 'status', 'tanggal_po',
+                    'tanggal_diharapkan', 'referensi_supplier', 'total_value_rupiah',
+                    'sent_at', 'closed_at',
+                ],
+            ],
+
+            /*
+             * A supplier's faktur pajak number identifies their tax document,
+             * and for a supplier trading as a sole proprietorship that document
+             * is a person's — the same distinction drawn for customers.
+             */
+            'supplier_bills' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => [
+                    'nomor_faktur_supplier', 'nomor_faktur_pajak',
+                    'created_by', 'posted_by', 'catatan',
+                ],
+                'bukan' => [
+                    'nomor', 'supplier_id', 'purchase_order_id', 'tanggal_faktur',
+                    'due_date', 'status', 'subtotal_rupiah', 'discount_rupiah',
+                    'dpp_rupiah', 'ppn_rupiah', 'total_rupiah', 'kode_transaksi', 'posted_at',
+                ],
+            ],
+
+            'supplier_payment_entries' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['actor_id', 'referensi', 'catatan'],
+                'bukan' => [
+                    'supplier_id', 'supplier_bill_id', 'amount_rupiah', 'kind',
+                    'reverses_entry_id', 'paid_at',
                 ],
             ],
         ];
@@ -237,7 +274,7 @@ final class DataInventory
 
             // Stock and costing: quantities and money about goods, not people.
             'stock_levels', 'stock_movements', 'stock_reservations', 'product_costs',
-            'goods_receipt_lines',
+            'goods_receipt_lines', 'purchase_order_lines', 'supplier_bill_lines',
 
             // Order and cart detail. The people are on the parent rows.
             'order_lines', 'cart_items',
@@ -341,11 +378,14 @@ final class DataInventory
                 'isi' => 'Nomor Virtual Account, referensi pembayaran dari penyedia gateway, '
                     .'jumlah dan waktu pembayaran, identitas pajak yang disalin ke faktur, serta '
                     .'<strong>salinan mentah setiap callback</strong> yang dikirim penyedia '
-                    .'gateway pembayaran kepada kami.',
+                    .'gateway pembayaran kepada kami. Termasuk pula pembayaran yang kami '
+                    .'lakukan kepada pemasok beserta referensi transfernya, dan nomor faktur '
+                    .'pajak pemasok yang menjadi dasar pengkreditan pajak masukan.',
                 'dasar' => 'Pelaksanaan perjanjian dan kewajiban hukum perpajakan (UU PDP Pasal 20 '
                     .'ayat 2 huruf b dan huruf c).',
                 'tujuan' => 'Mencocokkan pembayaran dengan tagihan, mencegah pembayaran tercatat '
-                    .'dua kali, menerbitkan faktur pajak, dan memenuhi kewajiban pelaporan pajak.',
+                    .'dua kali, menerbitkan faktur pajak, membayar pemasok, dan memenuhi '
+                    .'kewajiban pelaporan pajak keluaran maupun masukan.',
                 'retensi' => '10 tahun sejak akhir tahun pajak yang bersangkutan. Callback mentah '
                     .'disimpan karena menjadi bukti asal setiap pembayaran yang tercatat.',
             ],

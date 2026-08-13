@@ -26,6 +26,10 @@ class DocumentNumberGenerator
 
     public const SCOPE_GOODS_RECEIPT = 'goods_receipt';
 
+    public const SCOPE_PURCHASE_ORDER = 'purchase_order';
+
+    public const SCOPE_SUPPLIER_BILL = 'supplier_bill';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -79,5 +83,17 @@ class DocumentNumberGenerator
     public function nextGoodsReceiptNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_GOODS_RECEIPT, 'TB', $date);
+    }
+
+    /** Pesanan Pembelian: PO-202608-0001. */
+    public function nextPurchaseOrderNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_PURCHASE_ORDER, 'PO', $date);
+    }
+
+    /** Tagihan Pemasok: TP-202608-0001. */
+    public function nextSupplierBillNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_SUPPLIER_BILL, 'TP', $date);
     }
 }

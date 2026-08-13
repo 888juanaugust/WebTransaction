@@ -29,6 +29,7 @@ class GoodsReceiptPoster
     public function __construct(
         private readonly StockLedger $stock,
         private readonly AuditLogger $audit,
+        private readonly PurchaseOrderFlow $purchaseOrders,
     ) {}
 
     /**
@@ -99,6 +100,14 @@ class GoodsReceiptPoster
                 'posted_by' => $actor->id,
                 'posted_at' => now(),
             ])->save();
+
+            /*
+             * Tell the purchase order what turned up, inside this transaction,
+             * so the received quantity and the stock movement land together or
+             * not at all. A receipt with no purchase order behind it — an
+             * urgent top-up, or the opening balance — simply skips this.
+             */
+            $this->purchaseOrders->registerReceipt($locked, $actor);
 
             $this->audit->log(
                 action: 'goods_receipt_posted',

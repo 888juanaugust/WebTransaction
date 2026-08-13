@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * The document that lets stock arrive. Draft until posted; posted forever after.
  */
 #[Fillable([
-    'nomor', 'supplier_id', 'warehouse_id', 'nomor_surat_jalan_supplier',
+    'nomor', 'supplier_id', 'purchase_order_id', 'warehouse_id', 'nomor_surat_jalan_supplier',
     'nomor_faktur_supplier', 'tanggal_terima', 'catatan', 'created_by',
 ])]
 class GoodsReceipt extends Model
@@ -50,6 +50,12 @@ class GoodsReceipt extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /** Null when stock simply turned up — a top-up, or the opening balance. */
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     public function lines(): HasMany
