@@ -41,6 +41,26 @@ The seeder creates one account per role at `<role>@example.test` / `password`
 Prices and products are deliberately **not** seeded. They come from a real price list import,
 because a seeded price is a price nobody approved.
 
+### Showing it to somebody
+
+`migrate --seed` gives you staff logins and empty screens — there is nothing to
+demonstrate, because real prices arrive through a reviewed import rather than a
+seeder. To get a business worth looking at:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=DemoSeeder
+```
+
+Every dashboard queue fills, orders exist in every state, and the purchase
+order carries a deliberate variance so the three-way match has something to
+find. **[docs/DEMO.md](docs/DEMO.md)** is the ten-minute walkthrough, with the
+logins and what to say at each step.
+
+`DemoSeeder` refuses to run in production or on a database that already has
+orders in it: it writes invented prices into append-only ledgers, and there is
+no clean way back out.
+
 ### Tests
 
 ```bash
