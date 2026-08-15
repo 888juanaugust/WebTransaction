@@ -1,0 +1,59 @@
+# Odoo 19 evaluation stack.
+#
+# NOT for production and not part of this application. This exists so the Odoo
+# option can be judged on evidence rather than on two people's instincts.
+#
+#   docker compose up -d
+#   open http://localhost:8069
+#
+# First screen asks you to create a database. Use:
+#   Master password  : anything you will remember
+#   Database name    : evaluasi
+#   Language         : Bahasa Indonesia
+#   Country          : Indonesia      <-- important, this loads the l10n_id
+#                                         chart of accounts and tax setup
+#   Demo data        : LEAVE UNCHECKED. Demo data invents products and
+#                      customers, and you will spend the evaluation unable to
+#                      tell its rows apart from yours.
+#
+# To start over: docker compose down -v   (the -v drops the database volume)
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      # Odoo creates its own databases, so it needs the role to be able to.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - odoo-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 5s
+      retries: 10
+
+  odoo:
+    # Pin the major version. `odoo:latest` will move to 20 when it is released
+    # and an evaluation that silently changes version underneath you is worth
+    # nothing.
+    image: odoo:19
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8069:8069"
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo
+    volumes:
+      - odoo-data:/var/lib/odoo
+      # Anything you drop in here is available to Odoo as an addons path —
+      # where a custom module would go if you decided to write one.
+      - ./addons:/mnt/extra-addons
+
+volumes:
+  odoo-db:
+  odoo-data:
