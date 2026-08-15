@@ -51,6 +51,12 @@ class PurchaseOrder extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** Who sent it to the supplier — the name that signs the printed order. */
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sent_by');
+    }
+
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseOrderLine::class)->orderBy('urutan')->orderBy('id');

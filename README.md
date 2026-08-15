@@ -541,6 +541,34 @@ A receipt with **no** PO behind it still works. Stock sometimes simply turns up
 — an urgent counter purchase, or the opening balance — and refusing to record
 that pushes people into recording it nowhere.
 
+### The printed order
+
+`/dokumen/pesanan-pembelian/{po}` — the third print document, and the first that
+travels *outward*. The surat jalan goes with our goods and the faktur goes to
+our customer; this one lands in somebody else's inbox and asks them to ship
+something. Until it existed, "Kirim ke pemasok" moved a status in our database
+and put nothing anywhere else.
+
+**A draft cannot be printed.** Nothing has been agreed, the lines are still
+being edited and the total is not fixed — sending one would create an
+obligation the system does not believe exists. A closed or cancelled order
+prints with its status stamped across it, so it can go in the file without ever
+reading as live.
+
+Two things on it are load-bearing rather than decorative:
+
+- **"Cantumkan nomor pesanan PO-… pada surat jalan dan faktur Anda."** That
+  reference is what makes the three-way match possible when the goods arrive.
+  Without it somebody has to guess which order a delivery belongs to, and
+  guessing is how a delivery gets matched against the wrong one.
+- **Prices stated as excluding PPN.** A supplier who reads the total as
+  VAT-inclusive invoices for 11% less than we agreed, and it is only found at
+  the match.
+
+Quantities print in both the ordered unit and base units — the supplier ships
+cartons and the ledger counts pieces, and printing only one of them is how a
+delivery arrives ten times too small.
+
 ### Supplier bills
 
 Shaped exactly like the customer invoice, for the same reasons: figures summed

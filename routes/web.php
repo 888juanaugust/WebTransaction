@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\FakturController;
+use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -93,6 +94,17 @@ Route::middleware(['web', 'auth:web'])
 Route::middleware(['web', 'auth:customer'])
     ->get('/portal/dokumen/faktur/{invoice}', [FakturController::class, 'pelanggan'])
     ->name('portal.dokumen.faktur');
+
+/*
+ * Pesanan pembelian — the first of the three print documents that travels
+ * outward. The surat jalan goes with our goods and the faktur goes to our
+ * customer; this one is emailed to a supplier and asks them to ship something.
+ *
+ * Behind canRecordPurchases(), like every other screen that shows what we pay.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/pesanan-pembelian/{purchaseOrder}', PesananPembelianController::class)
+    ->name('dokumen.pesanan-pembelian');
 
 /*
 |--------------------------------------------------------------------------

@@ -52,6 +52,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
+| `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 

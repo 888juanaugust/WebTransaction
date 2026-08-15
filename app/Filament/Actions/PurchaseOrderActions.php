@@ -27,9 +27,7 @@ class PurchaseOrderActions
     public static function kirim(string $name = 'kirim_po'): Action
     {
         return Action::make($name)
-            // "Kirim ke pemasok" spelled out left no room for the other two
-            // actions on the row; the modal heading says the rest.
-            ->label('Kirim')
+            ->label('Kirim ke pemasok')
             ->icon('heroicon-o-paper-airplane')
             ->color('primary')
             ->requiresConfirmation()
@@ -108,10 +106,9 @@ class PurchaseOrderActions
     {
         return Action::make($name)
             ->label('Cocokkan')
-            // Icon only: this is something you open to look at, not one of the
-            // transitions, and the row has to fit three actions.
-            ->iconButton()
-            ->tooltip('Cocokkan tiga arah')
+            // Not an icon button. It was one while these sat inline on the row
+            // and width was tight; inside the action menu that strips the label
+            // and leaves an unlabelled glyph nobody can identify.
             ->icon('heroicon-o-scale')
             ->color('gray')
             ->modalHeading(fn (PurchaseOrder $record) => "Pencocokan tiga arah — {$record->nomor}")
@@ -127,10 +124,29 @@ class PurchaseOrderActions
                 && (auth()->user()?->role()->canRecordPurchases() ?? false));
     }
 
+    /**
+     * The document the supplier actually receives.
+     *
+     * Hidden while the order is a draft: nothing has been agreed, the lines are
+     * still being edited, and printing one would create an obligation the
+     * system does not believe exists. The controller refuses it either way.
+     */
+    public static function cetak(string $name = 'cetak_po'): Action
+    {
+        return Action::make($name)
+            ->label('Cetak PO')
+            ->icon('heroicon-o-printer')
+            ->color('gray')
+            ->url(fn (PurchaseOrder $record) => route('dokumen.pesanan-pembelian', $record))
+            ->openUrlInNewTab()
+            ->visible(fn (PurchaseOrder $record) => $record->status !== PurchaseOrderStatus::Draft
+                && (auth()->user()?->role()->canRecordPurchases() ?? false));
+    }
+
     /** @return list<Action> */
     public static function all(): array
     {
-        return [self::kirim(), self::cocokkan(), self::selesaikan(), self::batalkan()];
+        return [self::kirim(), self::cetak(), self::cocokkan(), self::selesaikan(), self::batalkan()];
     }
 
     private static function run(callable $do, string $title, ?string $body = null): void
