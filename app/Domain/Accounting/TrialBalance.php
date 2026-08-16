@@ -30,13 +30,30 @@ final class TrialBalance
         private readonly array $rows,
     ) {}
 
+    /** Everything up to and including a date, or everything ever. */
     public static function asOf(?DateTimeInterface $tanggal = null): self
     {
-        $asOf = $tanggal !== null ? Carbon::parse($tanggal) : null;
+        return self::build($tanggal === null ? null : Carbon::parse($tanggal), null);
+    }
 
+    /**
+     * Movement within a window rather than a running total.
+     *
+     * This is what an income statement reads: "what did we earn in August" is
+     * a question about the movement between two dates, where "what do we own"
+     * is a question about the balance at one. Same query, one extra bound.
+     */
+    public static function forPeriod(DateTimeInterface $from, DateTimeInterface $to): self
+    {
+        return self::build(Carbon::parse($to), Carbon::parse($from));
+    }
+
+    private static function build(?Carbon $asOf, ?Carbon $from): self
+    {
         $totals = JournalLine::query()
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
             ->when($asOf !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '<=', $asOf))
+            ->when($from !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '>=', $from))
             ->groupBy('journal_lines.account_id')
             ->selectRaw('journal_lines.account_id, SUM(debit_rupiah) AS d, SUM(kredit_rupiah) AS k')
             ->get()

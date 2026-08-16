@@ -164,12 +164,17 @@ Not to argue for it — so the comparison is like for like.
 | Buyer portal with reorder | Built |
 | Order to cash, purchase to pay, three-way match | Built |
 | Surat jalan, faktur, purchase order documents | Built |
-| **General ledger, financial statements** | **Not built** |
+| General ledger, neraca, laba rugi, trial balance | Built and tested |
+| Control accounts reconciled against their subledgers | Built and tested |
 | Credit notes, transfers, opname, landed cost, period close | **Not built** |
+| Multi-currency, fixed assets, bank reconciliation | **Not built**, and not planned |
 
-The honest summary: what exists is tuned to how this business actually trades
-and has no accounting core. Odoo is the reverse. The decision is which half is
-cheaper to add.
+The summary this file was written with — "tuned to your trade, no accounting
+core" — is now out of date: the ledger exists, every document posts to it, and
+the four control accounts tie to their subledgers. What Odoo still has and this
+does not is depth rather than presence: period close, bank reconciliation,
+fixed assets, multi-currency. Weigh that against how much Python the five tests
+above turn out to need.
 
 ## One timing note
 

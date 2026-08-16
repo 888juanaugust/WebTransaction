@@ -50,9 +50,17 @@ otherwise every surface falls back to the wordmark.
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
+| `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
+| `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
+| `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
+| `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
+
+The four accounting screens are behind `canSeeBooks()`. They carry cost and
+margin — everything Sales and Warehouse are kept away from elsewhere — and the
+route refuses, not just the menu item.
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 

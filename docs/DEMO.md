@@ -167,22 +167,30 @@ because cost plus selling price is margin.
 
 ## 4. Questions you will be asked
 
-**"Can it do accounting?"** No. There is no general ledger, no trial balance,
-no P&L. This runs the operation and the money that flows through it; the books
-are still your accountant's. That is the largest single gap and it is in
-`docs/MAP.md` alongside the others — credit notes, stock transfers, opname,
-landed cost, period close.
+**"Can it do accounting?"** Yes, now — see section 3 below. Every document
+posts double entry as it happens, and **Buku besar** carries neraca, laba rugi,
+neraca saldo and the journal. What is still missing is period close, so nothing
+can be locked against a back-dated entry, and there are no credit notes,
+transfers, opname or landed cost. Those are in `docs/MAP.md`.
+
+Two things to raise with your accountant rather than take on trust: orders are
+invoiced when they move to awaiting payment, which is **before** they ship, so
+revenue is recognised ahead of its cost; and PPN on a supplier bill with no
+faktur pajak is booked to expense rather than into stock value. Both are
+written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested — 467 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 592 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
 **"Why not Odoo?"** A fair question, and there is a written evaluation kit for
 exactly that in `docs/odoo-evaluation/` — including a sample of the real
-supplier workbook to throw at it. The honest summary is that this is tuned to
-how the business trades and has no accounting core, Odoo is the reverse, and
-which half is cheaper to add is a business decision.
+supplier workbook to throw at it. The comparison has moved since it was
+written: this now has a general ledger, so the gap is narrower than the
+"tuned to your trade but no accounting" summary suggests. What Odoo still has
+and this does not is depth — period close, multi-currency, fixed assets, bank
+reconciliation.
 
 **"Can I break it?"** Encourage it. Try to approve an order that exceeds the
 credit limit, or ship stock that isn't there. Refusals are the feature.
