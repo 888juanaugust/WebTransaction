@@ -35,6 +35,8 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        $this->call(ChartOfAccountsSeeder::class);
+
         Warehouse::query()->firstOrCreate(
             ['kode' => 'GD-PUSAT'],
             ['nama' => 'Gudang Pusat', 'aktif' => true],

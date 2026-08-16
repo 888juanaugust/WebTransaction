@@ -247,6 +247,23 @@ final class DataInventory
                     'reverses_entry_id', 'paid_at',
                 ],
             ],
+
+            /*
+             * The general ledger. An entry names the member of staff who posted
+             * it, and its description can carry a customer or supplier name in
+             * free text. The lines below it carry only figures — the people are
+             * on the entry, and on the company_id/supplier_id keys that point
+             * back at rows already described elsewhere.
+             */
+            'journal_entries' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['posted_by', 'keterangan'],
+                'bukan' => [
+                    'nomor', 'tanggal', 'source_type', 'source_id', 'jenis',
+                    'total_debit_rupiah', 'total_kredit_rupiah', 'posted_at',
+                    'reversed_by_entry_id', 'reverses_entry_id',
+                ],
+            ],
         ];
     }
 
@@ -275,6 +292,14 @@ final class DataInventory
             // Stock and costing: quantities and money about goods, not people.
             'stock_levels', 'stock_movements', 'stock_reservations', 'product_costs',
             'goods_receipt_lines', 'purchase_order_lines', 'supplier_bill_lines',
+
+            /*
+             * Accounting. The chart of accounts is reference data — account
+             * names and codes, nothing about anybody. Journal lines are two
+             * figures and a memo about the movement, with the person on the
+             * parent entry.
+             */
+            'accounts', 'journal_lines',
 
             // Order and cart detail. The people are on the parent rows.
             'order_lines', 'cart_items',

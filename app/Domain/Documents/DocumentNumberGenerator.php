@@ -30,6 +30,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_SUPPLIER_BILL = 'supplier_bill';
 
+    public const SCOPE_JOURNAL = 'journal';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -95,5 +97,17 @@ class DocumentNumberGenerator
     public function nextSupplierBillNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_SUPPLIER_BILL, 'TP', $date);
+    }
+
+    /**
+     * Jurnal Umum: JU-202608-0001.
+     *
+     * Numbered by the date the entry belongs to, not the date it was typed —
+     * a bill entered in September for August work carries an August number,
+     * and the register for August reads in order.
+     */
+    public function nextJournalNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_JOURNAL, 'JU', $date);
     }
 }

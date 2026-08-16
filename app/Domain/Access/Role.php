@@ -69,6 +69,26 @@ enum Role: string
         return in_array($this, [self::Finance, self::Owner], true);
     }
 
+    /**
+     * Write a manual journal, or reverse one.
+     *
+     * Entries posted by documents need no permission — they are consequences
+     * of actions already authorised elsewhere. This covers the entries with no
+     * document behind them: opening balances, accruals, an accountant's
+     * correction. Those are assertions about the business made on somebody's
+     * say-so, and only Finance and the Owner get to say so.
+     */
+    public function canPostJournals(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /** Neraca, laba rugi, trial balance, the journal register. */
+    public function canSeeBooks(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
     public function canCreateOrders(): bool
     {
         return in_array($this, [self::Sales, self::Owner], true);
