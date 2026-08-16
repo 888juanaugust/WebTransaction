@@ -89,6 +89,31 @@ enum Role: string
         return in_array($this, [self::Finance, self::Owner], true);
     }
 
+    /**
+     * Close a month, locking it against anything further being posted into it.
+     *
+     * Finance's job — they are the ones who reconcile it and hand the figures
+     * over, so they are the ones who know when it is done.
+     */
+    public function canClosePeriod(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /**
+     * Reopen a closed month.
+     *
+     * Owner only, and deliberately narrower than closing it. Reopening is how
+     * a set of figures that has already gone to the accountant gets quietly
+     * restated, so the person who closed the month should not be able to undo
+     * that alone — the same reasoning that keeps whoever confirms a payment
+     * away from the invoice amount.
+     */
+    public function canReopenPeriod(): bool
+    {
+        return $this === self::Owner;
+    }
+
     public function canCreateOrders(): bool
     {
         return in_array($this, [self::Sales, self::Owner], true);

@@ -166,14 +166,15 @@ Not to argue for it — so the comparison is like for like.
 | Surat jalan, faktur, purchase order documents | Built |
 | General ledger, neraca, laba rugi, trial balance | Built and tested |
 | Control accounts reconciled against their subledgers | Built and tested |
-| Credit notes, transfers, opname, landed cost, period close | **Not built** |
+| Period close: months locked against back-dating, year-end into Laba Ditahan | Built and tested |
+| Credit notes, transfers, opname, landed cost | **Not built** |
 | Multi-currency, fixed assets, bank reconciliation | **Not built**, and not planned |
 
 The summary this file was written with — "tuned to your trade, no accounting
 core" — is now out of date: the ledger exists, every document posts to it, and
 the four control accounts tie to their subledgers. What Odoo still has and this
-does not is depth rather than presence: period close, bank reconciliation,
-fixed assets, multi-currency. Weigh that against how much Python the five tests
+does not is depth rather than presence: bank reconciliation, fixed assets,
+multi-currency. Weigh that against how much Python the five tests
 above turn out to need.
 
 ## One timing note

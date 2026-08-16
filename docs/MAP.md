@@ -54,6 +54,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
+| `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
@@ -242,6 +243,28 @@ The rules, all of them:
 | Pembayaran pelanggan | Dr Bank / Cr Piutang Usaha |
 | Pembayaran pemasok | Dr Utang Usaha / Cr Bank |
 
+**Closing the books.**
+
+| Function | Decides |
+|---|---|
+| `FiscalCalendar::isClosed` | Whether a date may still be posted to. Asked by `Ledger`, and by the screen |
+| `FiscalCalendar::nextToClose` | The one month that may be closed now, or null. A month in progress is never offered |
+| `PeriodCloser::close` | Locks a month. **Oldest first** — Finance and Owner |
+| `PeriodCloser::reopen` | Unlocks one. **Newest first, Owner only**, and a reason is required |
+| `PeriodCloser::previewYearEnd` | What closing December would post, built by the same code that posts it |
+
+A closed month refuses *any* entry dated into it, so a back-dated faktur or
+goods receipt fails with the document rather than silently restating a month
+already reported. The check sits after `Ledger::post`'s idempotency look-up on
+purpose: a retried queue job for an entry already posted hands back what is
+there, because nothing is being back-dated.
+
+Closing December closes the year — one entry zeroes every income and expense
+account into Laba Ditahan, so January starts from nil. Reopening December
+reverses it rather than deleting it. Reopening is Owner-only and deliberately
+narrower than closing: it is how figures already sent to the accountant get
+quietly restated, so whoever closed the month cannot undo it alone.
+
 Postings are explicit calls from inside each document service's own
 transaction, not events — the journal has to land atomically with the document,
 and a listener firing after commit can leave a shipment with no cost against it.
@@ -387,7 +410,6 @@ Still absent, and none of it is decided against — it is simply not built:
 - Transfer and stock-opname documents. Both movement reasons exist with no
   paperwork pairing an out with an in, or approving a count variance
 - Landed cost — duty and freight never reach unit cost
-- Fiscal period close. Nothing can be locked against a back-dated movement
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.

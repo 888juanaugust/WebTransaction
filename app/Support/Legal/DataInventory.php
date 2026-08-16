@@ -249,6 +249,24 @@ final class DataInventory
             ],
 
             /*
+             * Closing and reopening the books. Both name the member of staff
+             * who did it, and a reopening carries their stated reason in free
+             * text — which is exactly the sort of field that ends up
+             * mentioning a customer or a colleague by name.
+             */
+            'accounting_periods' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['closed_by', 'catatan'],
+                'bukan' => ['tahun', 'bulan', 'closed_at', 'closing_entry_id'],
+            ],
+
+            'accounting_period_reopenings' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['reopened_by', 'alasan'],
+                'bukan' => ['tahun', 'bulan', 'reversal_entry_id'],
+            ],
+
+            /*
              * The general ledger. An entry names the member of staff who posted
              * it, and its description can carry a customer or supplier name in
              * free text. The lines below it carry only figures — the people are

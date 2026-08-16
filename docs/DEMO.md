@@ -169,9 +169,11 @@ because cost plus selling price is margin.
 
 **"Can it do accounting?"** Yes, now — see section 3 below. Every document
 posts double entry as it happens, and **Buku besar** carries neraca, laba rugi,
-neraca saldo and the journal. What is still missing is period close, so nothing
-can be locked against a back-dated entry, and there are no credit notes,
-transfers, opname or landed cost. Those are in `docs/MAP.md`.
+neraca saldo, the journal and period close. Closing a month locks it: a
+document back-dated into it is refused, with the document, rather than quietly
+restating figures already reported. Closing December closes the year into Laba
+Ditahan. What is still missing is credit notes, transfers, opname and landed
+cost. Those are in `docs/MAP.md`.
 
 Two things to raise with your accountant rather than take on trust: orders are
 invoiced when they move to awaiting payment, which is **before** they ship, so
@@ -180,7 +182,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 592 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 674 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
@@ -189,7 +191,7 @@ exactly that in `docs/odoo-evaluation/` — including a sample of the real
 supplier workbook to throw at it. The comparison has moved since it was
 written: this now has a general ledger, so the gap is narrower than the
 "tuned to your trade but no accounting" summary suggests. What Odoo still has
-and this does not is depth — period close, multi-currency, fixed assets, bank
+and this does not is depth — multi-currency, fixed assets, bank
 reconciliation.
 
 **"Can I break it?"** Encourage it. Try to approve an order that exceeds the

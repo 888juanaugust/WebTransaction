@@ -102,6 +102,30 @@ final class BalanceSheet
     }
 
     /**
+     * One account's balance as this statement reports it.
+     *
+     * Reads the rendered lines rather than the ledger again, so a caller
+     * cannot be told one figure by the report and a different one by a second
+     * query — which is precisely how a balance sheet and the thing checking it
+     * end up disagreeing.
+     *
+     * Returns 0 for an account that is not on this statement: income and
+     * expense accounts genuinely have no balance-sheet balance.
+     */
+    public function balanceOf(string $kode): int
+    {
+        foreach ([$this->aset, $this->kewajiban, $this->modal] as $section) {
+            foreach ($section->lines as $line) {
+                if ($line->kode() === $kode) {
+                    return $line->amount;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
      * The check. It cannot fail unless the trial balance does, which is the
      * point — printing it is what makes that guarantee visible rather than
      * assumed.

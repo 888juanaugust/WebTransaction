@@ -45,6 +45,13 @@ class JournalEntry extends Model
 
     public const JENIS_PEMBAYARAN_PEMASOK = 'pembayaran_pemasok';
 
+    /**
+     * The year-end entry that zeroes income and expense into Laba Ditahan.
+     * Its source is the December period that produced it, so a period can only
+     * ever have one — the same unique index every other posting relies on.
+     */
+    public const JENIS_TUTUP_BUKU = 'tutup_buku';
+
     public const JENIS_PEMBALIKAN = 'pembalikan';
 
     protected function casts(): array

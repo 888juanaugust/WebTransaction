@@ -40,6 +40,7 @@ class Ledger
     public function __construct(
         private readonly DocumentNumberGenerator $numbers,
         private readonly AuditLogger $audit,
+        private readonly FiscalCalendar $calendar,
     ) {}
 
     /**
@@ -63,6 +64,17 @@ class Ledger
                 return $existing;
             }
         }
+
+        /*
+         * The period check goes *after* the idempotency look-up, deliberately.
+         *
+         * An entry posted in July and re-requested in September — a retried
+         * queue job, a document service called twice — must hand back what is
+         * already there rather than refuse it because July has since closed.
+         * The entry exists; nothing is being back-dated. Checking first would
+         * turn every closed month into a minefield for retries.
+         */
+        $this->calendar->assertOpen($draft->tanggal, $draft->keterangan);
 
         try {
             return $this->write($draft, $actor);
@@ -106,6 +118,7 @@ class Ledger
         }
 
         $this->assertPostable($draft);
+        $this->calendar->assertOpen($draft->tanggal, 'Jurnal manual');
 
         $entry = $this->write($draft, $actor);
 
@@ -145,6 +158,15 @@ class Ledger
         if ($entry->isReversal()) {
             throw new LogicException('A reversal cannot itself be reversed.');
         }
+
+        /*
+         * The *reversal's* date is what has to be open, not the original's.
+         * Correcting something that happened in a closed month is ordinary and
+         * allowed — the correction lands in the current period, which is where
+         * an accountant would put it anyway. What is not allowed is dating the
+         * correction back into the month that was already reported.
+         */
+        $this->calendar->assertOpen($tanggal ?? \Illuminate\Support\Carbon::now(), 'Jurnal pembalik');
 
         return DB::transaction(function () use ($entry, $actor, $alasan, $tanggal) {
             /*

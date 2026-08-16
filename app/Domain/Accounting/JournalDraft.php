@@ -75,6 +75,35 @@ final class JournalDraft
         );
     }
 
+    /**
+     * An entry the system produces that has no document row behind it.
+     *
+     * Only the year-end close, so far. It cannot use for(): the period row it
+     * belongs to does not exist yet when the entry is posted, and it cannot,
+     * because writing that row first is what would make the ledger refuse the
+     * entry. Idempotency comes from the unique constraint on the period
+     * instead, which is a better guarantee than a source key anyway — a year
+     * can only be closed once because a year can only have one closed
+     * December.
+     */
+    public static function system(
+        string $jenis,
+        string $keterangan,
+        ?DateTimeInterface $tanggal = null,
+    ): self {
+        if ($jenis === JournalEntry::JENIS_MANUAL) {
+            throw new LogicException('A manual journal is not a system entry; use manual().');
+        }
+
+        return new self(
+            jenis: $jenis,
+            keterangan: $keterangan,
+            tanggal: $tanggal ? Carbon::parse($tanggal) : Carbon::now(),
+            sourceType: null,
+            sourceId: null,
+        );
+    }
+
     public function debit(
         string $kode,
         int $amountRupiah,
