@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Credit\CreditChecker;
@@ -41,6 +42,7 @@ class OrderStateMachine
         private readonly AuditLogger $audit,
         private readonly InvoiceIssuer $invoices,
         private readonly VirtualAccountProvisioner $virtualAccounts,
+        private readonly DocumentPoster $poster,
     ) {}
 
     public function submit(Order $order, User $actor, ?string $catatan = null): Order
@@ -196,6 +198,16 @@ class OrderStateMachine
 
         return DB::transaction(function () use ($order, $actor, $catatan) {
             $movements = $this->stock->shipOrder($order, $actor);
+
+            /*
+             * Dr HPP / Cr Persediaan, at the cost frozen onto the movements a
+             * line above. Posted from here rather than from inside the stock
+             * ledger because this is the transaction that owns the shipment,
+             * and because cost of sales is an accounting consequence of an
+             * order shipping rather than of stock moving — a transfer between
+             * warehouses moves stock and costs nothing.
+             */
+            $this->poster->shipmentCosted($order, $movements, $actor);
 
             return $this->transition(
                 $order,

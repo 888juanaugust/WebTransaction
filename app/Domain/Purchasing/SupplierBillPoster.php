@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Purchasing;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Tax\TaxCalculator;
@@ -31,6 +32,7 @@ class SupplierBillPoster
         private readonly TaxCalculator $tax,
         private readonly DocumentNumberGenerator $numbers,
         private readonly AuditLogger $audit,
+        private readonly DocumentPoster $poster,
     ) {}
 
     /**
@@ -90,6 +92,13 @@ class SupplierBillPoster
                 'posted_by' => $actor->id,
                 'posted_at' => now(),
             ])->save();
+
+            /*
+             * Clears the accrual at what the goods were received at, and puts
+             * whatever the supplier charged on top into the variance account
+             * rather than back into stock value.
+             */
+            $this->poster->supplierBillPosted($locked, $actor);
 
             $this->audit->log(
                 action: 'supplier_bill_posted',

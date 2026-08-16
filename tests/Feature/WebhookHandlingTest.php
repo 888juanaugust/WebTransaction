@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
@@ -311,7 +312,7 @@ class WebhookHandlingTest extends TestCase
 
         // A ledger that posts the payment and then dies, exactly as a killed
         // worker would after writing part of the transaction.
-        $exploding = new class(app(AuditLogger::class)) extends PaymentLedger
+        $exploding = new class(app(AuditLogger::class), app(DocumentPoster::class)) extends PaymentLedger
         {
             public function recordGatewayPayment(
                 Company $company,

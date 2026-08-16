@@ -179,8 +179,9 @@ draft → dikirim → selesai
 A receipt may have no PO behind it: stock sometimes simply turns up.
 
 **Price variance is not posted to inventory.** Goods stay valued at what the
-receipt said they cost. Doing it properly needs a purchase price variance
-account, and there is no general ledger to put one in.
+receipt said they cost; the difference goes to Selisih Harga Pembelian in the
+general ledger, so a supplier's price creep is an expense of this period rather
+than a silent restatement of stock value.
 
 ### Costing — moving average, frozen at the movement
 
@@ -205,6 +206,59 @@ warehouse, which makes a transfer value-neutral by construction.
 
 A shipment freezes the average standing at that instant. A later purchase moves
 the average for everything after it and changes nothing before it.
+
+### Books — double entry over everything above
+
+Every subledger above is append-only and right about its own thing. None of
+them can produce a balance sheet, because nothing states that the money leaving
+inventory is the money arriving in cost of sales. That is what this does.
+
+| Function | Decides |
+|---|---|
+| `Ledger::post` | The only way an entry is written. **Balances or refuses**; idempotent per document + jenis |
+| `Ledger::postManual` | An entry with no document behind it — **Finance and Owner only** |
+| `Ledger::reverse` | Mirrors an entry from its own stored lines. The original is never edited |
+| `Ledger::balanceOf` | One account, in its own normal direction, optionally as at a date |
+| `TrialBalance::asOf` | Neraca saldo, every postable account, in one query |
+| `DocumentPoster::*` | **Every posting rule in the system**, in one file |
+| `LedgerReconciliation::checks` | The four control accounts against the subledgers they summarise |
+
+The rules, all of them:
+
+| Document | Posting |
+|---|---|
+| Faktur terbit | Dr Piutang Usaha / Cr Penjualan + Cr PPN Keluaran |
+| Pengiriman | Dr HPP / Cr Persediaan, at the cost frozen on the movement |
+| Penerimaan barang | Dr Persediaan / Cr Utang Belum Ditagih |
+| Tagihan pemasok | Dr Utang Belum Ditagih + Dr Selisih Harga + Dr PPN Masukan / Cr Utang Usaha |
+| Pembayaran pelanggan | Dr Bank / Cr Piutang Usaha |
+| Pembayaran pemasok | Dr Utang Usaha / Cr Bank |
+
+Postings are explicit calls from inside each document service's own
+transaction, not events — the journal has to land atomically with the document,
+and a listener firing after commit can leave a shipment with no cost against it.
+
+A trial balance proves the ledger is internally consistent; it cannot prove the
+rules are right, because a wrong account balances perfectly. `LedgerReconciliation`
+is what catches that: Piutang against open invoices, Utang against open bills,
+Persediaan against `product_costs`, Utang Belum Ditagih against goods received
+and not billed. If one drifts, a rule in `DocumentPoster` is wrong.
+
+**Two things to settle with the accountant.**
+
+1. **Revenue is recognised before delivery.** An order is invoiced at
+   `awaiting_payment`, which is before `shipped`. So the sale hits the profit
+   and loss while its cost is still in inventory, and an order straddling a
+   month end misstates both months' margin. Moving invoicing to `shipped`, or
+   accruing at period end, are both fixes — it is a policy call, not a bug.
+2. **PPN with no faktur pajak goes to Beban Operasional**, not into stock cost.
+   The textbook treatment adds non-creditable VAT to the asset, but that would
+   put the ledger's Persediaan above `product_costs` and break a control
+   account. This is the one place the rules knowingly diverge.
+
+Manual payments are booked to Bank, never Kas. Nothing on the row says which it
+was, and nearly all of them are transfers; Kas is in the chart for the manual
+journal that moves one when it is not.
 
 ### Credit
 
@@ -324,8 +378,6 @@ Still absent, and none of it is decided against — it is simply not built:
   system cannot record
 - Transfer and stock-opname documents. Both movement reasons exist with no
   paperwork pairing an out with an in, or approving a count variance
-- General ledger and chart of accounts. `payment_entries` is a single-sided cash
-  ledger; nothing posts double entry, so there is no trial balance
 - Landed cost — duty and freight never reach unit cost
 - Fiscal period close. Nothing can be locked against a back-dated movement
 

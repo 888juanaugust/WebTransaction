@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Billing;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Tax\TaxCalculator;
@@ -31,6 +32,7 @@ class InvoiceIssuer
         private readonly TaxCalculator $tax,
         private readonly DocumentNumberGenerator $numbers,
         private readonly AuditLogger $audit,
+        private readonly DocumentPoster $poster,
     ) {}
 
     /**
@@ -101,6 +103,12 @@ class InvoiceIssuer
 
                 'kode_transaksi' => $this->tax->kodeTransaksi(),
             ]);
+
+            /*
+             * Dr Piutang Usaha / Cr Penjualan + PPN Keluaran, inside this
+             * transaction, so the books and the invoice land together.
+             */
+            $this->poster->invoiceIssued($invoice, $actor);
 
             $this->audit->log(
                 action: 'invoice_issued',

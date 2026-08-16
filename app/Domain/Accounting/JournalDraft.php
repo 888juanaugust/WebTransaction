@@ -115,6 +115,19 @@ final class JournalDraft
             : $this->kredit($kode, -$amountRupiah, $memo, $company, $supplier);
     }
 
+    /** The mirror of debitSigned(): positive credits, negative debits. */
+    public function kreditSigned(
+        string $kode,
+        int $amountRupiah,
+        ?string $memo = null,
+        ?Company $company = null,
+        ?Supplier $supplier = null,
+    ): self {
+        return $amountRupiah >= 0
+            ? $this->kredit($kode, $amountRupiah, $memo, $company, $supplier)
+            : $this->debit($kode, -$amountRupiah, $memo, $company, $supplier);
+    }
+
     /** @return list<array{kode: string, debit: int, kredit: int, memo: ?string, company_id: ?int, supplier_id: ?int}> */
     public function lines(): array
     {

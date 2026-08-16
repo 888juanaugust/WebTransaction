@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Purchasing;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
@@ -30,6 +31,7 @@ class GoodsReceiptPoster
         private readonly StockLedger $stock,
         private readonly AuditLogger $audit,
         private readonly PurchaseOrderFlow $purchaseOrders,
+        private readonly DocumentPoster $poster,
     ) {}
 
     /**
@@ -108,6 +110,10 @@ class GoodsReceiptPoster
              * urgent top-up, or the opening balance — simply skips this.
              */
             $this->purchaseOrders->registerReceipt($locked, $actor);
+
+            // Dr Persediaan / Cr Utang Belum Ditagih. The stock is on the
+            // shelf and the supplier has not billed for it yet.
+            $this->poster->goodsReceived($locked, $actor);
 
             $this->audit->log(
                 action: 'goods_receipt_posted',

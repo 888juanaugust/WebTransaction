@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Purchasing;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
@@ -24,7 +25,10 @@ use LogicException;
  */
 class SupplierLedger
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly DocumentPoster $poster,
+    ) {}
 
     /**
      * Record a payment made to a supplier.
@@ -69,6 +73,9 @@ class SupplierLedger
             ]);
 
             $this->settleIfCleared($bill);
+
+            // Dr Utang Usaha / Cr Bank.
+            $this->poster->supplierPaymentMade($entry, $actor);
 
             $this->audit->log(
                 action: 'supplier_payment_recorded',
@@ -135,6 +142,8 @@ class SupplierLedger
                         : SupplierBill::STATUS_OPEN,
                 ])->save();
             }
+
+            $this->poster->supplierPaymentMade($reversal, $actor);
 
             $this->audit->log(
                 action: 'supplier_payment_reversed',

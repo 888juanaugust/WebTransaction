@@ -25,9 +25,11 @@ use App\Models\SupplierBillLine;
  * actually happened gets worked around, which loses the record entirely.
  *
  * **Price variance is not posted to inventory.** Goods are valued at what the
- * receipt said they cost; if the bill later disagrees, this surfaces the gap
- * but nothing adjusts the stock valuation. Doing that properly means a purchase
- * price variance account, and there is no general ledger to put one in yet.
+ * receipt said they cost; if the bill later disagrees, the stock valuation is
+ * left alone and the difference goes to Selisih Harga Pembelian in the general
+ * ledger — an expense of this period rather than a silent restatement of the
+ * balance sheet. This screen is where somebody sees it and rings the supplier;
+ * DocumentPoster::supplierBillPosted is where it lands in the books.
  */
 class ThreeWayMatch
 {

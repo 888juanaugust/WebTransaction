@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Payments;
 
+use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Models\Company;
 use App\Models\Invoice;
@@ -23,7 +24,10 @@ use LogicException;
  */
 class PaymentLedger
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly DocumentPoster $poster,
+    ) {}
 
     /**
      * Post a payment that arrived through the gateway.
@@ -70,6 +74,9 @@ class PaymentLedger
 
             $this->settleInvoiceIfCovered($invoice);
 
+            // Dr Bank / Cr Piutang Usaha.
+            $this->poster->customerPaymentReceived($entry);
+
             $this->audit->log(
                 action: 'payment_received',
                 subject: $entry,
@@ -114,6 +121,8 @@ class PaymentLedger
 
             $this->settleInvoiceIfCovered($invoice);
 
+            $this->poster->customerPaymentReceived($entry, $actor);
+
             $this->audit->log(
                 action: 'payment_confirmed',
                 subject: $entry,
@@ -157,6 +166,13 @@ class PaymentLedger
                 && $invoice->fresh()->amountOutstanding() > 0) {
                 $invoice->forceFill(['status' => Invoice::STATUS_OPEN])->save();
             }
+
+            /*
+             * The reversal is its own row with a negative amount, so it posts
+             * its own entry with both sides the other way round. The original
+             * entry is not touched — same rule as the payment ledger itself.
+             */
+            $this->poster->customerPaymentReceived($reversal, $actor);
 
             $this->audit->log(
                 action: 'payment_reversed',
