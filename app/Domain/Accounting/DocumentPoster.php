@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Accounting;
 
 use App\Domain\Money;
+use App\Models\CreditNote;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
@@ -31,7 +32,7 @@ use App\Models\User;
  *
  * The control accounts these rules maintain, and what proves each one:
  *
- *   Piutang Usaha           = total outstanding customer invoices
+ *   Piutang Usaha           = invoices, less payments, less credit notes
  *   Utang Usaha             = total outstanding supplier bills
  *   Persediaan              = total value in product_costs
  *   Utang Belum Ditagih     = goods received and not yet billed
@@ -74,6 +75,78 @@ class DocumentPoster
             ->debit(AccountCode::PIUTANG_USAHA, (int) $invoice->total_rupiah, $company?->nama, company: $company)
             ->kredit(AccountCode::PENJUALAN, (int) $invoice->subtotal_rupiah, company: $company)
             ->kredit(AccountCode::PPN_KELUARAN, (int) $invoice->ppn_rupiah, 'PPN keluaran');
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * Credit note posted: the customer owes less, and possibly the goods came
+     * back.
+     *
+     *   Dr Penjualan          the sale being unwound, net of discount
+     *   Dr PPN Keluaran       tax no longer collected on their behalf
+     *     Cr Piutang Usaha    total
+     *
+     * Revenue is debited rather than a contra "Retur Penjualan" account being
+     * credited. The same choice as booking sales net of discount, and the same
+     * cost: returns are not a line on the profit and loss, only a document in
+     * the register. Add Retur Penjualan if that ever needs to be visible —
+     * which it will, the first time somebody asks how much came back.
+     *
+     * A retur posts a second entry for the goods; see shipmentReturned().
+     */
+    public function creditNoteIssued(CreditNote $note, ?User $actor = null): JournalEntry
+    {
+        $company = $note->company;
+
+        $draft = JournalDraft::for(
+            $note,
+            JournalEntry::JENIS_NOTA_KREDIT,
+            "Nota kredit {$note->nomor}",
+            $note->tanggal,
+        )
+            ->debit(AccountCode::PENJUALAN, (int) $note->subtotal_rupiah, $note->alasan, company: $company)
+            ->debit(AccountCode::PPN_KELUARAN, (int) $note->ppn_rupiah, 'PPN keluaran diretur')
+            ->kredit(AccountCode::PIUTANG_USAHA, (int) $note->total_rupiah, $company?->nama, company: $company);
+
+        $entry = $this->ledger->post($draft, $actor);
+
+        $this->shipmentReturned($note, $actor);
+
+        return $entry;
+    }
+
+    /**
+     * Goods coming back off a credit note.
+     *
+     *   Dr Persediaan               at the cost they left at
+     *     Cr Harga Pokok Penjualan
+     *
+     * The exact reverse of the shipment that sent them out, which is what
+     * makes the margin on the part that was kept come out right. Valuing the
+     * return at today's average instead would book a profit or a loss on goods
+     * that merely came back.
+     *
+     * Returns null for a potongan, and for a retur of stock that was never
+     * costed — there is no cost to put back, and an entry for nil would say
+     * something happened.
+     */
+    public function shipmentReturned(CreditNote $note, ?User $actor = null): ?JournalEntry
+    {
+        $cost = (int) $note->hpp_rupiah;
+
+        if ($cost === 0) {
+            return null;
+        }
+
+        $draft = JournalDraft::for(
+            $note,
+            JournalEntry::JENIS_HPP_RETUR,
+            "HPP retur {$note->nomor}",
+            $note->tanggal,
+        )
+            ->debit(AccountCode::PERSEDIAAN, $cost)
+            ->kredit(AccountCode::HARGA_POKOK_PENJUALAN, $cost, company: $note->company);
 
         return $this->ledger->post($draft, $actor);
     }

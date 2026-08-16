@@ -48,6 +48,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
+| `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
@@ -57,6 +58,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
+| `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
 
 The four accounting screens are behind `canSeeBooks()`. They carry cost and
@@ -298,6 +300,13 @@ journal that moves one when it is not.
 | `CreditChecker::check(order)` | Whether this order fits the limit |
 | `CreditChecker::status(company)` | limit, outstanding, committed, available |
 
+Exposure comes from `OutstandingReceivables`, shared with the ledger's Piutang
+Usaha reconciliation and the invoice row. It used to be computed here
+separately, counting only payments already matched to an invoice — so money
+plainly in the bank freed no credit until somebody allocated it, and this
+disagreed with the ledger, which never had that filter. Credit notes would have
+made it a third term computed three ways. Now there is one answer.
+
 ### Payments — append-only ledger
 
 | Function | Decides |
@@ -321,6 +330,55 @@ laptop. A flow you cannot complete locally is one people test on production.
 
 Counter table under a row lock, not a Postgres sequence — sequences survive
 rollback and would leave gaps.
+
+### Credit notes — money going back
+
+The Syarat Penjualan described a returns process the system could not record.
+Staff faced with a returned carton had two options, both bad: edit the invoice,
+which the system refuses, or write the account down somewhere the books never
+see.
+
+| Function | Decides |
+|---|---|
+| `CreditNoteIssuer::creditable` | What may still be credited: shipped, less already credited, with the invoiced price and the frozen cost |
+| `CreditNoteIssuer::draft` | Opens a draft. Requires a reason, and a gudang for a retur |
+| `CreditNotePoster::post` | **Every figure is decided here.** Stock back in, books reversed, invoice re-settled |
+| `OutstandingReceivables` | **One definition** of what customers owe: invoiced − paid − credited |
+
+Two kinds. A **retur barang** puts stock back and reverses cost of sales; a
+**potongan** moves only money. Getting that wrong either invents inventory or
+gives away margin that was never lost.
+
+Three snapshots are load-bearing, and each protects against a different lie:
+
+- Credited at the price on the **invoice**, apportioned from the line total so
+  the discount that was actually given is honoured. Quantity times list price
+  refunds a number the customer never paid.
+- Returned goods valued at the cost they **left** at, from the shipment's own
+  frozen value. Today's moving average books a profit on goods that merely came
+  back.
+- Never more than shipped, never more than invoiced — checked against every
+  note already posted, so three small ones cannot do what one large one is
+  refused.
+
+**Who may raise one is the control.** `canIssueCreditNote()` follows
+`canEditOrderPrices()`, not `canConfirmPayment()`: a credit note reduces the
+amount owed, which is editing the invoice amount by another name, and
+CLAUDE.md's hard rule says whoever confirms a payment must not be able to do
+that. The fraud it blocks is the ordinary one — take a payment, keep it, write
+the receivable off as a return nobody witnessed. So Finance read credit notes
+and cannot raise one.
+
+Posting is terminal, like every other money document. There is no un-issuing a
+credit note; a wrong one is corrected by invoicing again, which is what happens
+in practice anyway.
+
+**For the accountant.** Under the PPN rules a return is evidenced by a nota
+retur the *buyer* issues to the seller. The system records that number when one
+arrives (`nomor_nota_retur`) and computes PPN on the credit at the same 11/12
+DPP as the sale, but nothing here has been confirmed against the current
+Coretax treatment. Worth five minutes of their time before the first real
+return.
 
 ### Cart
 
@@ -399,14 +457,11 @@ All idempotent — assume they run twice.
   import file or reads an NSFP back
 - Buyer self-service password reset
 - `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)
-- Unallocated payments don't reduce credit exposure — conservative, but wrong
 - Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
 
 Still absent, and none of it is decided against — it is simply not built:
 
-- Credit note / nota retur — the Syarat Penjualan describe a returns process the
-  system cannot record
 - Transfer and stock-opname documents. Both movement reasons exist with no
   paperwork pairing an out with an in, or approving a count variance
 - Landed cost — duty and freight never reach unit cost

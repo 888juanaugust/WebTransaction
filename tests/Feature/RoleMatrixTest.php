@@ -59,6 +59,10 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => true,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => true,
+                // A credit note reduces what a customer owes, which is editing
+                // the invoice amount by another name — so it follows price
+                // authority, not payment authority.
+                'canIssueCreditNote' => true,
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => false,
                 'canViewAuditLog' => false,
@@ -75,6 +79,7 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,
+                'canIssueCreditNote' => false,
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => true,
                 'canViewAuditLog' => false,
@@ -92,6 +97,9 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => false,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => false,
+                // Finance confirm payments, so they must not be able to write
+                // a receivable off as a return nobody witnessed.
+                'canIssueCreditNote' => false,
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => false,
                 'canViewAuditLog' => false,
@@ -108,6 +116,7 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => true,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => true,
+                'canIssueCreditNote' => true,
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => true,
                 'canViewAuditLog' => true,

@@ -134,6 +134,24 @@ enum Role: string
         return in_array($this, [self::Sales, self::Owner], true);
     }
 
+    /**
+     * Issue a credit note — a return, or a correction to what a customer owes.
+     *
+     * Follows canEditOrderPrices() rather than canConfirmPayment(), and the
+     * distinction is the whole point. A credit note reduces the amount owed,
+     * which is editing the invoice amount by another name. CLAUDE.md's hard
+     * rule is that whoever confirms a payment must not be able to do that, and
+     * the fraud it blocks is the ordinary one: take a customer's payment,
+     * keep it, then write the receivable off as a return nobody witnessed.
+     *
+     * So Finance — who confirm payments — cannot issue credit notes, and Sales
+     * — who cannot touch money coming in — can.
+     */
+    public function canIssueCreditNote(): bool
+    {
+        return in_array($this, [self::Sales, self::Owner], true);
+    }
+
     public function canOverrideCreditLimit(): bool
     {
         return in_array($this, [self::Finance, self::Owner], true);

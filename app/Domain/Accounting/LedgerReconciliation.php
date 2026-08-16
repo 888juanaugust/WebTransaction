@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Accounting;
 
+use App\Domain\Billing\OutstandingReceivables;
 use App\Domain\Purchasing\SupplierLedger;
 use App\Domain\Stock\InventoryValuation;
 use App\Models\GoodsReceiptLine;
-use App\Models\Invoice;
-use App\Models\PaymentEntry;
 use App\Models\SupplierBillLine;
 
 /**
@@ -33,6 +32,7 @@ class LedgerReconciliation
         private readonly Ledger $ledger,
         private readonly InventoryValuation $valuation,
         private readonly SupplierLedger $suppliers,
+        private readonly OutstandingReceivables $receivables,
     ) {}
 
     /**
@@ -45,8 +45,8 @@ class LedgerReconciliation
                 kode: AccountCode::PIUTANG_USAHA,
                 nama: 'Piutang Usaha',
                 buku: $this->ledger->balanceOf(AccountCode::PIUTANG_USAHA),
-                subledger: $this->outstandingReceivables(),
-                sumber: 'Total faktur pelanggan yang belum lunas',
+                subledger: $this->receivables->total(),
+                sumber: 'Faktur pelanggan, dikurangi pembayaran dan nota kredit',
             ),
             new ControlAccountCheck(
                 kode: AccountCode::UTANG_USAHA,
@@ -87,23 +87,6 @@ class LedgerReconciliation
     public function discrepancies(): array
     {
         return array_values(array_filter($this->checks(), fn (ControlAccountCheck $c) => ! $c->agrees()));
-    }
-
-    /**
-     * What customers still owe: everything invoiced, less everything received.
-     *
-     * Computed from the two ledgers rather than from `status`, because status
-     * is a cached conclusion and these are the facts behind it.
-     */
-    private function outstandingReceivables(): int
-    {
-        $invoiced = (int) Invoice::query()
-            ->where('status', '!=', Invoice::STATUS_VOID)
-            ->sum('total_rupiah');
-
-        $paid = (int) PaymentEntry::query()->sum('amount_rupiah');
-
-        return $invoiced - $paid;
     }
 
     /**

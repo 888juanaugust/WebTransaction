@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Credit;
 
+use App\Domain\Billing\OutstandingReceivables;
 use App\Domain\Orders\OrderStatus;
 use App\Models\Company;
 use App\Models\Invoice;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CreditChecker
 {
+    public function __construct(private readonly OutstandingReceivables $receivables) {}
+
     /**
      * Check whether an order fits inside the customer's remaining credit.
      *
@@ -94,19 +97,20 @@ class CreditChecker
      * Open invoices, net of everything posted against them in the payment
      * ledger — including reversals, which are just negative entries.
      */
+    /**
+     * What this customer owes, from the one definition of it.
+     *
+     * Used to sum invoices and subtract only *matched* payments, which meant
+     * money sitting in the bank against an unallocated transfer did not free
+     * up any credit — listed in docs/MAP.md as conservative but wrong. It also
+     * meant this and the ledger's Piutang Usaha reconciliation, which never
+     * had that filter, disagreed about the same customer.
+     *
+     * Both now read OutstandingReceivables, so there is one answer.
+     */
     private function outstanding(Company $company): int
     {
-        $invoiced = (int) Invoice::query()
-            ->where('company_id', $company->id)
-            ->where('status', '!=', Invoice::STATUS_VOID)
-            ->sum('total_rupiah');
-
-        $paid = (int) DB::table('payment_entries')
-            ->where('company_id', $company->id)
-            ->whereNotNull('invoice_id')
-            ->sum('amount_rupiah');
-
-        return max(0, $invoiced - $paid);
+        return $this->receivables->exposureFor($company);
     }
 
     /**

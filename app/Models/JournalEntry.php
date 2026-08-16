@@ -45,6 +45,11 @@ class JournalEntry extends Model
 
     public const JENIS_PEMBAYARAN_PEMASOK = 'pembayaran_pemasok';
 
+    /** A credit note: the sale unwound, and the goods back on the shelf. */
+    public const JENIS_NOTA_KREDIT = 'nota_kredit';
+
+    public const JENIS_HPP_RETUR = 'hpp_retur';
+
     /**
      * The year-end entry that zeroes income and expense into Laba Ditahan.
      * Its source is the December period that produced it, so a period can only

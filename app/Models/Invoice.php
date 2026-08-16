@@ -59,15 +59,41 @@ class Invoice extends Model
         return $this->hasMany(PaymentEntry::class);
     }
 
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
     /** Sum of the append-only payment ledger for this invoice. */
     public function amountPaid(): int
     {
         return (int) $this->paymentEntries()->sum('amount_rupiah');
     }
 
+    /**
+     * What has been credited back on posted notes.
+     *
+     * Drafts do not count. A draft is somebody's intention, and letting an
+     * unfinished document lower a customer's balance is how a return that was
+     * never agreed ends up reducing what they owe.
+     */
+    public function amountCredited(): int
+    {
+        return (int) $this->creditNotes()
+            ->where('status', CreditNote::STATUS_POSTED)
+            ->sum('total_rupiah');
+    }
+
+    /**
+     * What is still owed: billed, less paid, less credited.
+     *
+     * Three other places need this same figure — the credit check, the ledger
+     * reconciliation, and the portal — and OutstandingReceivables exists so
+     * they are all one rule. This is the per-invoice form of it.
+     */
     public function amountOutstanding(): int
     {
-        return $this->total_rupiah - $this->amountPaid();
+        return $this->total_rupiah - $this->amountPaid() - $this->amountCredited();
     }
 
     public function scopeOverdue(Builder $query): Builder

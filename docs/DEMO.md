@@ -172,8 +172,9 @@ posts double entry as it happens, and **Buku besar** carries neraca, laba rugi,
 neraca saldo, the journal and period close. Closing a month locks it: a
 document back-dated into it is refused, with the document, rather than quietly
 restating figures already reported. Closing December closes the year into Laba
-Ditahan. What is still missing is credit notes, transfers, opname and landed
-cost. Those are in `docs/MAP.md`.
+Ditahan. Returns are recorded as credit notes, which put stock back at the cost
+it left at and reverse the sale in the books. What is still missing is
+transfers, opname and landed cost. Those are in `docs/MAP.md`.
 
 Two things to raise with your accountant rather than take on trust: orders are
 invoiced when they move to awaiting payment, which is **before** they ship, so
@@ -182,7 +183,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 674 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 731 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

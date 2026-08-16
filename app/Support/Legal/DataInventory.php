@@ -249,6 +249,22 @@ final class DataInventory
             ],
 
             /*
+             * Credit notes. `alasan` is mandatory free text explaining why a
+             * customer is getting money back, which in practice names people:
+             * who complained, who agreed to it, which driver damaged what.
+             */
+            'credit_notes' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['alasan', 'created_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'invoice_id', 'company_id', 'jenis', 'tanggal',
+                    'warehouse_id', 'subtotal_rupiah', 'dpp_rupiah', 'ppn_rupiah',
+                    'total_rupiah', 'hpp_rupiah', 'kode_transaksi',
+                    'nomor_nota_retur', 'status', 'posted_at',
+                ],
+            ],
+
+            /*
              * Closing and reopening the books. Both name the member of staff
              * who did it, and a reopening carries their stated reason in free
              * text — which is exactly the sort of field that ends up
@@ -318,6 +334,10 @@ final class DataInventory
              * parent entry.
              */
             'accounts', 'journal_lines',
+
+            // Credit note detail: quantities and money about goods. The person
+            // and the reason are on the parent note.
+            'credit_note_lines',
 
             // Order and cart detail. The people are on the parent rows.
             'order_lines', 'cart_items',

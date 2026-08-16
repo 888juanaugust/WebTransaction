@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\FakturController;
+use App\Http\Controllers\NotaKreditController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
@@ -94,6 +95,19 @@ Route::middleware(['web', 'auth:web'])
 Route::middleware(['web', 'auth:customer'])
     ->get('/portal/dokumen/faktur/{invoice}', [FakturController::class, 'pelanggan'])
     ->name('portal.dokumen.faktur');
+
+/*
+ * Nota kredit — the faktur run backwards, and the same two-route shape for the
+ * same reason. A customer arguing about a return and the salesperson who agreed
+ * to it must be reading one document.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/nota-kredit/{creditNote}', [NotaKreditController::class, 'staff'])
+    ->name('dokumen.nota-kredit');
+
+Route::middleware(['web', 'auth:customer'])
+    ->get('/portal/dokumen/nota-kredit/{creditNote}', [NotaKreditController::class, 'pelanggan'])
+    ->name('portal.dokumen.nota-kredit');
 
 /*
  * Pesanan pembelian — the first of the three print documents that travels

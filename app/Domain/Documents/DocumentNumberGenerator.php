@@ -32,6 +32,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_JOURNAL = 'journal';
 
+    public const SCOPE_CREDIT_NOTE = 'credit_note';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -97,6 +99,12 @@ class DocumentNumberGenerator
     public function nextSupplierBillNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_SUPPLIER_BILL, 'TP', $date);
+    }
+
+    /** Nota Kredit: NK-202608-0001. */
+    public function nextCreditNoteNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_CREDIT_NOTE, 'NK', $date);
     }
 
     /**
