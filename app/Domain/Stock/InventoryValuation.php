@@ -56,6 +56,42 @@ class InventoryValuation
     }
 
     /**
+     * Raise what the goods on hand are worth, without any arriving.
+     *
+     * Landed cost is the only thing that does this: the freight invoice turns
+     * up a fortnight after the container, and it says those cartons cost more
+     * than we booked them at. The quantity is unchanged; the value is not.
+     *
+     * **Only against stock we still have.** Adding value to a SKU at zero
+     * quantity would leave value with nothing under it — inventory worth money
+     * and holding nothing, and a unit cost of infinity for whatever arrives
+     * next. The caller works out the share belonging to goods already sold and
+     * sends that to cost of sales instead; by the time it reaches here, the
+     * figure is the on-shelf share and there is something to put it on.
+     *
+     * Must be called inside the caller's transaction.
+     */
+    public function addCost(string $sku, int $valueRupiah): ProductCost
+    {
+        if ($valueRupiah <= 0) {
+            throw new LogicException("An added cost of {$valueRupiah} is not a cost.");
+        }
+
+        $cost = $this->lock($sku);
+
+        if ($cost->qty_base <= 0) {
+            throw new LogicException(
+                "Cannot add cost to {$sku}: nothing on hand to carry it."
+            );
+        }
+
+        $cost->value_rupiah += $valueRupiah;
+        $cost->save();
+
+        return $cost;
+    }
+
+    /**
      * Take goods out at the current average, and report what they were worth.
      *
      * Returns the value removed as a positive number; the caller writes it onto

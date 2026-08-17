@@ -38,6 +38,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_STOCK_OPNAME = 'stock_opname';
 
+    public const SCOPE_LANDED_COST = 'landed_cost';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -115,6 +117,12 @@ class DocumentNumberGenerator
     public function nextStockOpnameNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_STOCK_OPNAME, 'OP', $date);
+    }
+
+    /** Biaya Perolehan: BP-202608-0001. */
+    public function nextLandedCostNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_LANDED_COST, 'BP', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

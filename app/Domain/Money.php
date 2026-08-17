@@ -40,6 +40,80 @@ final class Money
         return $signs % 2 === 1 ? -$rounded : $rounded;
     }
 
+    /**
+     * Split an amount across weights so the parts add back up to it exactly.
+     *
+     * `mulDiv` per row does not do this. Round three thirds of Rp 100 and you
+     * get 33 + 33 + 33 = 99, and the missing rupiah has to live somewhere — in
+     * a clearing account that never quite empties, or in a reconciliation
+     * check that reports a one-rupiah drift forever. Both teach people to
+     * ignore the check.
+     *
+     * So: floor every share, then hand the remainder out one rupiah at a time
+     * to whoever was robbed most by the flooring — largest remainder. Ties go
+     * to the earlier row, which makes the result depend only on the inputs:
+     * sorting the same weights in a different order must not move a rupiah
+     * somewhere else. PHP's sort has been stable since 8.0, so equal
+     * remainders keep their original sequence without an explicit tie-break.
+     *
+     * Zero weights get zero. All-zero weights spread evenly, because a charge
+     * still has to land somewhere and refusing here would strand it.
+     *
+     * @param  list<int>  $weights
+     * @return list<int> one share per weight, in the same order
+     */
+    public static function allocate(int $amount, array $weights): array
+    {
+        $count = count($weights);
+
+        if ($count === 0) {
+            throw new InvalidArgumentException('Nothing to allocate across.');
+        }
+
+        foreach ($weights as $weight) {
+            if ($weight < 0) {
+                throw new InvalidArgumentException('A negative weight is not a share of anything.');
+            }
+        }
+
+        $total = array_sum($weights);
+
+        if ($total === 0) {
+            $weights = array_fill(0, $count, 1);
+            $total = $count;
+        }
+
+        $shares = [];
+        $remainders = [];
+        $allocated = 0;
+
+        foreach ($weights as $i => $weight) {
+            // Floor on the magnitude so a negative amount — a credit note
+            // against a freight bill — spreads the same way in reverse.
+            $exact = abs($amount) * $weight;
+            $share = intdiv($exact, $total);
+
+            $shares[$i] = $share;
+            $remainders[$i] = $exact - $share * $total;
+            $allocated += $share;
+        }
+
+        $leftover = abs($amount) - $allocated;
+
+        // Sort a copy of the indices, largest remainder first. The shares
+        // themselves stay in the caller's order.
+        $order = range(0, $count - 1);
+        usort($order, fn (int $a, int $b) => $remainders[$b] <=> $remainders[$a]);
+
+        for ($i = 0; $i < $leftover; $i++) {
+            $shares[$order[$i % $count]]++;
+        }
+
+        return $amount < 0
+            ? array_map(fn (int $share) => -$share, $shares)
+            : $shares;
+    }
+
     /** Apply a basis-point discount. 250 bps = 2.5% off. */
     public static function applyDiscountBps(int $amount, int $discountBps): int
     {

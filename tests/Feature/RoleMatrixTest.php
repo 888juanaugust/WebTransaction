@@ -68,6 +68,7 @@ class RoleMatrixTest extends TestCase
                 'canTransferStock' => false,
                 'canCountStock' => false,
                 'canApproveStockCount' => false,
+                'canAllocateLandedCost' => false,
                 'canViewAuditLog' => false,
             ]],
             'warehouse' => [Role::Warehouse, [
@@ -90,6 +91,7 @@ class RoleMatrixTest extends TestCase
                 'canTransferStock' => true,
                 'canCountStock' => true,
                 'canApproveStockCount' => false,
+                'canAllocateLandedCost' => false,
                 'canViewAuditLog' => false,
             ]],
             'finance' => [Role::Finance, [
@@ -113,6 +115,10 @@ class RoleMatrixTest extends TestCase
                 'canTransferStock' => false,
                 'canCountStock' => false,
                 'canApproveStockCount' => true,
+                // Bookkeeping judgement about a supplier invoice, so it
+                // follows purchase authority rather than the opname split —
+                // an allocation creates no payable and no stock.
+                'canAllocateLandedCost' => true,
                 'canViewAuditLog' => false,
             ]],
             'owner' => [Role::Owner, [
@@ -133,6 +139,7 @@ class RoleMatrixTest extends TestCase
                 'canTransferStock' => true,
                 'canCountStock' => true,
                 'canApproveStockCount' => true,
+                'canAllocateLandedCost' => true,
                 'canViewAuditLog' => true,
             ]],
         ];

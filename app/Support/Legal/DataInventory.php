@@ -295,6 +295,30 @@ final class DataInventory
             ],
 
             /*
+             * Landed cost allocations — freight and duty being spread over the
+             * goods they belong to. About shipments and suppliers rather than
+             * people, apart from who drew it up and who posted it.
+             */
+            'landed_costs' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'supplier_bill_line_id', 'tanggal', 'dasar', 'amount_rupiah',
+                    'status', 'ke_persediaan_rupiah', 'ke_hpp_rupiah', 'posted_at',
+                ],
+            ],
+
+            'landed_cost_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => [],
+                'bukan' => [
+                    'landed_cost_id', 'goods_receipt_line_id', 'sku', 'urutan', 'warehouse_id',
+                    'dasar_nilai', 'qty_base', 'amount_rupiah', 'qty_on_hand',
+                    'ke_persediaan_rupiah', 'ke_hpp_rupiah',
+                ],
+            ],
+
+            /*
              * Credit notes. `alasan` is mandatory free text explaining why a
              * customer is getting money back, which in practice names people:
              * who complained, who agreed to it, which driver damaged what.

@@ -9,6 +9,7 @@ use App\Models\CreditNote;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
+use App\Models\LandedCost;
 use App\Models\Order;
 use App\Models\PaymentEntry;
 use App\Models\StockMovement;
@@ -239,6 +240,62 @@ class DocumentPoster
     }
 
     /**
+     * A freight or duty charge landing on the goods it belongs to.
+     *
+     *   Dr Persediaan                    the share still on the shelf
+     *   Dr Harga Pokok Penjualan         the share already sold
+     *     Cr Biaya Belum Dialokasikan    the whole charge, leaving the queue
+     *
+     * The credit is the entire charge, always, which is what makes the
+     * clearing account self-clearing: a charge either sits there in full or is
+     * gone in full, and its balance is exactly the list of things nobody has
+     * spread yet. There is no partial allocation and there should not be —
+     * "half of this freight bill belongs somewhere I have not decided" is a
+     * state that gets forgotten rather than finished.
+     *
+     * The HPP side is the part people get wrong. It is not a write-off. Those
+     * goods really did cost that much to bring in, and they have already been
+     * sold, so the cost belongs to the period we found out about it — the
+     * alternative is restating a margin somebody has already reported. It is
+     * booked to HPP rather than to an expense account because it *is* cost of
+     * sales, just recognised late.
+     *
+     * Amounts come from what the movements actually carried, not recomputed,
+     * for the same reason the opname rule does it: Persediaan is a control
+     * account, and a rupiah of rounding drift is a reconciliation that fails
+     * every day until somebody chases it.
+     */
+    public function landedCostAllocated(LandedCost $landedCost, User $actor): ?JournalEntry
+    {
+        $toInventory = (int) $landedCost->ke_persediaan_rupiah;
+        $toCogs = (int) $landedCost->ke_hpp_rupiah;
+        $total = $toInventory + $toCogs;
+
+        if ($total === 0) {
+            return null;
+        }
+
+        $supplier = $landedCost->supplierBillLine?->supplierBill?->supplier;
+
+        $draft = JournalDraft::for(
+            $landedCost,
+            JournalEntry::JENIS_BIAYA_PEROLEHAN,
+            "Biaya perolehan {$landedCost->nomor}",
+            $landedCost->tanggal,
+        )
+            ->debit(AccountCode::PERSEDIAAN, $toInventory, 'Bagian barang yang masih ada')
+            ->debit(AccountCode::HARGA_POKOK_PENJUALAN, $toCogs, 'Bagian barang yang sudah terjual')
+            ->kredit(
+                AccountCode::BIAYA_BELUM_DIALOKASIKAN,
+                $total,
+                $landedCost->catatan,
+                supplier: $supplier,
+            );
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
      * Goods received: stock arrives before the bill does.
      *
      *   Dr Persediaan              what the receipt valued them at
@@ -273,6 +330,7 @@ class DocumentPoster
      *
      *   Dr Utang Belum Ditagih         at the cost the goods were received at
      *   Dr Selisih Harga Pembelian     whatever the supplier charged on top
+     *   Dr Biaya Belum Dialokasikan    freight and duty, waiting to be spread
      *   Dr PPN Masukan                 if there is a faktur pajak
      *     Cr Utang Usaha               the total we now owe
      *
@@ -283,10 +341,17 @@ class DocumentPoster
      * the balance sheet and last month's margin along with it.
      *
      * Each bill line points at the receipt line it bills, so the amount to
-     * clear is exact rather than apportioned. A line with no receipt behind it
-     * — a bill that arrived before the goods — clears nothing and accrues the
-     * whole amount against Utang Belum Ditagih, which then goes contra until
-     * the delivery turns up. That is what the account is for.
+     * clear is exact rather than apportioned. A goods line with no receipt
+     * behind it — a bill that arrived before the delivery — clears nothing and
+     * accrues the whole amount against Utang Belum Ditagih, which then goes
+     * contra until the goods turn up. That is what the account is for.
+     *
+     * A **biaya** line is not that. Freight and duty are never going to be
+     * matched by a delivery, so parking them in Utang Belum Ditagih would
+     * leave a contra balance that nothing can ever clear — in the one account
+     * whose usefulness depends on it being close to empty. They go to the
+     * landed-cost clearing account instead, where a non-zero balance means
+     * "somebody still has to spread this", which is true and actionable.
      */
     public function supplierBillPosted(SupplierBill $bill, User $actor): JournalEntry
     {
@@ -295,10 +360,17 @@ class DocumentPoster
         $supplier = $bill->supplier;
         $grni = 0;
         $variance = 0;
+        $biaya = 0;
 
         foreach ($bill->lines as $line) {
             $billed = (int) $line->line_total_rupiah;
             $receiptLine = $line->goodsReceiptLine;
+
+            if ($line->isBiaya()) {
+                $biaya += $billed;
+
+                continue;
+            }
 
             if ($receiptLine === null || $receiptLine->qty_base <= 0) {
                 $grni += $billed;
@@ -328,6 +400,12 @@ class DocumentPoster
                 AccountCode::SELISIH_HARGA_PEMBELIAN,
                 $variance,
                 'Selisih harga terima vs tagihan',
+                supplier: $supplier,
+            )
+            ->debit(
+                AccountCode::BIAYA_BELUM_DIALOKASIKAN,
+                $biaya,
+                'Biaya perolehan, menunggu dialokasikan',
                 supplier: $supplier,
             );
 

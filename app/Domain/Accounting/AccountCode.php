@@ -28,6 +28,23 @@ final class AccountCode
     public const PERSEDIAAN = '1-1300';
 
     /**
+     * Freight, duty and handling that belong in the cost of goods but have not
+     * been spread over them yet.
+     *
+     * A charge like this arrives on its own invoice, days or weeks after the
+     * goods it belongs to. Between the two, it has to sit somewhere honest:
+     * booking it to expense means the stock is understated and every sale from
+     * that shipment shows too much margin, and holding it off the books until
+     * somebody allocates it means the supplier is owed money the ledger does
+     * not admit to.
+     *
+     * So it lands here, and an allocation drains it into Persediaan and HPP.
+     * **A balance in this account is a work item, not a figure** — it is the
+     * charges nobody has spread yet, and it should be empty at month end.
+     */
+    public const BIAYA_BELUM_DIALOKASIKAN = '1-1350';
+
+    /**
      * PPN we paid our suppliers and can credit against PPN we collected —
      * but only against a faktur pajak. A bill without an NSFP is a cost, not
      * an asset, and the posting rule has to know the difference.
@@ -96,6 +113,8 @@ final class AccountCode
                 'Faktur yang sudah terbit dan belum dibayar. Harus sama dengan total tagihan terbuka pelanggan.'),
             self::posting(self::PERSEDIAAN, 'Persediaan Barang Dagang', AccountType::Aset, '1-0000',
                 'Nilai persediaan dengan metode rata-rata bergerak. Harus sama dengan total nilai product_costs.'),
+            self::posting(self::BIAYA_BELUM_DIALOKASIKAN, 'Biaya Perolehan Belum Dialokasikan', AccountType::Aset, '1-0000',
+                'Ongkos angkut, bea masuk dan sejenisnya yang belum dibebankan ke barangnya. Idealnya kosong di akhir bulan.'),
             self::posting(self::PPN_MASUKAN, 'PPN Masukan', AccountType::Aset, '1-0000',
                 'Hanya dari tagihan pemasok yang disertai faktur pajak.'),
 

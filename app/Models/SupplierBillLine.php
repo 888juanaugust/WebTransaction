@@ -8,14 +8,37 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'supplier_bill_id', 'goods_receipt_line_id', 'sku', 'urutan', 'deskripsi',
+    'supplier_bill_id', 'goods_receipt_line_id', 'jenis', 'sku', 'urutan', 'deskripsi',
     'qty_base', 'unit_cost_rupiah', 'line_total_rupiah', 'dpp_rupiah', 'ppn_rupiah',
 ])]
 class SupplierBillLine extends Model
 {
     use HasFactory;
+
+    /** Goods, billed against a receipt. */
+    public const JENIS_BARANG = 'barang';
+
+    /**
+     * A charge with no goods behind it — freight, duty, handling.
+     *
+     * These wait in the clearing account until an allocation spreads them over
+     * the shipment they belong to.
+     */
+    public const JENIS_BIAYA = 'biaya';
+
+    public function isBiaya(): bool
+    {
+        return $this->jenis === self::JENIS_BIAYA;
+    }
+
+    /** Has this charge already been spread over the goods? */
+    public function isAllocated(): bool
+    {
+        return $this->landedCost()->where('status', LandedCost::STATUS_POSTED)->exists();
+    }
 
     protected function casts(): array
     {
@@ -42,5 +65,11 @@ class SupplierBillLine extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'sku', 'kode');
+    }
+
+    /** The allocation that spread this charge, if one has been drawn. */
+    public function landedCost(): HasOne
+    {
+        return $this->hasOne(LandedCost::class);
     }
 }

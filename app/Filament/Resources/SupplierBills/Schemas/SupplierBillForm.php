@@ -9,6 +9,7 @@ use App\Domain\Tax\TaxCalculator;
 use App\Models\GoodsReceiptLine;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Models\SupplierBillLine;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -100,13 +101,39 @@ class SupplierBillForm
                             ->columns(12)
                             ->minItems(1)
                             ->schema([
+                                /*
+                                 * Barang or biaya, and the difference is not
+                                 * cosmetic: a goods line clears the accrual
+                                 * against a receipt, and a cost line waits in
+                                 * the clearing account to be spread over the
+                                 * goods it belongs to. Getting it wrong parks
+                                 * freight in Utang Belum Ditagih, where no
+                                 * delivery is ever coming to clear it.
+                                 */
+                                Select::make('jenis')
+                                    ->label('Jenis')
+                                    ->options([
+                                        SupplierBillLine::JENIS_BARANG => 'Barang',
+                                        SupplierBillLine::JENIS_BIAYA => 'Biaya perolehan',
+                                    ])
+                                    ->default(SupplierBillLine::JENIS_BARANG)
+                                    ->selectablePlaceholder(false)
+                                    ->live()
+                                    ->columnSpan(2)
+                                    ->helperText(fn (Get $get) => $get('jenis') === SupplierBillLine::JENIS_BIAYA
+                                        ? 'Ongkos angkut, bea masuk. Dibebankan ke barang lewat Biaya perolehan.'
+                                        : null),
+
                                 Select::make('goods_receipt_line_id')
                                     ->label('Penerimaan barang')
                                     ->options(fn (Get $get) => self::receiptLineOptions($get))
                                     ->searchable()
                                     ->live()
-                                    ->placeholder('Tanpa penerimaan (ongkos kirim, dll)')
-                                    ->columnSpan(5)
+                                    ->placeholder('Tanpa penerimaan')
+                                    // A cost line has no goods behind it by
+                                    // definition, so the field is not offered.
+                                    ->visible(fn (Get $get) => $get('jenis') !== SupplierBillLine::JENIS_BIAYA)
+                                    ->columnSpan(3)
                                     ->afterStateUpdated(function ($state, $set) {
                                         $line = $state ? GoodsReceiptLine::query()->find($state) : null;
 

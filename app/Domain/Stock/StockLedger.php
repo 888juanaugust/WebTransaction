@@ -241,6 +241,65 @@ class StockLedger
     }
 
     /**
+     * Raise the cost of stock already on the shelf. Nothing moves.
+     *
+     * A freight or duty invoice arrives after the goods it belongs to and says
+     * they cost more than we booked them at. That is a change of value with no
+     * change of quantity — the one shape `record()` refuses, and rightly: a
+     * zero-quantity *movement* is nonsense, and letting the guard through
+     * would mean every caller has to be trusted not to write one by accident.
+     *
+     * So it gets its own door, and it still writes a row. It would be less
+     * code to move the value straight onto `product_costs` and skip the
+     * ledger, and it would be wrong twice over. `reconcile()` proves the
+     * cached pair by summing the movements; value applied behind its back
+     * makes that check report a permanent drift it cannot explain. And a
+     * person looking at why this SKU's average jumped last Tuesday would find
+     * nothing in its history saying so.
+     *
+     * `qty_signed = 0` is therefore not a degenerate movement but an accurate
+     * one: on this date, for this SKU, the value changed and the quantity did
+     * not.
+     */
+    public function addCost(
+        string $sku,
+        int $warehouseId,
+        int $valueRupiah,
+        ?string $referenceType = null,
+        ?string $referenceId = null,
+        ?User $actor = null,
+        ?string $catatan = null,
+    ): StockMovement {
+        if ($valueRupiah <= 0) {
+            throw new LogicException('An added cost must be positive.');
+        }
+
+        return DB::transaction(function () use (
+            $sku, $warehouseId, $valueRupiah, $referenceType, $referenceId, $actor, $catatan
+        ) {
+            // Locked even though the quantity does not change: the valuation
+            // is about to, and a shipment racing this must not read the
+            // average from between the two writes.
+            $this->lockLevel($sku, $warehouseId);
+
+            $cost = $this->valuation->addCost($sku, $valueRupiah);
+
+            return StockMovement::create([
+                'sku' => $sku,
+                'warehouse_id' => $warehouseId,
+                'qty_signed' => 0,
+                'unit_cost_rupiah' => $cost->unitCost(),
+                'value_rupiah' => $valueRupiah,
+                'reason' => MovementReason::BiayaPerolehan->value,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'actor_id' => $actor?->id,
+                'catatan' => $catatan,
+            ]);
+        });
+    }
+
+    /**
      * Reserve stock for every line of a confirmed order.
      *
      * Takes SELECT ... FOR UPDATE on each stock row inside the confirming

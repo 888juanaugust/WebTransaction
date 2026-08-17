@@ -52,6 +52,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
+| `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
@@ -265,6 +266,60 @@ warehouse, which makes a transfer value-neutral by construction.
 
 A shipment freezes the average standing at that instant. A later purchase moves
 the average for everything after it and changes nothing before it.
+
+### Landed cost — the freight that belongs in the price
+
+A carton does not cost what the supplier invoiced. It costs that plus the
+shipping, the duty and the handling, and leaving those out makes every margin
+figure optimistic by exactly the amount forgotten.
+
+| Function | Decides |
+|---|---|
+| `SupplierBillLine::jenis` | Goods, or a charge with no goods behind it |
+| `LandedCostAllocator::draw` | Which goods a charge belongs to, and each line's share |
+| `LandedCostAllocator::unallocated` | Charges billed to us that nothing has spread yet |
+| `LandedCostPoster::post` | **The split**: shelf share to inventory, sold share to HPP |
+| `Money::allocate` | Largest remainder, so the shares sum to the charge exactly |
+
+The charge itself is a line on a supplier bill — the forwarder's invoice, owed
+like any other — so this document creates no money. It decides where money that
+already exists belongs. A `biaya` line goes to **1-1350 Biaya Perolehan Belum
+Dialokasikan** and waits there; a balance in that account is a work item rather
+than a figure, and it is what the sidebar badge counts.
+
+**The hard part is timing.** The forwarder bills weeks after the container, by
+which point some of the shipment is sold. Three ways to handle that:
+
+- restate the shipments that went out. Refused — cost is frozen at the movement,
+  and last month's margin changing because a freight bill arrived today is what
+  that rule exists to stop.
+- load the whole charge onto what remains. Refused — if nine tenths has gone,
+  the last tenth absorbs ten times its share and every later sale shows a loss
+  that never happened.
+- split it. The shelf share raises cost through a real movement and comes back
+  through margin; the sold share is a cost of the period we found out, booked to
+  HPP because it *is* cost of sales, just recognised late.
+
+**The approximation, stated plainly.** Under average costing there is no way to
+know whether the cartons sold last week came from this container or the one
+before. Reading the current balance is wrong — receive 100, sell 40, then 500
+arrive from elsewhere and the whole charge lands on stock that never paid it —
+and capping that balance at what arrived does not help, because 100 of 100 is
+still all of it. So the measure is **what has gone out since this shipment
+landed**: a first-in-first-out reading laid over an average-cost system, which
+is the conventional choice and the conservative one. Transfers are excluded;
+stock walked across the yard has not gone anywhere.
+
+The uplift is a stock movement with **`qty_signed = 0`**. That is not a
+degenerate movement but an accurate one — on this date the value changed and the
+quantity did not — and it is what keeps `reconcile()` honest: value applied
+straight to `product_costs` would make that check report a drift it cannot
+explain, and a person asking why an average jumped would find nothing in the
+SKU's history saying so.
+
+The basis (value or quantity) is a choice on the document because both are
+defensible and they give very different answers on a mixed shipment. Weight
+would be better for sea freight and we do not hold it.
 
 ### Books — double entry over everything above
 
@@ -508,9 +563,9 @@ All idempotent — assume they run twice.
 - Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
 
-Still absent, and none of it is decided against — it is simply not built:
-
-- Landed cost — duty and freight never reach unit cost
+Landed cost has one approximation worth knowing about rather than a gap: which
+cartons the sold ones came from is unknowable under average costing, so a
+first-in-first-out reading is laid over it. See the section above.
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.

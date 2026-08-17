@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Accounting;
 
 use App\Domain\Billing\OutstandingReceivables;
+use App\Domain\Money;
 use App\Domain\Purchasing\SupplierLedger;
 use App\Domain\Stock\InventoryValuation;
 use App\Models\GoodsReceiptLine;
+use App\Models\LandedCost;
 use App\Models\SupplierBillLine;
 
 /**
@@ -69,6 +71,13 @@ class LedgerReconciliation
                 subledger: $this->receivedNotBilled(),
                 sumber: 'Barang diterima yang belum ada tagihannya',
             ),
+            new ControlAccountCheck(
+                kode: AccountCode::BIAYA_BELUM_DIALOKASIKAN,
+                nama: 'Biaya Perolehan Belum Dialokasikan',
+                buku: $this->ledger->balanceOf(AccountCode::BIAYA_BELUM_DIALOKASIKAN),
+                subledger: $this->unallocatedCharges(),
+                sumber: 'Biaya angkut dan bea yang belum dibebankan ke barangnya',
+            ),
         ];
     }
 
@@ -126,7 +135,7 @@ class LedgerReconciliation
             ])
             ->chunk(500, function ($rows) use (&$billed) {
                 foreach ($rows as $row) {
-                    $billed += \App\Domain\Money::mulDiv(
+                    $billed += Money::mulDiv(
                         (int) $row->received_value,
                         (int) $row->billed_qty,
                         (int) $row->received_qty,
@@ -135,17 +144,48 @@ class LedgerReconciliation
             });
 
         /*
-         * Bill lines with no receipt behind them push the account contra —
+         * Goods lines with no receipt behind them push the account contra —
          * billed before delivery — and the posting rule accrues the full
          * amount, so the subledger figure has to subtract it too.
+         *
+         * Cost lines are excluded because they never came here: freight and
+         * duty go to the clearing account, which has its own check below.
          */
         $billedWithoutReceipt = (int) SupplierBillLine::query()
             ->join('supplier_bills', 'supplier_bill_lines.supplier_bill_id', '=', 'supplier_bills.id')
             ->whereNull('supplier_bill_lines.goods_receipt_line_id')
+            ->where('supplier_bill_lines.jenis', '!=', SupplierBillLine::JENIS_BIAYA)
             ->whereNotNull('supplier_bills.posted_at')
             ->where('supplier_bills.status', '!=', 'void')
             ->sum('supplier_bill_lines.line_total_rupiah');
 
         return $received - $billed - $billedWithoutReceipt;
+    }
+
+    /**
+     * Charges billed to us that nobody has spread over the goods yet.
+     *
+     * Every posted cost line, less the ones a posted allocation has drained.
+     * The allocation always moves the whole charge — it splits it between
+     * inventory and cost of sales, but never leaves part of it behind — so
+     * this is a plain difference of two sums rather than an apportionment.
+     *
+     * Zero is the healthy answer, and it is the number the queue on the
+     * dashboard counts.
+     */
+    private function unallocatedCharges(): int
+    {
+        $billed = (int) SupplierBillLine::query()
+            ->join('supplier_bills', 'supplier_bill_lines.supplier_bill_id', '=', 'supplier_bills.id')
+            ->where('supplier_bill_lines.jenis', SupplierBillLine::JENIS_BIAYA)
+            ->whereNotNull('supplier_bills.posted_at')
+            ->where('supplier_bills.status', '!=', 'void')
+            ->sum('supplier_bill_lines.line_total_rupiah');
+
+        $allocated = (int) LandedCost::query()
+            ->where('status', LandedCost::STATUS_POSTED)
+            ->sum('amount_rupiah');
+
+        return $billed - $allocated;
     }
 }

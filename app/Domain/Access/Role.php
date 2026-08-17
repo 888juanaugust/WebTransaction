@@ -189,6 +189,24 @@ enum Role: string
         return in_array($this, [self::Finance, self::Owner], true);
     }
 
+    /**
+     * Spread a freight or duty charge over the goods it belongs to.
+     *
+     * Follows canRecordPurchases rather than canApproveStockCount, because
+     * this is a bookkeeping judgement about a supplier invoice and not a
+     * check on somebody else's work. Warehouse is excluded for the ordinary
+     * reason: the whole document is money.
+     *
+     * There is no counter/approver split here and there should not be one. An
+     * allocation moves cost between two places we already own it — inventory
+     * and cost of sales — and creates no payable, no stock and no way out for
+     * anything. The fraud that opname's split defends against has no analogue.
+     */
+    public function canAllocateLandedCost(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
     public function canPickAndShip(): bool
     {
         return in_array($this, [self::Warehouse, self::Owner], true);

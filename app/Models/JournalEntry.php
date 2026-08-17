@@ -53,6 +53,9 @@ class JournalEntry extends Model
     /** What a stock count found missing, or found extra. */
     public const JENIS_SELISIH_OPNAME = 'selisih_opname';
 
+    /** Freight and duty coming off the clearing account onto the goods. */
+    public const JENIS_BIAYA_PEROLEHAN = 'biaya_perolehan';
+
     /**
      * The year-end entry that zeroes income and expense into Laba Ditahan.
      * Its source is the December period that produced it, so a period can only

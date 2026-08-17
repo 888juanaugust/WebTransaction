@@ -14,6 +14,14 @@ enum MovementReason: string
     case TransferMasuk = 'transfer_masuk';
     case TransferKeluar = 'transfer_keluar';
 
+    /**
+     * Freight or duty landing on goods that are already here.
+     *
+     * The only reason that carries a value and no quantity. Nothing moves off
+     * the shelf; what it cost to get there changes.
+     */
+    case BiayaPerolehan = 'biaya_perolehan';
+
     public function label(): string
     {
         return match ($this) {
@@ -24,6 +32,7 @@ enum MovementReason: string
             self::Opname => 'Stok opname',
             self::TransferMasuk => 'Transfer masuk',
             self::TransferKeluar => 'Transfer keluar',
+            self::BiayaPerolehan => 'Biaya perolehan',
         };
     }
 }
