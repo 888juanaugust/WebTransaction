@@ -6,6 +6,7 @@ use App\Http\Controllers\FakturController;
 use App\Http\Controllers\FakturExportController;
 use App\Http\Controllers\NotaKreditController;
 use App\Http\Controllers\PesananPembelianController;
+use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -120,6 +121,19 @@ Route::middleware(['web', 'auth:customer'])
 Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/pesanan-pembelian/{purchaseOrder}', PesananPembelianController::class)
     ->name('dokumen.pesanan-pembelian');
+
+/*
+ * Nota retur — goes back to the supplier with the goods.
+ *
+ * The second outward-travelling document, and the one that turns our decision
+ * into their obligation: under the PPN rules the buyer issues the nota retur,
+ * so this carries our number and their credit note comes back against it.
+ *
+ * No portal twin. Nothing about a purchase return is a buyer's business.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/retur-pembelian/{purchaseReturn}', ReturPembelianController::class)
+    ->name('dokumen.retur-pembelian');
 
 /*
  * The faktur pajak export file, served from disk rather than regenerated.

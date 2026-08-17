@@ -10,6 +10,7 @@ use App\Domain\Purchasing\SupplierLedger;
 use App\Domain\Stock\InventoryValuation;
 use App\Models\GoodsReceiptLine;
 use App\Models\LandedCost;
+use App\Models\PurchaseReturn;
 use App\Models\SupplierBillLine;
 
 /**
@@ -55,7 +56,7 @@ class LedgerReconciliation
                 nama: 'Utang Usaha',
                 buku: $this->ledger->balanceOf(AccountCode::UTANG_USAHA),
                 subledger: $this->suppliers->totalPayable(),
-                sumber: 'Total tagihan pemasok yang belum dibayar',
+                sumber: 'Tagihan pemasok, dikurangi pembayaran dan retur pembelian',
             ),
             new ControlAccountCheck(
                 kode: AccountCode::PERSEDIAAN,
@@ -69,7 +70,7 @@ class LedgerReconciliation
                 nama: 'Utang Belum Ditagih',
                 buku: $this->ledger->balanceOf(AccountCode::UTANG_BELUM_DITAGIH),
                 subledger: $this->receivedNotBilled(),
-                sumber: 'Barang diterima yang belum ada tagihannya',
+                sumber: 'Barang diterima yang belum ada tagihannya, dikurangi yang sudah diretur',
             ),
             new ControlAccountCheck(
                 kode: AccountCode::BIAYA_BELUM_DIALOKASIKAN,
@@ -159,7 +160,20 @@ class LedgerReconciliation
             ->where('supplier_bills.status', '!=', 'void')
             ->sum('supplier_bill_lines.line_total_rupiah');
 
-        return $received - $billed - $billedWithoutReceipt;
+        /*
+         * Goods sent back before anybody billed us for them. The receipt
+         * accrued them here and the return unwinds exactly that, at the same
+         * receipt cost — the return's own snapshot, not recomputed, for the
+         * same rounding reason as the billed side above.
+         *
+         * Returns of goods that *had* been billed do not appear: those came
+         * off Utang Usaha, which has its own check.
+         */
+        $returnedUnbilled = (int) PurchaseReturn::query()
+            ->posted()
+            ->sum('nilai_belum_ditagih_rupiah');
+
+        return $received - $billed - $billedWithoutReceipt - $returnedUnbilled;
     }
 
     /**

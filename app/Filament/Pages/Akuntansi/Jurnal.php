@@ -155,6 +155,12 @@ class Jurnal extends Page implements HasTable
             JournalEntry::JENIS_TAGIHAN_PEMASOK => 'Tagihan pemasok',
             JournalEntry::JENIS_PEMBAYARAN_PELANGGAN => 'Pembayaran pelanggan',
             JournalEntry::JENIS_PEMBAYARAN_PEMASOK => 'Pembayaran pemasok',
+            JournalEntry::JENIS_NOTA_KREDIT => 'Nota kredit',
+            JournalEntry::JENIS_HPP_RETUR => 'Harga pokok retur',
+            JournalEntry::JENIS_RETUR_PEMBELIAN => 'Retur pembelian',
+            JournalEntry::JENIS_SELISIH_OPNAME => 'Selisih stok opname',
+            JournalEntry::JENIS_BIAYA_PEROLEHAN => 'Biaya perolehan',
+            JournalEntry::JENIS_TUTUP_BUKU => 'Tutup buku',
             JournalEntry::JENIS_MANUAL => 'Jurnal manual',
             JournalEntry::JENIS_PEMBALIKAN => 'Pembalikan',
         ];

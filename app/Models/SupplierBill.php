@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * What we owe a supplier. The mirror of Invoice, down to the three statuses.
@@ -67,15 +68,41 @@ class SupplierBill extends Model
         return $this->hasMany(SupplierPaymentEntry::class);
     }
 
+    public function purchaseReturnLines(): HasMany
+    {
+        return $this->hasMany(PurchaseReturnLine::class);
+    }
+
     /** Sum of the append-only ledger for this bill. */
     public function amountPaid(): int
     {
         return (int) $this->paymentEntries()->sum('amount_rupiah');
     }
 
+    /**
+     * Goods off this bill that went back to the supplier.
+     *
+     * Posted returns only — a draft is an intention, and letting one reduce a
+     * bill would take an invoice out of the payment run on the strength of a
+     * document nobody has agreed to. As on SupplierLedger, that filter is
+     * currently unfalsifiable by test because a draft line carries zeroes; it
+     * is stated anyway, for the same reason.
+     *
+     * The bill's own total is untouched by any of this, which is the control:
+     * whoever pays cannot move the amount owed. What a return changes is what
+     * is still *outstanding* on it.
+     */
+    public function amountReturned(): int
+    {
+        return (int) $this->purchaseReturnLines()
+            ->join('purchase_returns', 'purchase_return_lines.purchase_return_id', '=', 'purchase_returns.id')
+            ->where('purchase_returns.status', PurchaseReturn::STATUS_POSTED)
+            ->sum(DB::raw('purchase_return_lines.nilai_ditagih_rupiah + purchase_return_lines.ppn_rupiah'));
+    }
+
     public function amountOutstanding(): int
     {
-        return $this->total_rupiah - $this->amountPaid();
+        return $this->total_rupiah - $this->amountPaid() - $this->amountReturned();
     }
 
     /** Input VAT this bill carries — creditable only with a faktur pajak behind it. */

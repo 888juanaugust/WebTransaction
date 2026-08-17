@@ -50,6 +50,9 @@ class JournalEntry extends Model
 
     public const JENIS_HPP_RETUR = 'hpp_retur';
 
+    /** Goods going back to a supplier, and the payable coming down with them. */
+    public const JENIS_RETUR_PEMBELIAN = 'retur_pembelian';
+
     /** What a stock count found missing, or found extra. */
     public const JENIS_SELISIH_OPNAME = 'selisih_opname';
 

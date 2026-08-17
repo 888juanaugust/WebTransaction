@@ -69,6 +69,9 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => false,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
+                // Sending goods back is the receipt read backwards: it carries
+                // what we paid on every line, which Sales never see.
+                'canReturnToSupplier' => false,
                 // They issue the invoices behind it, but filing is a
                 // statement to the tax office about what was sold, and the
                 // people paid on what was sold should not be making it.
@@ -97,6 +100,9 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => true,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
+                // They hand the cartons back to the driver and enter nothing —
+                // the same compromise canRecordPurchases already names.
+                'canReturnToSupplier' => false,
                 'canExportFaktur' => false,
                 // Every report is money, and this role never sees money.
                 'canSeeReports' => false,
@@ -127,6 +133,9 @@ class RoleMatrixTest extends TestCase
                 // follows purchase authority rather than the opname split —
                 // an allocation creates no payable and no stock.
                 'canAllocateLandedCost' => true,
+                // Not split into a raise/approve pair like the stock count,
+                // because a return has a counterparty who has to agree with it.
+                'canReturnToSupplier' => true,
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
@@ -150,6 +159,7 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => true,
                 'canApproveStockCount' => true,
                 'canAllocateLandedCost' => true,
+                'canReturnToSupplier' => true,
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => true,

@@ -153,6 +153,34 @@ Also from that menu: **Cetak PO** — the document the supplier receives, which
 asks them to quote our PO number on their surat jalan and faktur. That
 reference is what makes the matching possible in the first place.
 
+### Sending a delivery back — 2 min
+
+**Pembelian → Retur pembelian → Buat retur.** Pick the posted receipt, give a
+reason, and the draft arrives with every line on it at full quantity. Cut one
+down to 30 and delete nothing else.
+
+> "It starts from everything on purpose. Forgetting to delete a line means you
+> returned too much, and the supplier rings you. Forgetting to add one means
+> you quietly kept goods you are still paying for, and nobody rings anybody."
+
+Post it, and look at **Hasil** at the bottom of the screen. Three figures, and
+the middle one is the point:
+
+- **Dikreditkan pemasok** — what the supplier now owes us, PPN and all.
+- **Akrual dibatalkan** — the part they had not billed yet, which unwinds the
+  receipt instead of reducing a debt.
+- **Selisih harga** — the goods left the shelf at the moving average, which has
+  drifted since they arrived. That difference is a real gain or loss.
+
+> "Whether the supplier had invoiced the delivery yet decides which account
+> this touches. Both happen on the same delivery, and getting it wrong balances
+> perfectly — which is exactly why the system works it out rather than asking."
+
+**Cetak nota retur** produces the document that goes back on the truck. Under
+the PPN rules the *buyer* issues it, so it carries our number and our NPWP, and
+the supplier's credit note comes back against it. Until it does, the return
+shows a badge in the sidebar — that gap is money nobody else is watching.
+
 ### Close on the numbers — 1 min
 
 > "Because every stock movement carries what it cost, the system can say what
@@ -202,7 +230,9 @@ restating figures already reported. Closing December closes the year into Laba
 Ditahan. Returns are recorded as credit notes, which put stock back at the cost
 it left at and reverse the sale in the books. Stock moves between warehouses on
 a transfer document, and the shelf is counted on an opname sheet that Warehouse
-fills in and Finance approves — never the same person. Freight and duty are
+fills in and Finance approves — never the same person. Goods sent back to a
+supplier come off the shelf on a retur pembelian, which reduces what we owe them
+where they had already invoiced it and unwinds the accrual where they had not. Freight and duty are
 spread over the goods they belong to, with the share for stock already sold
 going to HPP rather than restating shipments that have gone. **Buku besar →
 Faktur pajak** exports a month's output VAT for filing and records the nomor
@@ -219,7 +249,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1016 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1080 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

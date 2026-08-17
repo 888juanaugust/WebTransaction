@@ -48,6 +48,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
+| `/admin/retur-pembelian` | Retur pembelian | Finance, Owner | Goods back to a supplier. Badge counts returns they have not acknowledged |
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
@@ -68,6 +69,7 @@ otherwise every surface falls back to the wordmark.
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
+| `/dokumen/retur-pembelian/{purchaseReturn}` | Nota retur | Finance, Owner | Goes back with the goods. **We** issue it, not the supplier. Drafts are a 404 |
 | `/dokumen/faktur-pajak/{export}` | Ekspor faktur pajak | Finance, Owner | The filing file, served from disk as written — never regenerated |
 
 The four accounting screens are behind `canSeeBooks()`. They carry cost and
@@ -353,6 +355,61 @@ A receipt may have no PO behind it: stock sometimes simply turns up.
 receipt said they cost; the difference goes to Selisih Harga Pembelian in the
 general ledger, so a supplier's price creep is an expense of this period rather
 than a silent restatement of stock value.
+
+### Retur pembelian — goods going back
+
+| Function | Decides |
+|---|---|
+| `PurchaseReturnIssuer::returnable` | What a delivery still allows back, and how much of it is billed |
+| `PurchaseReturnIssuer::draftEverything` | Draws a draft with every remaining line on it |
+| `ReturnableLine::splitFor` | **Billed first**: how a quantity divides between a debt and an accrual |
+| `PurchaseReturnPoster::post` | Stock out, payable down, one transaction |
+| `DocumentPoster::purchaseReturnPosted` | The entry — see below |
+
+Always against a posted goods receipt. The receipt is the only evidence the
+goods ever arrived and the only record of what they cost, so a return with
+nothing behind it has nothing to check itself against.
+
+**The billed and unbilled parts go to different accounts, and that is the whole
+document.** Goods the supplier has invoiced reduce Utang Usaha and reverse the
+input VAT that came with them; goods they have not invoiced unwind Utang Belum
+Ditagih and touch no tax, because there is no faktur pajak yet. Both happen on
+one delivery. The split is computed per line rather than asked of whoever is
+typing — getting it wrong balances perfectly and quietly breaks a control
+account.
+
+Attribution is **billed first**. Sending a partial return to the unbilled half
+would leave an invoice for goods we no longer have standing in Utang Usaha, and
+the next payment run pays it.
+
+```
+Dr Utang Usaha                 billed value + PPN
+Dr Utang Belum Ditagih         receipt cost of the unbilled part
+Dr/Cr Selisih Harga Pembelian  the difference
+  Cr Persediaan                what the movements actually took out
+  Cr PPN Masukan               input VAT no longer creditable
+```
+
+**Stock leaves at the running average, not at what the receipt paid.** That is
+the stock ledger's rule — an outbound movement is never valued by its caller —
+so if anything has arrived since at a different price, what leaves the shelf and
+what the supplier credits are two different numbers. The difference is a real
+gain or loss, not a plug, and it lands in the account that already means
+"carried at one figure, settled at another".
+
+Input VAT reverses to PPN Masukan where the bill carried a faktur pajak and to
+Beban Operasional where it never did — the mirror of how the bill booked it.
+
+A line billed across **two** bills is refused rather than apportioned: which
+invoice the supplier means to credit is a guess, and a wrong guess leaves one
+bill chased for goods that went back. Rare, and it says so out loud.
+
+Under the PPN rules the nota retur is issued by the **buyer**, so the printed
+document carries our number and the supplier's credit note comes back against
+it. `nomor_nota_kredit_supplier` sitting empty is the sidebar badge.
+
+Not built: a supplier knocking money off without goods moving. That is a credit
+against the bill rather than a return, and it needs its own document.
 
 ### Costing — moving average, frozen at the movement
 
@@ -653,7 +710,7 @@ the real file have headers that disagree with the data below them.
 
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
 `canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`,
-`canSeeCost`, `canSeeBooks`, `canSeeReports`
+`canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -695,7 +752,7 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- Retur pembelian — sending goods back to a supplier
+- Supplier credits with no goods behind them — a price correction on a bill
 - Statement of account — one customer's invoices, credits and payments on a page
 - Reorder points, the question the stock report deliberately does not answer
 - Buyer self-service password reset

@@ -12,6 +12,7 @@ use App\Models\JournalEntry;
 use App\Models\LandedCost;
 use App\Models\Order;
 use App\Models\PaymentEntry;
+use App\Models\PurchaseReturn;
 use App\Models\StockMovement;
 use App\Models\StockOpname;
 use App\Models\SupplierBill;
@@ -35,12 +36,14 @@ use App\Models\User;
  * The control accounts these rules maintain, and what proves each one:
  *
  *   Piutang Usaha           = invoices, less payments, less credit notes
- *   Utang Usaha             = total outstanding supplier bills
+ *   Utang Usaha             = supplier bills, less payments, less purchase
+ *                             returns of goods those bills covered
  *   Persediaan              = total value in product_costs. Transfers move
  *                             goods between warehouses and post nothing:
  *                             product_costs is keyed by SKU, so the total is
  *                             unchanged and there is nothing to say.
- *   Utang Belum Ditagih     = goods received and not yet billed
+ *   Utang Belum Ditagih     = goods received and not yet billed, less returns
+ *                             of goods nobody had billed for
  *
  * `LedgerReconciliation` checks all four against their subledgers. If one
  * drifts, a rule below is wrong.
@@ -417,6 +420,93 @@ class DocumentPoster
             $bill->nomor_faktur_supplier,
             supplier: $supplier,
         );
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * Goods going back to a supplier.
+     *
+     *   Dr Utang Usaha                 what they billed for the billed part,
+     *                                  plus the PPN that came with it
+     *   Dr Utang Belum Ditagih         what the receipt accrued for the part
+     *                                  they had not billed
+     *   Dr/Cr Selisih Harga Pembelian  the difference
+     *     Cr Persediaan                what the goods were carried at when
+     *                                  they left
+     *     Cr PPN Masukan               input VAT no longer creditable
+     *
+     * Three things here are worth reading twice.
+     *
+     * **The two debits are not interchangeable.** Reducing Utang Usaha says a
+     * named supplier owes us money against an invoice we hold. Reducing Utang
+     * Belum Ditagih says a bill that was coming is now smaller. Sending a
+     * return to the wrong one balances perfectly and leaves either a payable
+     * standing for goods we no longer have, or an accrual gone contra in the
+     * one account whose usefulness depends on being near empty. The split is
+     * computed line by line — see PurchaseReturnPoster.
+     *
+     * **The credit to Persediaan is what the movements actually took out**,
+     * which under moving-average costing need not equal what the supplier is
+     * crediting: stock received since at a different price has moved the
+     * average. Forcing the two to agree by recomputing one of them would put
+     * the ledger's Persediaan out of step with product_costs, and that control
+     * account is the only thing proving these rules are right at all.
+     *
+     * **So the variance line is not a plug.** It is the real gain or loss
+     * between what we carried the goods at and what we get back for them,
+     * which is the same thing Selisih Harga Pembelian already records when a
+     * supplier bills a price the goods did not arrive at.
+     *
+     * Input VAT reverses to PPN Masukan where the bill carried a faktur pajak,
+     * and to Beban Operasional where it never did — the exact mirror of how
+     * the bill booked it, because reversing it to an account it never went to
+     * would leave PPN Masukan understated and an expense standing forever.
+     */
+    public function purchaseReturnPosted(
+        PurchaseReturn $return,
+        User $actor,
+        bool $inputVatCreditable = true,
+    ): JournalEntry {
+        $supplier = $return->supplier;
+        $ppn = (int) $return->ppn_rupiah;
+
+        $draft = JournalDraft::for(
+            $return,
+            JournalEntry::JENIS_RETUR_PEMBELIAN,
+            "Retur pembelian {$return->nomor}",
+            $return->tanggal,
+        )
+            ->debit(
+                AccountCode::UTANG_USAHA,
+                (int) $return->total_rupiah,
+                $return->alasan,
+                supplier: $supplier,
+            )
+            ->debit(
+                AccountCode::UTANG_BELUM_DITAGIH,
+                (int) $return->nilai_belum_ditagih_rupiah,
+                'Bagian yang belum ditagih pemasok',
+                supplier: $supplier,
+            )
+            ->debitSigned(
+                AccountCode::SELISIH_HARGA_PEMBELIAN,
+                (int) $return->selisih_rupiah,
+                'Selisih nilai persediaan vs yang dikreditkan pemasok',
+                supplier: $supplier,
+            )
+            ->kredit(AccountCode::PERSEDIAAN, (int) $return->nilai_persediaan_rupiah);
+
+        if ($ppn > 0) {
+            $draft->kredit(
+                $inputVatCreditable ? AccountCode::PPN_MASUKAN : AccountCode::BEBAN_OPERASIONAL,
+                $ppn,
+                $inputVatCreditable
+                    ? "Nota retur {$return->nomor}"
+                    : 'PPN tanpa faktur pajak — dibalik ke beban',
+                supplier: $supplier,
+            );
+        }
 
         return $this->ledger->post($draft, $actor);
     }

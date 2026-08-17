@@ -237,6 +237,30 @@ enum Role: string
         return in_array($this, [self::Finance, self::Owner], true);
     }
 
+    /**
+     * Send goods back to a supplier.
+     *
+     * Follows canRecordPurchases(), because this is the receipt read backwards
+     * — it carries the same cost on every line and is entered from the same
+     * paperwork. It inherits that capability's compromise too: the person who
+     * physically hands the cartons back to the driver is warehouse staff, and
+     * they enter nothing.
+     *
+     * Deliberately *not* split into a raise/approve pair like the stock count.
+     * It is worth being explicit about why, because a return does write stock
+     * off the shelf and that is exactly what opname's split defends against.
+     * The difference is that a return has a counterparty: the goods go to a
+     * named supplier against a named delivery, the document is sent to them,
+     * and what comes back is their credit note. A count variance is a private
+     * claim about a shelf; a return is a claim somebody else has to agree
+     * with. `nomor_nota_kredit_supplier` sitting empty is what makes an
+     * invented one visible.
+     */
+    public function canReturnToSupplier(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
     public function canPickAndShip(): bool
     {
         return in_array($this, [self::Warehouse, self::Owner], true);

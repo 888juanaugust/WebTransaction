@@ -6,6 +6,7 @@ namespace App\Domain\Purchasing;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Models\PurchaseReturn;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
 use App\Models\SupplierPaymentEntry;
@@ -160,28 +161,68 @@ class SupplierLedger
     /** What we still owe a supplier across every open bill. */
     public function outstandingFor(Supplier $supplier): int
     {
-        $billed = (int) SupplierBill::query()
-            ->where('supplier_id', $supplier->id)
-            ->where('status', '!=', SupplierBill::STATUS_VOID)
-            ->sum('total_rupiah');
-
-        $paid = (int) SupplierPaymentEntry::query()
-            ->where('supplier_id', $supplier->id)
-            ->sum('amount_rupiah');
-
-        return $billed - $paid;
+        return $this->billed($supplier->id)
+            - $this->paid($supplier->id)
+            - $this->returned($supplier->id);
     }
 
-    /** Total accounts payable across every supplier. */
+    /**
+     * Total accounts payable across every supplier.
+     *
+     * What the ledger's Utang Usaha must equal. Three terms, and the third one
+     * is the one that is easy to forget: a purchase return of goods a supplier
+     * had already billed reduces what we owe them without any money moving and
+     * without the bill being touched — the bill's total is not editable, by
+     * anybody, which is the whole control. Miss the term here and the control
+     * account drifts from the subledger every time a delivery goes back.
+     *
+     * The same shape as OutstandingReceivables on the sell side, and for the
+     * same reason: the moment a figure like this has three terms, three copies
+     * of it start disagreeing.
+     */
     public function totalPayable(): int
     {
-        $billed = (int) SupplierBill::query()
+        return $this->billed(null) - $this->paid(null) - $this->returned(null);
+    }
+
+    private function billed(?int $supplierId): int
+    {
+        return (int) SupplierBill::query()
             ->where('status', '!=', SupplierBill::STATUS_VOID)
+            ->when($supplierId !== null, fn ($q) => $q->where('supplier_id', $supplierId))
             ->sum('total_rupiah');
+    }
 
-        $paid = (int) SupplierPaymentEntry::query()->sum('amount_rupiah');
+    private function paid(?int $supplierId): int
+    {
+        return (int) SupplierPaymentEntry::query()
+            ->when($supplierId !== null, fn ($q) => $q->where('supplier_id', $supplierId))
+            ->sum('amount_rupiah');
+    }
 
-        return $billed - $paid;
+    /**
+     * Returns of goods the supplier had already billed for.
+     *
+     * `total_rupiah` on a return is deliberately only the billed part plus its
+     * PPN — the part that reduces a real debt. What comes off Utang Belum
+     * Ditagih instead was never a payable and must not be subtracted here.
+     *
+     * Drafts are excluded. A draft return is an intention, and letting one
+     * reduce a payable would show a supplier as owed less on the strength of a
+     * document nobody has posted.
+     *
+     * Mutation testing says removing that filter changes nothing, and today it
+     * does not: a draft carries zeroes in every money column because only the
+     * poster ever writes them. The filter states the rule rather than relying
+     * on that — the day a draft shows a provisional figure on screen, this is
+     * the line that stops the figure reaching the books.
+     */
+    private function returned(?int $supplierId): int
+    {
+        return (int) PurchaseReturn::query()
+            ->posted()
+            ->when($supplierId !== null, fn ($q) => $q->where('supplier_id', $supplierId))
+            ->sum('total_rupiah');
     }
 
     /**

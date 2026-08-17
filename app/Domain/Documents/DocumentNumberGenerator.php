@@ -40,6 +40,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_LANDED_COST = 'landed_cost';
 
+    public const SCOPE_PURCHASE_RETURN = 'purchase_return';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -131,6 +133,19 @@ class DocumentNumberGenerator
     public function nextFakturExportNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_FAKTUR_EXPORT, 'EF', $date);
+    }
+
+    /**
+     * Retur Pembelian: RP-202608-0001.
+     *
+     * This number is what goes on the nota retur the supplier receives, so the
+     * register has to read straight — which is why every document here counts
+     * through a locked counter row rather than a sequence that survives
+     * rollback.
+     */
+    public function nextPurchaseReturnNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_PURCHASE_RETURN, 'RP', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

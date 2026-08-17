@@ -346,6 +346,36 @@ final class DataInventory
             ],
 
             /*
+             * Purchase returns — goods going back to a supplier. `alasan` is
+             * mandatory free text saying why, and free text on a dispute names
+             * people the same way a credit note's does: who found the fault,
+             * who agreed to take it back, which driver brought the wrong pallet.
+             */
+            'purchase_returns' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['alasan', 'created_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'supplier_id', 'goods_receipt_id', 'warehouse_id', 'tanggal',
+                    'nomor_nota_kredit_supplier', 'nilai_ditagih_rupiah',
+                    'nilai_belum_ditagih_rupiah', 'dpp_rupiah', 'ppn_rupiah',
+                    'total_rupiah', 'nilai_persediaan_rupiah', 'selisih_rupiah',
+                    'kode_transaksi', 'status', 'posted_at',
+                ],
+            ],
+
+            'purchase_return_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => [],
+                'bukan' => [
+                    'purchase_return_id', 'goods_receipt_line_id', 'supplier_bill_id',
+                    'sku', 'urutan', 'deskripsi', 'ordered_unit', 'ordered_qty',
+                    'qty_per_ctn_snapshot', 'qty_base', 'qty_ditagih',
+                    'nilai_ditagih_rupiah', 'nilai_belum_ditagih_rupiah',
+                    'dpp_rupiah', 'ppn_rupiah', 'unit_cost_rupiah', 'nilai_persediaan_rupiah',
+                ],
+            ],
+
+            /*
              * Credit notes. `alasan` is mandatory free text explaining why a
              * customer is getting money back, which in practice names people:
              * who complained, who agreed to it, which driver damaged what.
