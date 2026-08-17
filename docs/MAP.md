@@ -79,6 +79,7 @@ route refuses, not just the menu item.
 | `UnmatchedPayments` | Money in that isn't allocated to an invoice |
 | `OrdersReadyToPick` | What the warehouse can pack today |
 | `OverdueInvoices` | Who is late, by age bucket |
+| `BackupStatus` | **Owner only, and silent when healthy.** Appears above the queues when backups are stale, failing, or still on this machine |
 
 ### Buyer portal — customers, `customer` guard against `customer_users`
 
@@ -122,6 +123,51 @@ rather than a permission check somebody can forget to write.
 
 Per line, never only on the total: summing rounded lines is not the same number
 as rounding a summed total, and the faktur has to agree with the lines on it.
+
+### Backups — the copy that survives the machine
+
+CLAUDE.md asks for nightly `pg_dump`, encrypted, off-box, restore tested. The
+runbook is `docs/BACKUP.md`; this is what the code decides.
+
+| Function | Decides |
+|---|---|
+| `BackupCipher::encrypt` / `decrypt` | Authenticated streaming encryption. Refuses altered or truncated files |
+| `DatabaseDumper::dumpTo` | `pg_dump` to plain SQL. Refuses an empty result |
+| `FileArchiver::archiveTo` | The kept-forever files a dump cannot bring back |
+| `BackupRunner::run` | Dump, encrypt, store, **read back**, record |
+| `BackupRunner::prune` | Retention, only ever after a fresh verified run |
+| `BackupHealth::state` | never / failing / stale / local / ok |
+
+**The only success state is `verified`.** A run downloads its own artefact and
+decrypts it before reporting success. Writing a file proves the disk accepted
+bytes, which is not the question anybody has — reading it back catches a
+rotated key, a truncated upload, a full disk, and storage that accepted the
+write and lost it, at creation rather than at three in the morning.
+
+libsodium's secretstream rather than `openssl enc`, for three reasons and the
+third is the one that matters: it is authenticated, so a file altered in
+storage fails instead of yielding plausible rubbish that `psql` then executes;
+it is streaming, so a multi-gigabyte dump never lands in memory; and it is in
+PHP core, so the machine that has to read this at three in the morning — which
+is by definition not the machine that wrote it — needs no extra binary. The
+last chunk carries a FINAL tag, which is what makes truncation detectable: a
+backup cut short decrypts perfectly right up to where it stops.
+
+**A local destination is recorded as `offsite = false`** and the health check
+treats it as unprotected. The machine is the thing that fails; a copy beside
+the original guards against a dropped table and nothing else. Saying otherwise
+in config does not make it true, and the flag exists only for a local path that
+is itself a remote mount.
+
+Failures are rows too. A table of successes cannot tell "nothing has run since
+Tuesday" from "everything has failed since Tuesday", and those need different
+phone calls. The dashboard banner is Owner-only and **silent when healthy** — a
+green tick that is always there stops being read within a week.
+
+Deleting a customer from the live database does not delete them from last
+month's backups, and should not: a backup that can be edited is evidence of
+nothing. They age out on the retention window instead, which is the honest
+answer to give under UU PDP.
 
 ### Faktur pajak — reporting output VAT
 

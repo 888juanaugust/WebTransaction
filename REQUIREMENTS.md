@@ -24,6 +24,7 @@ files.
 | Composer | 2.8+ | |
 | Caddy | 2.x | TLS termination. Automatic certificates. |
 | Supervisor | 4.x | Keeps the queue workers alive. |
+| `pg_dump` / `psql` | 16.x | Backups and restores. Ships with the PostgreSQL client package. |
 
 ### PostgreSQL is a hard requirement, not a preference
 
@@ -224,6 +225,17 @@ php artisan filament:optimize # caches Filament components and Blade icons
 php artisan queue:restart     # workers must reload the new code
 ```
 
-Plus, before going live: PSE Lingkup Privat registration, a Kebijakan Privasi
-page (UU PDP 27/2022), and a nightly encrypted off-box `pg_dump` whose restore
-you have actually tested.
+Backups are built in — `php artisan backup:key`, then set `BACKUP_DISK` to
+somewhere off this machine, and the nightly run at 02:15 does the rest. It only
+fires if the scheduler's cron entry exists:
+
+```cron
+* * * * * cd /var/www/webtransaction && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**Practise the restore before launch** — `php artisan backup:restore
+--into=a_scratch_database`. `docs/BACKUP.md` is the runbook, including what to
+do when the server is gone.
+
+Plus, before going live: PSE Lingkup Privat registration and a Kebijakan
+Privasi page (UU PDP 27/2022).

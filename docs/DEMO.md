@@ -189,7 +189,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 936 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 979 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

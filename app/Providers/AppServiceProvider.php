@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Backup\BackupCipher;
+use App\Domain\Backup\DatabaseDumper;
+use App\Domain\Backup\FileArchiver;
 use App\Domain\Payments\LocalVirtualAccountGateway;
 use App\Domain\Payments\VirtualAccountGateway;
 use App\Domain\Payments\XenditVirtualAccountGateway;
@@ -35,6 +38,18 @@ class AppServiceProvider extends ServiceProvider
          * template, is a config value and a new writer class rather than a
          * change to anything that calls it.
          */
+        /*
+         * Backup pieces, built from config rather than injected.
+         *
+         * `bind` rather than `singleton` on purpose: each is a thin wrapper
+         * over configuration that a restore or a test legitimately changes
+         * mid-process, and a cached instance would keep answering with the
+         * settings that were in force when it was first asked for.
+         */
+        $this->app->bind(BackupCipher::class, fn () => BackupCipher::fromConfig());
+        $this->app->bind(DatabaseDumper::class, fn () => DatabaseDumper::fromConfig());
+        $this->app->bind(FileArchiver::class, fn () => FileArchiver::fromConfig());
+
         $this->app->bind(FakturWriter::class, function () {
             return match ((string) config('pajak.format_ekspor')) {
                 'efaktur_csv' => new EFakturCsvWriter,
@@ -81,5 +96,22 @@ class AppServiceProvider extends ServiceProvider
         // Recovers money stranded by a worker that died mid-callback. Nothing
         // else will: the gateway already got its 200 and will not redeliver.
         Schedule::job(new SweepStuckWebhookEvents)->everyFiveMinutes();
+
+        /*
+         * Nightly backup, at an hour when nobody is ordering.
+         *
+         * `withoutOverlapping` because a dump of a large database can outrun
+         * the day: two pg_dumps competing would make both slower and could
+         * leave two runs writing the same night's artefacts.
+         *
+         * Deliberately **not** `runInBackground()`. The exit code is how a
+         * failure becomes visible to whatever watches cron, and backgrounding
+         * throws it away — which is how a backup that has not worked since
+         * March keeps reporting nothing at all.
+         */
+        Schedule::command('backup:run')
+            ->dailyAt('02:15')
+            ->withoutOverlapping(60)
+            ->onOneServer();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Widgets\AccountsAwaitingApproval;
+use App\Filament\Widgets\BackupStatus;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
@@ -59,6 +60,8 @@ class AdminPanelProvider extends PanelProvider
              * no prices, the finance queues show no picking work.
              */
             ->widgets([
+                // Above the work queues, and silent unless something is wrong.
+                BackupStatus::class,
                 OrdersAwaitingApproval::class,
                 AccountsAwaitingApproval::class,
                 UnmatchedPayments::class,

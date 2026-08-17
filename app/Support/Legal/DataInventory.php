@@ -444,6 +444,21 @@ final class DataInventory
             'jobs', 'job_batches', 'failed_jobs',
 
             /*
+             * Backup runs: timestamps, byte counts and a destination path.
+             * Nothing about a person is in this table.
+             *
+             * The **files it points at** are another matter entirely — a
+             * database dump is every customer record there is. That is worth
+             * being explicit about when answering a deletion request under UU
+             * PDP: erasing somebody from the live database does not erase them
+             * from last month's backups, and it should not, because a backup
+             * that can be edited is not evidence of anything. They age out
+             * instead, on the retention window in config/backup.php, which is
+             * the honest answer to give.
+             */
+            'backup_runs',
+
+            /*
              * Framework tables that do hold personal data but are not ours to
              * describe row by row: `sessions` carries an IP address and user
              * agent, and `password_reset_tokens` an email address. Both are
