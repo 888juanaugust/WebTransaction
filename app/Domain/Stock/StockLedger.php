@@ -126,6 +126,121 @@ class StockLedger
     }
 
     /**
+     * Move stock between warehouses, both legs in one transaction.
+     *
+     * A transfer must be **value-neutral**. `product_costs` is keyed by SKU
+     * and not by warehouse, so moving goods between two of our own buildings
+     * changes nothing about what the inventory is worth — and the ledger has
+     * to reflect that exactly, not approximately.
+     *
+     * Calling record() twice would not. The outbound leg takes value out at
+     * the running average; the inbound leg, with no value stated, would come
+     * back in at the average *recomputed after* that removal. Integer rounding
+     * makes those two figures differ by a rupiah on awkward numbers, and a
+     * rupiah destroyed by walking a carton across the yard is a rupiah nobody
+     * can ever explain. So the value that left is carried across and put back
+     * verbatim.
+     *
+     * Unvalued stock — the opening balances that predate costing — stays
+     * unvalued on both legs. Writing a valued zero on the way in would leave
+     * unvaluedQuantity() reporting a shortfall forever on a shelf that
+     * balances.
+     *
+     * @return array{0: StockMovement, 1: StockMovement} out, in
+     */
+    public function transfer(
+        string $sku,
+        int $fromWarehouseId,
+        int $toWarehouseId,
+        int $qtyBase,
+        ?string $referenceType = null,
+        ?string $referenceId = null,
+        ?User $actor = null,
+        ?string $catatan = null,
+    ): array {
+        if ($qtyBase <= 0) {
+            throw new LogicException('A transfer moves a positive quantity.');
+        }
+
+        if ($fromWarehouseId === $toWarehouseId) {
+            throw new LogicException('A transfer needs two different warehouses.');
+        }
+
+        return DB::transaction(function () use (
+            $sku, $fromWarehouseId, $toWarehouseId, $qtyBase, $referenceType,
+            $referenceId, $actor, $catatan
+        ) {
+            /*
+             * Both rows locked up front, lowest warehouse id first. Two
+             * transfers of the same SKU in opposite directions would otherwise
+             * each hold the row the other wants — the same deadlock the order
+             * confirmation avoids by sorting its lines.
+             */
+            $ids = [$fromWarehouseId, $toWarehouseId];
+            sort($ids);
+
+            $levels = [];
+
+            foreach ($ids as $id) {
+                $levels[$id] = $this->lockLevel($sku, $id);
+            }
+
+            $from = $levels[$fromWarehouseId];
+            $to = $levels[$toWarehouseId];
+
+            if ($from->qty_on_hand - $from->qty_reserved < $qtyBase) {
+                throw new InsufficientStockException(
+                    sku: $sku,
+                    warehouseId: $fromWarehouseId,
+                    requested: $qtyBase,
+                    available: max(0, $from->qty_on_hand - $from->qty_reserved),
+                );
+            }
+
+            $issued = $this->valuation->applyIssue($sku, $qtyBase);
+
+            $out = StockMovement::create([
+                'sku' => $sku,
+                'warehouse_id' => $fromWarehouseId,
+                'qty_signed' => -$qtyBase,
+                'unit_cost_rupiah' => $issued->valued ? $issued->unitCost : null,
+                'value_rupiah' => $issued->valued ? -$issued->value : null,
+                'reason' => MovementReason::TransferKeluar->value,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'actor_id' => $actor?->id,
+                'catatan' => $catatan,
+            ]);
+
+            // Exactly what left, back in. Not the average recomputed since.
+            if ($issued->valued) {
+                $this->valuation->applyReceipt($sku, $qtyBase, $issued->value);
+            }
+
+            $in = StockMovement::create([
+                'sku' => $sku,
+                'warehouse_id' => $toWarehouseId,
+                'qty_signed' => $qtyBase,
+                'unit_cost_rupiah' => $issued->valued ? $issued->unitCost : null,
+                'value_rupiah' => $issued->valued ? $issued->value : null,
+                'reason' => MovementReason::TransferMasuk->value,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId,
+                'actor_id' => $actor?->id,
+                'catatan' => $catatan,
+            ]);
+
+            $from->qty_on_hand -= $qtyBase;
+            $from->save();
+
+            $to->qty_on_hand += $qtyBase;
+            $to->save();
+
+            return [$out, $in];
+        });
+    }
+
+    /**
      * Reserve stock for every line of a confirmed order.
      *
      * Takes SELECT ... FOR UPDATE on each stock row inside the confirming

@@ -168,7 +168,8 @@ Not to argue for it — so the comparison is like for like.
 | Control accounts reconciled against their subledgers | Built and tested |
 | Period close: months locked against back-dating, year-end into Laba Ditahan | Built and tested |
 | Credit notes: returns and price corrections, with the segregation control | Built and tested |
-| Transfers, opname, landed cost | **Not built** |
+| Warehouse transfers, and stock opname with counter/approver separated | Built and tested |
+| Landed cost | **Not built** |
 | Multi-currency, fixed assets, bank reconciliation | **Not built**, and not planned |
 
 The summary this file was written with — "tuned to your trade, no accounting

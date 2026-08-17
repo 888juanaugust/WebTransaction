@@ -34,6 +34,10 @@ class DocumentNumberGenerator
 
     public const SCOPE_CREDIT_NOTE = 'credit_note';
 
+    public const SCOPE_STOCK_TRANSFER = 'stock_transfer';
+
+    public const SCOPE_STOCK_OPNAME = 'stock_opname';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -99,6 +103,18 @@ class DocumentNumberGenerator
     public function nextSupplierBillNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_SUPPLIER_BILL, 'TP', $date);
+    }
+
+    /** Transfer Gudang: TG-202608-0001. */
+    public function nextStockTransferNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_STOCK_TRANSFER, 'TG', $date);
+    }
+
+    /** Stok Opname: SO is taken by sales orders, so OP-202608-0001. */
+    public function nextStockOpnameNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_STOCK_OPNAME, 'OP', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

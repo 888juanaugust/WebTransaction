@@ -66,6 +66,17 @@ final class AccountCode
      */
     public const SELISIH_HARGA_PEMBELIAN = '5-2000';
 
+    /**
+     * What a stock count found missing — or found extra.
+     *
+     * Shrinkage is a cost of trading rather than an overhead: it moves with
+     * how much stock is handled, which is why it hangs under the HPP header
+     * and lands above gross profit. A surplus credits the same account, and a
+     * surplus is not good news — it means the count and the ledger disagree in
+     * the other direction, and the cause is usually a movement never recorded.
+     */
+    public const SELISIH_PERSEDIAAN = '5-3000';
+
     public const BEBAN_OPERASIONAL = '6-1000';
 
     /**
@@ -110,6 +121,8 @@ final class AccountCode
                 'Biaya barang yang dikirim, dikunci pada saat pengiriman.'),
             self::posting(self::SELISIH_HARGA_PEMBELIAN, 'Selisih Harga Pembelian', AccountType::Beban, '5-0000',
                 'Selisih antara harga saat barang diterima dan harga yang ditagih pemasok.'),
+            self::posting(self::SELISIH_PERSEDIAAN, 'Selisih Persediaan', AccountType::Beban, '5-0000',
+                'Selisih hasil stok opname terhadap catatan. Idealnya kecil; kalau besar, cari sebabnya.'),
 
             self::header('6-0000', 'BEBAN OPERASIONAL', AccountType::Beban),
             self::posting(self::BEBAN_OPERASIONAL, 'Beban Operasional', AccountType::Beban, '6-0000'),

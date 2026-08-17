@@ -12,6 +12,7 @@ use App\Models\JournalEntry;
 use App\Models\Order;
 use App\Models\PaymentEntry;
 use App\Models\StockMovement;
+use App\Models\StockOpname;
 use App\Models\SupplierBill;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
@@ -34,7 +35,10 @@ use App\Models\User;
  *
  *   Piutang Usaha           = invoices, less payments, less credit notes
  *   Utang Usaha             = total outstanding supplier bills
- *   Persediaan              = total value in product_costs
+ *   Persediaan              = total value in product_costs. Transfers move
+ *                             goods between warehouses and post nothing:
+ *                             product_costs is keyed by SKU, so the total is
+ *                             unchanged and there is nothing to say.
  *   Utang Belum Ditagih     = goods received and not yet billed
  *
  * `LedgerReconciliation` checks all four against their subledgers. If one
@@ -189,6 +193,47 @@ class DocumentPoster
         $draft = JournalDraft::for($order, JournalEntry::JENIS_HPP, "HPP pengiriman {$order->nomor}")
             ->debit(AccountCode::HARGA_POKOK_PENJUALAN, $cost, company: $order->company)
             ->kredit(AccountCode::PERSEDIAAN, $cost);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A stock count found the shelf out of step with the record.
+     *
+     *   shortfall:  Dr Selisih Persediaan / Cr Persediaan
+     *   surplus:    Dr Persediaan         / Cr Selisih Persediaan
+     *
+     * Shrinkage is a cost of trading rather than an overhead — it moves with
+     * how much stock is handled — so the variance account hangs under the HPP
+     * header and lands above gross profit.
+     *
+     * The amount comes from the value the adjustment movements actually
+     * carried, not from recomputing quantity times average. Recomputing is how
+     * the ledger and the valuation end up a rupiah apart on an awkward
+     * average, and Persediaan is a control account: a rupiah apart is a
+     * reconciliation that fails every day until somebody chases it.
+     *
+     * Returns null when the count agreed with the record, which is the outcome
+     * to hope for. An entry for nil would say something happened.
+     */
+    public function stockCountAdjusted(StockOpname $opname, ?User $actor = null): ?JournalEntry
+    {
+        $selisih = (int) $opname->selisih_rupiah;
+
+        if ($selisih === 0) {
+            return null;
+        }
+
+        $draft = JournalDraft::for(
+            $opname,
+            JournalEntry::JENIS_SELISIH_OPNAME,
+            "Selisih stok opname {$opname->nomor}",
+            $opname->tanggal,
+        )
+            // Signed, so a surplus and a shortfall are the same rule read in
+            // two directions rather than two branches that can drift apart.
+            ->debitSigned(AccountCode::PERSEDIAAN, $selisih)
+            ->kreditSigned(AccountCode::SELISIH_PERSEDIAAN, $selisih, $opname->catatan);
 
         return $this->ledger->post($draft, $actor);
     }

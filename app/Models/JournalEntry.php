@@ -50,6 +50,9 @@ class JournalEntry extends Model
 
     public const JENIS_HPP_RETUR = 'hpp_retur';
 
+    /** What a stock count found missing, or found extra. */
+    public const JENIS_SELISIH_OPNAME = 'selisih_opname';
+
     /**
      * The year-end entry that zeroes income and expense into Laba Ditahan.
      * Its source is the December period that produced it, so a period can only

@@ -157,6 +157,38 @@ enum Role: string
         return in_array($this, [self::Finance, self::Owner], true);
     }
 
+    /**
+     * Move stock between our own warehouses.
+     *
+     * Warehouse work, and no money control is needed: a transfer is
+     * value-neutral by construction, so there is nothing to give away. What
+     * matters is that whoever moved the cartons is the one who says so.
+     */
+    public function canTransferStock(): bool
+    {
+        return in_array($this, [self::Warehouse, self::Owner], true);
+    }
+
+    /** Draw up a count sheet and write down what is on the shelf. */
+    public function canCountStock(): bool
+    {
+        return in_array($this, [self::Warehouse, self::Owner], true);
+    }
+
+    /**
+     * Sign off a count variance, writing the difference to the books.
+     *
+     * Deliberately disjoint from canCountStock() for Warehouse. A stock count
+     * is the one document whose purpose is to make missing goods disappear
+     * from the record, and the person who counted the shelf must not be the
+     * person who approves what they found. Finance and Owner approve; the
+     * poster refuses to let one person do both.
+     */
+    public function canApproveStockCount(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
     public function canPickAndShip(): bool
     {
         return in_array($this, [self::Warehouse, self::Owner], true);

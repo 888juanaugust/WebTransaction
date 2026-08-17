@@ -65,6 +65,9 @@ class RoleMatrixTest extends TestCase
                 'canIssueCreditNote' => true,
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => false,
+                'canTransferStock' => false,
+                'canCountStock' => false,
+                'canApproveStockCount' => false,
                 'canViewAuditLog' => false,
             ]],
             'warehouse' => [Role::Warehouse, [
@@ -82,6 +85,11 @@ class RoleMatrixTest extends TestCase
                 'canIssueCreditNote' => false,
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => true,
+                // Counts the shelf; approving what they found is somebody
+                // else's, or a count is a way to make stock disappear.
+                'canTransferStock' => true,
+                'canCountStock' => true,
+                'canApproveStockCount' => false,
                 'canViewAuditLog' => false,
             ]],
             'finance' => [Role::Finance, [
@@ -102,6 +110,9 @@ class RoleMatrixTest extends TestCase
                 'canIssueCreditNote' => false,
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => false,
+                'canTransferStock' => false,
+                'canCountStock' => false,
+                'canApproveStockCount' => true,
                 'canViewAuditLog' => false,
             ]],
             'owner' => [Role::Owner, [
@@ -119,6 +130,9 @@ class RoleMatrixTest extends TestCase
                 'canIssueCreditNote' => true,
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => true,
+                'canTransferStock' => true,
+                'canCountStock' => true,
+                'canApproveStockCount' => true,
                 'canViewAuditLog' => true,
             ]],
         ];
@@ -269,6 +283,22 @@ class RoleMatrixTest extends TestCase
             // The catalogue, so a packer can look a part number up. Prices are
             // hidden by canSeePrices().
             'ProductResource',
+            /*
+             * Moving stock between our own warehouses. Warehouse work by
+             * definition — they are the ones carrying the cartons — and the
+             * value column is hidden from them by canSeeCost(). A transfer
+             * cannot change what the inventory is worth anyway, so there is
+             * nothing on this screen they could give away.
+             */
+            'StockTransferResource',
+            /*
+             * Counting the shelf. They fill the sheet in and cannot approve
+             * what they found: canApproveStockCount() excludes them, so the
+             * variance is signed off by finance or the owner. The rupiah
+             * column is hidden from them; the quantity is not, because the
+             * quantity is what they counted.
+             */
+            'StockOpnameResource',
         ];
 
         $this->actingAs(User::factory()->role(Role::Warehouse)->create());

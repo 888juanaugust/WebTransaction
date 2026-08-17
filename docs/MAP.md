@@ -48,6 +48,8 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
+| `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
+| `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
@@ -164,9 +166,55 @@ and neither is a customer's call.
 | `StockLedger::releaseForOrder` | Hands held stock back. No movement — it never left |
 | `StockLedger::shipOrder` | The only place stock leaves for a sale |
 | `StockLedger::available` | on hand − reserved |
+| `StockLedger::transfer` | Moves stock between warehouses. Two movements, one value |
 | `StockLedger::reconcile` | Rebuilds the cache from the ledger. **Must always change nothing** |
 
 Reserved at `confirmed`, decremented at `shipped`.
+
+### Warehouse documents — transfer and opname
+
+Both movement reasons existed for a long time with no paperwork behind them.
+These are that paperwork.
+
+| Function | Decides |
+|---|---|
+| `StockTransferPoster::post` | Locks both warehouses in id order, issues from one, receives into the other |
+| `StockOpnameSheet::draw` | Snapshots the shelf: **every SKU the warehouse holds, including the zeroes** |
+| `StockOpnameSheet::record` | Writes what was counted. Blank ≠ zero |
+| `StockOpnamePoster::post` | Approves it: adjusts stock, charges the difference to Selisih Persediaan |
+
+**A transfer writes no journal entry, and that is the point.** One moving
+average for the company means goods moving between our own warehouses change
+nothing about what the company owns or what it cost. The value still travels
+with the goods — it is issued at the running average and received back at the
+same figure — so the pair nets to zero without a rounding step in the middle.
+An entry here would be two lines that cancel, which is noise in the jurnal and
+an invitation for someone to later "fix" one side of it.
+
+Opname carries two controls, and they are why the poster is not the sheet:
+
+- **The counter cannot approve their own count.** A count is the one document
+  whose purpose is to make missing goods disappear from the record. Somebody
+  who can both count a shelf and sign off what they found can walk out with
+  stock and file the paperwork themselves. Warehouse counts; Finance or Owner
+  approves; and an Owner who counted a sheet still cannot post it.
+- **A stale count is refused, not applied.** If a shipment or receipt landed
+  between drawing the sheet and approving it, the counted figure answers a
+  question about a different moment. Adjusting to it would set the shelf to a
+  number that was true an hour ago and silently swallow whatever moved since.
+  The refusal names the SKU and both quantities.
+
+A shortfall leaves at the running average, exactly as a shipment would. A
+surplus arrives at that same average — there is no invoice saying what it cost,
+because it is stock we apparently already owned and had not recorded.
+
+Blank is not zero on a count sheet. A zero is a finding — the shelf was empty.
+A blank means nobody has been to that shelf yet, and those lines are left
+untouched, so a half-finished count cannot write off everything it skipped.
+
+Neither screen shows money to Warehouse. A transfer has no value to show them
+in the first place; on an opname the quantity variance is theirs and the rupiah
+is not.
 
 ### Purchasing — order, receive, bill, pay
 
@@ -462,8 +510,6 @@ All idempotent — assume they run twice.
 
 Still absent, and none of it is decided against — it is simply not built:
 
-- Transfer and stock-opname documents. Both movement reasons exist with no
-  paperwork pairing an out with an in, or approving a count variance
 - Landed cost — duty and freight never reach unit cost
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a

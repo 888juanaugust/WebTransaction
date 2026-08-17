@@ -249,6 +249,52 @@ final class DataInventory
             ],
 
             /*
+             * Stock counts. `catatan` is where somebody writes what they think
+             * happened to the missing cartons, which in practice names people.
+             * Counted by one person and approved by another, and both are
+             * recorded because that separation is the control.
+             */
+            'stock_opnames' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by', 'counted_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'warehouse_id', 'tanggal', 'status',
+                    'selisih_qty', 'selisih_rupiah', 'posted_at',
+                ],
+            ],
+
+            'stock_opname_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan'],
+                'bukan' => [
+                    'stock_opname_id', 'sku', 'urutan', 'qty_system', 'qty_counted',
+                    'selisih_qty', 'unit_cost_rupiah', 'selisih_rupiah',
+                ],
+            ],
+
+            /*
+             * Transfers between our own warehouses. Goods and quantities, plus
+             * whoever moved them.
+             */
+            'stock_transfers' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'from_warehouse_id', 'to_warehouse_id', 'tanggal',
+                    'status', 'total_value_rupiah', 'posted_at',
+                ],
+            ],
+
+            'stock_transfer_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan'],
+                'bukan' => [
+                    'stock_transfer_id', 'sku', 'urutan', 'ordered_unit', 'ordered_qty',
+                    'qty_per_ctn_snapshot', 'qty_base', 'unit_cost_rupiah', 'line_value_rupiah',
+                ],
+            ],
+
+            /*
              * Credit notes. `alasan` is mandatory free text explaining why a
              * customer is getting money back, which in practice names people:
              * who complained, who agreed to it, which driver damaged what.
