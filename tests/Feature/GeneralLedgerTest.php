@@ -11,6 +11,7 @@ use App\Domain\Accounting\JournalDraft;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Accounting\NormalBalance;
 use App\Domain\Accounting\TrialBalance;
+use App\Domain\Accounting\TrialBalanceRow;
 use App\Domain\Accounting\UnbalancedJournalException;
 use App\Models\Account;
 use App\Models\AuditLog;
@@ -20,7 +21,9 @@ use App\Models\JournalLine;
 use App\Models\User;
 use Database\Seeders\ChartOfAccountsSeeder;
 use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -274,7 +277,7 @@ class GeneralLedgerTest extends TestCase
         $company = $this->company();
         $entry = $this->ledger->post($this->sale(10_000_000, 1_100_000, $company));
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         JournalEntry::query()->create([
             'nomor' => 'JU-209901-0001',
@@ -635,10 +638,10 @@ class GeneralLedgerTest extends TestCase
     {
         $this->ledger->post($this->sale(10_000_000, 1_100_000));
 
-        \Illuminate\Support\Facades\DB::enableQueryLog();
+        DB::enableQueryLog();
         TrialBalance::asOf();
-        $queries = \Illuminate\Support\Facades\DB::getQueryLog();
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
 
         $this->assertLessThanOrEqual(2, count($queries), 'The trial balance is scanning per account.');
     }
@@ -723,7 +726,7 @@ class GeneralLedgerTest extends TestCase
             ->kredit(AccountCode::PPN_KELUARAN, $ppn);
     }
 
-    private function row(TrialBalance $tb, string $kode): \App\Domain\Accounting\TrialBalanceRow
+    private function row(TrialBalance $tb, string $kode): TrialBalanceRow
     {
         foreach ($tb->rows() as $row) {
             if ($row->account->kode === $kode) {

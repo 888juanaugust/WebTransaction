@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Akuntansi;
 
+use App\Domain\Accounting\ControlAccountCheck;
 use App\Domain\Accounting\LedgerReconciliation;
 use App\Domain\Accounting\TrialBalance;
+use App\Domain\Accounting\TrialBalanceRow;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -82,7 +84,7 @@ class NeracaSaldo extends Page
         return TrialBalance::asOf($this->asOf());
     }
 
-    /** @return list<\App\Domain\Accounting\TrialBalanceRow> */
+    /** @return list<TrialBalanceRow> */
     public function getRows(): array
     {
         $tb = $this->getTrialBalance();
@@ -90,7 +92,7 @@ class NeracaSaldo extends Page
         return $this->sembunyikanKosong ? $tb->rowsWithActivity() : $tb->rows();
     }
 
-    /** @return list<\App\Domain\Accounting\ControlAccountCheck> */
+    /** @return list<ControlAccountCheck> */
     public function getChecks(): array
     {
         return app(LedgerReconciliation::class)->checks();

@@ -13,6 +13,7 @@ use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Purchasing\GoodsReceiptPoster;
 use App\Filament\Resources\CreditNotes\CreditNoteResource;
+use App\Filament\Resources\CreditNotes\Pages\ListCreditNotes;
 use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\CreditNoteLine;
@@ -28,6 +29,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -227,13 +229,13 @@ class NotaKreditDocumentTest extends TestCase
          */
         $this->postedNote(10);
 
-        \Livewire\Livewire::actingAs($this->finance)
-            ->test(\App\Filament\Resources\CreditNotes\Pages\ListCreditNotes::class)
+        Livewire::actingAs($this->finance)
+            ->test(ListCreditNotes::class)
             ->assertOk()
             ->assertDontSee('Nota kredit baru');
 
-        \Livewire\Livewire::actingAs($this->sales)
-            ->test(\App\Filament\Resources\CreditNotes\Pages\ListCreditNotes::class)
+        Livewire::actingAs($this->sales)
+            ->test(ListCreditNotes::class)
             ->assertSee('Nota kredit baru');
     }
 

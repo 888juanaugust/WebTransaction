@@ -6,7 +6,6 @@ namespace Tests\Feature;
 
 use App\Domain\Access\Role;
 use App\Domain\Accounting\AccountCode;
-use App\Domain\Accounting\BalanceSheet;
 use App\Domain\Accounting\ClosedPeriodException;
 use App\Domain\Accounting\FiscalCalendar;
 use App\Domain\Accounting\JournalDraft;
@@ -15,7 +14,9 @@ use App\Domain\Accounting\PeriodCloser;
 use App\Domain\Accounting\ProfitAndLoss;
 use App\Domain\Accounting\TrialBalance;
 use App\Models\AccountingPeriod;
+use App\Models\AccountingPeriodReopening;
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\JournalEntry;
 use App\Models\User;
 use DateTime;
@@ -140,7 +141,7 @@ class PeriodCloseTest extends TestCase
          * back-dated. Checking first would turn every closed month into a
          * minefield for retries.
          */
-        $company = \App\Models\Company::factory()->create();
+        $company = Company::factory()->create();
 
         $draft = fn () => JournalDraft::for($company, JournalEntry::JENIS_PENJUALAN, 'Faktur', new DateTime('2026-01-10'))
             ->debit(AccountCode::PIUTANG_USAHA, 3_000_000)
@@ -320,7 +321,7 @@ class PeriodCloseTest extends TestCase
             $this->closer->reopen(2026, 1, $this->owner, $alasan);
         }
 
-        $this->assertSame(2, \App\Models\AccountingPeriodReopening::query()->count());
+        $this->assertSame(2, AccountingPeriodReopening::query()->count());
         $this->assertSame(2, AuditLog::query()->where('action', 'accounting_period_reopened')->count());
     }
 

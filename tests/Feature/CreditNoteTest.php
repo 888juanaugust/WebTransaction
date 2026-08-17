@@ -31,6 +31,7 @@ use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\PriceListItem;
 use App\Models\PriceListVersion;
+use App\Models\PriceTier;
 use App\Models\Product;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
@@ -235,7 +236,7 @@ class CreditNoteTest extends TestCase
          * customer's favour, which is the version nobody reports.
          */
         $this->company->forceFill([
-            'price_tier_id' => \App\Models\PriceTier::factory()->discount(1_000)->create()->id,
+            'price_tier_id' => PriceTier::factory()->discount(1_000)->create()->id,
         ])->save();
 
         $this->stockUp(100, 60_000);
@@ -699,7 +700,7 @@ class CreditNoteTest extends TestCase
 
         if ($discountBps > 0) {
             $this->company->forceFill([
-                'price_tier_id' => \App\Models\PriceTier::factory()->discount($discountBps)->create()->id,
+                'price_tier_id' => PriceTier::factory()->discount($discountBps)->create()->id,
             ])->save();
         }
     }

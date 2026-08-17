@@ -14,6 +14,8 @@ use DateTimeInterface;
 use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
@@ -166,7 +168,7 @@ class Ledger
          * an accountant would put it anyway. What is not allowed is dating the
          * correction back into the month that was already reported.
          */
-        $this->calendar->assertOpen($tanggal ?? \Illuminate\Support\Carbon::now(), 'Jurnal pembalik');
+        $this->calendar->assertOpen($tanggal ?? Carbon::now(), 'Jurnal pembalik');
 
         return DB::transaction(function () use ($entry, $actor, $alasan, $tanggal) {
             /*
@@ -208,7 +210,7 @@ class Ledger
     }
 
     /** Every entry a document has posted, in date order. */
-    public function entriesForDocument(Model $source): \Illuminate\Support\Collection
+    public function entriesForDocument(Model $source): Collection
     {
         return JournalEntry::query()
             ->where('source_type', $source::class)
@@ -323,7 +325,7 @@ class Ledger
         string $alasan,
         ?DateTimeInterface $tanggal,
     ): JournalEntry {
-        $tanggal = $tanggal !== null ? \Illuminate\Support\Carbon::parse($tanggal) : \Illuminate\Support\Carbon::now();
+        $tanggal = $tanggal !== null ? Carbon::parse($tanggal) : Carbon::now();
 
         $reversal = JournalEntry::create([
             'nomor' => $this->numbers->nextJournalNumber($tanggal),

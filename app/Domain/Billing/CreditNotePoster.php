@@ -6,13 +6,16 @@ namespace App\Domain\Billing;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Money;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Tax\TaxCalculator;
 use App\Models\CreditNote;
 use App\Models\CreditNoteLine;
 use App\Models\Invoice;
+use App\Models\User;
 use DomainException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,7 +41,7 @@ class CreditNotePoster
         private readonly AuditLogger $audit,
     ) {}
 
-    public function post(CreditNote $note, \App\Models\User $actor): CreditNote
+    public function post(CreditNote $note, User $actor): CreditNote
     {
         if (! $actor->role()->canIssueCreditNote()) {
             throw new DomainException('Anda tidak berhak memposting nota kredit.');
@@ -104,7 +107,7 @@ class CreditNotePoster
                     'ppn_rupiah' => $breakdown->ppn,
                     'line_cost_rupiah' => $cost,
                     'unit_cost_rupiah' => $line->qty_base > 0
-                        ? \App\Domain\Money::mulDiv($cost, 1, (int) $line->qty_base)
+                        ? Money::mulDiv($cost, 1, (int) $line->qty_base)
                         : 0,
                     'unit_price_rupiah' => $source?->unitPriceRupiah() ?? 0,
                     'deskripsi' => $line->deskripsi ?? $source?->deskripsi,
@@ -189,13 +192,13 @@ class CreditNotePoster
     /**
      * What one line is worth and what it cost, with every limit enforced.
      *
-     * @param  \Illuminate\Support\Collection<int, CreditableLine>  $creditable
+     * @param  Collection<int, CreditableLine>  $creditable
      * @return array{0: int, 1: int} value, cost
      */
     private function settleLine(
         CreditNote $note,
         CreditNoteLine $line,
-        \Illuminate\Support\Collection $creditable,
+        Collection $creditable,
     ): array {
         /*
          * A potongan with no order line behind it — a settlement on the

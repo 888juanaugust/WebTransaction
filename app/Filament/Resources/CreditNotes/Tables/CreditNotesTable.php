@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\CreditNotes\Tables;
 
 use App\Domain\Billing\CreditNoteType;
+use App\Domain\Money;
 use App\Filament\Actions\PostCreditNoteAction;
 use App\Models\CreditNote;
 use Filament\Actions\Action;
@@ -47,9 +48,9 @@ class CreditNotesTable
                     ->alignEnd()
                     ->formatStateUsing(fn ($state, CreditNote $record) => $record->isDraft()
                         ? '—'
-                        : \App\Domain\Money::format((int) $state))
+                        : Money::format((int) $state))
                     ->description(fn (CreditNote $record) => $record->isPosted() && $record->hpp_rupiah > 0
-                        ? 'HPP kembali '.\App\Domain\Money::format((int) $record->hpp_rupiah)
+                        ? 'HPP kembali '.Money::format((int) $record->hpp_rupiah)
                         : null),
 
                 TextColumn::make('status')

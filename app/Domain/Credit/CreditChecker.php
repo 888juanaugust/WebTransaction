@@ -9,7 +9,6 @@ use App\Domain\Orders\OrderStatus;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Credit exposure = unpaid invoices + confirmed orders not yet invoiced.

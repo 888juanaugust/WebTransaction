@@ -4,9 +4,19 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Akuntansi;
 
+use App\Domain\Money;
+use App\Filament\Resources\GoodsReceipts\GoodsReceiptResource;
+use App\Filament\Resources\Invoices\InvoiceResource;
+use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Resources\SupplierBills\SupplierBillResource;
+use App\Models\GoodsReceipt;
+use App\Models\Invoice;
 use App\Models\JournalEntry;
+use App\Models\Order;
+use App\Models\SupplierBill;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -15,7 +25,6 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -100,7 +109,7 @@ class Jurnal extends Page implements HasTable
                     ->label('Nilai')
                     // Whole rupiah. ->money('IDR') renders "Rp 4.415.025,00",
                     // and a currency with no subunit does not have cents.
-                    ->formatStateUsing(fn ($state) => \App\Domain\Money::format((int) $state))
+                    ->formatStateUsing(fn ($state) => Money::format((int) $state))
                     ->alignEnd()
                     ->sortable(),
 
@@ -179,18 +188,18 @@ class Jurnal extends Page implements HasTable
             return null;
         }
 
-        if ($entry->source_type === \App\Models\Order::class) {
+        if ($entry->source_type === Order::class) {
             return rescue(
-                fn () => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $entry->source_id]),
+                fn () => OrderResource::getUrl('view', ['record' => $entry->source_id]),
                 fn () => null,
                 report: false,
             );
         }
 
         $resource = match ($entry->source_type) {
-            \App\Models\Invoice::class => \App\Filament\Resources\Invoices\InvoiceResource::class,
-            \App\Models\GoodsReceipt::class => \App\Filament\Resources\GoodsReceipts\GoodsReceiptResource::class,
-            \App\Models\SupplierBill::class => \App\Filament\Resources\SupplierBills\SupplierBillResource::class,
+            Invoice::class => InvoiceResource::class,
+            GoodsReceipt::class => GoodsReceiptResource::class,
+            SupplierBill::class => SupplierBillResource::class,
             default => null,
         };
 

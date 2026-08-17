@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Accounting;
 
+use App\Domain\Money;
 use App\Models\Account;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
@@ -117,7 +118,7 @@ final class ProfitAndLoss
             return null;
         }
 
-        return \App\Domain\Money::mulDiv($this->labaKotor(), 10_000, $this->totalPendapatan());
+        return Money::mulDiv($this->labaKotor(), 10_000, $this->totalPendapatan());
     }
 
     /** @return list<StatementLine> */

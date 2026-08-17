@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Domain\Access\Role;
 use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\AccountType;
+use App\Domain\Accounting\DocumentPoster;
+use App\Domain\Accounting\JournalDraft;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Accounting\LedgerReconciliation;
 use App\Domain\Accounting\TrialBalance;
@@ -22,7 +24,6 @@ use App\Domain\Stock\InventoryValuation;
 use App\Models\Company;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
-use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Order;
 use App\Models\OrderLine;
@@ -390,7 +391,7 @@ class DocumentPostingTest extends TestCase
         $this->assertTrue($reconciliation->isClean());
 
         app(Ledger::class)->postManual(
-            \App\Domain\Accounting\JournalDraft::manual('Koreksi tanpa dokumen')
+            JournalDraft::manual('Koreksi tanpa dokumen')
                 ->debit(AccountCode::PIUTANG_USAHA, 1_000_000)
                 ->kredit(AccountCode::PENJUALAN, 1_000_000),
             $this->finance,
@@ -441,7 +442,7 @@ class DocumentPostingTest extends TestCase
 
         // The receipt itself refuses a second posting, so drive the ledger
         // directly: this is the queue-runs-twice case, not the double-click.
-        app(\App\Domain\Accounting\DocumentPoster::class)
+        app(DocumentPoster::class)
             ->goodsReceived($receipt->refresh(), $this->finance);
 
         $this->assertSame(6_000_000, $this->balance(AccountCode::PERSEDIAAN));

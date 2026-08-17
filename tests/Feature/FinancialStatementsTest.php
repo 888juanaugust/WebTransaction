@@ -10,6 +10,7 @@ use App\Domain\Accounting\BalanceSheet;
 use App\Domain\Accounting\JournalDraft;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Accounting\ProfitAndLoss;
+use App\Domain\Accounting\StatementLine;
 use App\Domain\Accounting\StatementSection;
 use App\Models\User;
 use DateTime;
@@ -309,7 +310,7 @@ class FinancialStatementsTest extends TestCase
         );
     }
 
-    private function line(StatementSection $section, string $label): \App\Domain\Accounting\StatementLine
+    private function line(StatementSection $section, string $label): StatementLine
     {
         foreach ($section->lines as $line) {
             if ($line->label === $label) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Billing;
 
 use App\Domain\Documents\DocumentNumberGenerator;
+use App\Domain\Money;
 use App\Domain\Stock\MovementReason;
 use App\Models\CreditNote;
 use App\Models\CreditNoteLine;
@@ -12,6 +13,7 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\StockMovement;
+use App\Models\User;
 use DateTimeInterface;
 use DomainException;
 use Illuminate\Support\Collection;
@@ -72,7 +74,7 @@ class CreditNoteIssuer
              */
             $shippedQty = min((int) $ship['qty'], (int) $line->qty_base);
             $shippedCost = $ship['qty'] > 0
-                ? \App\Domain\Money::mulDiv((int) $ship['value'], $shippedQty, (int) $ship['qty'])
+                ? Money::mulDiv((int) $ship['value'], $shippedQty, (int) $ship['qty'])
                 : 0;
 
             return new CreditableLine(
@@ -83,7 +85,7 @@ class CreditNoteIssuer
                 creditedQty: (int) $done['qty'],
                 creditedValue: (int) $done['value'],
                 unitCostRupiah: $shippedQty > 0
-                    ? \App\Domain\Money::mulDiv($shippedCost, 1, $shippedQty)
+                    ? Money::mulDiv($shippedCost, 1, $shippedQty)
                     : 0,
                 shippedCostRupiah: $shippedCost,
             );
@@ -132,7 +134,7 @@ class CreditNoteIssuer
     public function draft(
         Invoice $invoice,
         CreditNoteType $jenis,
-        \App\Models\User $actor,
+        User $actor,
         string $alasan,
         ?DateTimeInterface $tanggal = null,
         ?int $warehouseId = null,
