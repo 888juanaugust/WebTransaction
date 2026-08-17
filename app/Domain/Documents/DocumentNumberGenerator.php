@@ -40,6 +40,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_LANDED_COST = 'landed_cost';
 
+    public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
+
     /**
      * @param  string  $prefix  'SO' or 'INV'.
      */
@@ -123,6 +125,12 @@ class DocumentNumberGenerator
     public function nextLandedCostNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_LANDED_COST, 'BP', $date);
+    }
+
+    /** Ekspor Faktur Pajak: EF-202608-0001. */
+    public function nextFakturExportNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_FAKTUR_EXPORT, 'EF', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

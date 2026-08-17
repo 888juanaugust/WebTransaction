@@ -102,11 +102,14 @@ the difference lands on a faktur pajak.
 Odoo 19's Indonesian localisation reportedly exports Coretax-compliant **XML**
 (Actions → Download e-faktur, per invoice or batched).
 
-**Verify the format with your accountant**, and note this affects the decision
-either way: `CLAUDE.md` in this repo specifies a **CSV** export, and if Coretax
-now wants XML then that spec is out of date and the export we have not built
-yet would have been built wrong. This is worth five minutes of their time
-regardless of which system you choose.
+**Verify the format with your accountant.** This affects the decision either
+way, and it is now the single most valuable question on this list: `CLAUDE.md`
+specifies a **CSV** export and the exporter in this repo writes one. If Coretax
+wants XML, that spec is out of date and our file will be rejected. The
+serialisation there sits behind an interface with the column layout declared as
+data for exactly this — take their template and diff it — so the fix is one
+class either way. But nobody should upload our file for the first time without
+having asked.
 
 Also check what happens when an invoice is corrected after the XML is
 downloaded. Odoo's documentation notes the file cannot be edited and only the
@@ -159,7 +162,7 @@ Not to argue for it — so the comparison is like for like.
 |---|---|
 | Price list import with all the quirks above | Built, 1,457 rows → 1,402 published, 55 routed to review |
 | PPN 11/12 per line, code 04 | Built and tested |
-| Coretax export | **Not built** (and specified as CSV, which may be wrong) |
+| Coretax export, with the NSFP round trip | Built and tested — **but in CSV, and the format is unconfirmed** |
 | Cartons/pieces, moving average, frozen COGS | Built and tested |
 | Buyer portal with reorder | Built |
 | Order to cash, purchase to pay, three-way match | Built |

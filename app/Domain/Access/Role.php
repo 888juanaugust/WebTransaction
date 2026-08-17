@@ -190,6 +190,23 @@ enum Role: string
     }
 
     /**
+     * Export fakturs for filing, and record the serial numbers that come back.
+     *
+     * Finance's job, and Owner's. It is not an accounting entry — nothing here
+     * posts to the ledger, and an NSFP changes no figure — but it is the
+     * output VAT return, and the person who reconciles PPN Keluaran is the
+     * person who should be filing it.
+     *
+     * Sales are excluded even though they issue the invoices behind it. Filing
+     * is a statement to the tax office about what was sold, and the people
+     * paid on what was sold should not be the ones making it.
+     */
+    public function canExportFaktur(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /**
      * Spread a freight or duty charge over the goods it belongs to.
      *
      * Follows canRecordPurchases rather than canApproveStockCount, because

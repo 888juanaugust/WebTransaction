@@ -295,6 +295,33 @@ final class DataInventory
             ],
 
             /*
+             * Faktur pajak filings. About tax periods and totals rather than
+             * people, apart from who filed each one.
+             *
+             * The buyers' NPWP and tax addresses are *in the file* this record
+             * points at, not in these columns — the file is a report of what
+             * `invoices` already holds, and that table is classified above.
+             * Worth knowing when answering an access request: the exports on
+             * disk carry the same personal data as the invoices behind them.
+             */
+            'faktur_exports' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by'],
+                'bukan' => [
+                    'nomor', 'masa_pajak', 'tahun_pajak', 'format', 'jumlah_faktur',
+                    'total_dpp_rupiah', 'total_ppn_rupiah', 'file_path',
+                ],
+            ],
+
+            'faktur_export_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => [],
+                'bukan' => [
+                    'faktur_export_id', 'invoice_id', 'referensi', 'nsfp', 'nsfp_recorded_at',
+                ],
+            ],
+
+            /*
              * Landed cost allocations — freight and duty being spread over the
              * goods they belong to. About shipments and suppliers rather than
              * people, apart from who drew it up and who posted it.

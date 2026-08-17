@@ -8,6 +8,8 @@ use App\Domain\Payments\LocalVirtualAccountGateway;
 use App\Domain\Payments\VirtualAccountGateway;
 use App\Domain\Payments\XenditVirtualAccountGateway;
 use App\Domain\Pricing\PriceResolver;
+use App\Domain\Tax\EFakturCsvWriter;
+use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepStuckWebhookEvents;
@@ -16,6 +18,7 @@ use App\Observers\CompanyObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +27,22 @@ class AppServiceProvider extends ServiceProvider
         // Everything else in App\Domain is constructor-injectable as-is; only
         // the tax calculator needs config to build.
         $this->app->singleton(TaxCalculator::class, fn () => TaxCalculator::fromConfig());
+
+        /*
+         * Which file layout the tax office wants is not settled — see
+         * FakturWriter for the whole of it. Bound from config rather than
+         * hard-wired so the answer, when the accountant produces a real
+         * template, is a config value and a new writer class rather than a
+         * change to anything that calls it.
+         */
+        $this->app->bind(FakturWriter::class, function () {
+            return match ((string) config('pajak.format_ekspor')) {
+                'efaktur_csv' => new EFakturCsvWriter,
+                default => throw new InvalidArgumentException(
+                    'Format ekspor faktur tidak dikenal: '.config('pajak.format_ekspor')
+                ),
+            };
+        });
 
         /*
          * One price resolver per request and per queue job.

@@ -26,8 +26,28 @@ return [
         'denominator' => (int) env('PPN_DPP_DENOMINATOR', 12),
     ],
 
-    // Coretax transaction code written into the faktur CSV export.
+    // Coretax transaction code written into the faktur export.
     'kode_transaksi' => env('PPN_TRANSACTION_CODE', '04'),
+
+    /*
+    |----------------------------------------------------------------------
+    | Export layout
+    |----------------------------------------------------------------------
+    |
+    | >>> PUTUSKAN with the accountant before the first real filing.
+    |
+    | `efaktur_csv` is the layout CLAUDE.md specifies and the one the desktop
+    | e-Faktur application accepted for years. Coretax, live since January
+    | 2025, is widely reported to want XML instead. Both cannot be right.
+    |
+    | Only the serialisation is in doubt — which invoice, whose NPWP and what
+    | the DPP is per line are settled and live in FakturRecord. If the answer
+    | is XML, that is a second class implementing FakturWriter and a change to
+    | this value; nothing that calls it moves. `faktur_exports.format` records
+    | which layout each past filing used, so old filings stay readable.
+    |
+    */
+    'format_ekspor' => env('PAJAK_FORMAT_EKSPOR', 'efaktur_csv'),
 
     // Identity of the seller (PT/CV) as it must appear on the faktur.
     'penjual' => [

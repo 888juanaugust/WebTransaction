@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\FakturController;
+use App\Http\Controllers\FakturExportController;
 use App\Http\Controllers\NotaKreditController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\SuratJalanController;
@@ -119,6 +120,18 @@ Route::middleware(['web', 'auth:customer'])
 Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/pesanan-pembelian/{purchaseOrder}', PesananPembelianController::class)
     ->name('dokumen.pesanan-pembelian');
+
+/*
+ * The faktur pajak export file, served from disk rather than regenerated.
+ *
+ * Not a printable document like the three above — this one is uploaded to the
+ * tax office — but it belongs here for the same reason: it is a file we hand
+ * to somebody outside, and what was actually handed over has to stay
+ * retrievable.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/faktur-pajak/{fakturExport}', FakturExportController::class)
+    ->name('faktur-pajak.unduh');
 
 /*
 |--------------------------------------------------------------------------

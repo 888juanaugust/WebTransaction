@@ -177,7 +177,10 @@ it left at and reverse the sale in the books. Stock moves between warehouses on
 a transfer document, and the shelf is counted on an opname sheet that Warehouse
 fills in and Finance approves — never the same person. Freight and duty are
 spread over the goods they belong to, with the share for stock already sold
-going to HPP rather than restating shipments that have gone.
+going to HPP rather than restating shipments that have gone. **Buku besar →
+Faktur pajak** exports a month's output VAT for filing and records the nomor
+seri that come back — read the note on that screen about the file format
+before the first real filing.
 
 Two things to raise with your accountant rather than take on trust: orders are
 invoiced when they move to awaiting payment, which is **before** they ship, so
@@ -186,7 +189,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 874 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 936 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

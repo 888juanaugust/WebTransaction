@@ -69,6 +69,10 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => false,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
+                // They issue the invoices behind it, but filing is a
+                // statement to the tax office about what was sold, and the
+                // people paid on what was sold should not be making it.
+                'canExportFaktur' => false,
                 'canViewAuditLog' => false,
             ]],
             'warehouse' => [Role::Warehouse, [
@@ -92,6 +96,7 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => true,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
+                'canExportFaktur' => false,
                 'canViewAuditLog' => false,
             ]],
             'finance' => [Role::Finance, [
@@ -119,6 +124,7 @@ class RoleMatrixTest extends TestCase
                 // follows purchase authority rather than the opname split —
                 // an allocation creates no payable and no stock.
                 'canAllocateLandedCost' => true,
+                'canExportFaktur' => true,
                 'canViewAuditLog' => false,
             ]],
             'owner' => [Role::Owner, [
@@ -140,6 +146,7 @@ class RoleMatrixTest extends TestCase
                 'canCountStock' => true,
                 'canApproveStockCount' => true,
                 'canAllocateLandedCost' => true,
+                'canExportFaktur' => true,
                 'canViewAuditLog' => true,
             ]],
         ];

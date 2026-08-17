@@ -59,10 +59,12 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
+| `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
+| `/dokumen/faktur-pajak/{export}` | Ekspor faktur pajak | Finance, Owner | The filing file, served from disk as written — never regenerated |
 
 The four accounting screens are behind `canSeeBooks()`. They carry cost and
 margin — everything Sales and Warehouse are kept away from elsewhere — and the
@@ -120,6 +122,58 @@ rather than a permission check somebody can forget to write.
 
 Per line, never only on the total: summing rounded lines is not the same number
 as rounding a summed total, and the faktur has to agree with the lines on it.
+
+### Faktur pajak — reporting output VAT
+
+There is no API. A person exports a file, uploads it, and the tax office
+assigns a nomor seri faktur pajak to each faktur which has to land back on our
+invoice. That round trip is the feature.
+
+| Function | Decides |
+|---|---|
+| `FakturRecord::fromInvoice` | The mapping: which figure goes in which field, all from snapshots |
+| `FakturBlocker::forInvoice` | Why one invoice cannot be filed, and what to do about it |
+| `FakturExporter::preview` | What a filing would contain **and what it would leave out** |
+| `FakturExporter::export` | Writes the file, keeps it, records the filing |
+| `NsfpRecorder::record` | Matches returned serials to invoices by our own reference |
+| `FakturWriter` | The one part in doubt — see below |
+
+**The file format is not settled, and nothing in this repository can settle
+it.** `CLAUDE.md` specifies a CSV in the e-Faktur import layout, which the
+desktop application accepted for years. Coretax, live since January 2025, is
+widely reported to want XML. Both cannot be right, and getting it wrong is not
+a bug that shows up in testing — it is a rejected upload near a deadline, or an
+accepted upload of the wrong figures.
+
+So the serialisation is an interface with one implementation, and the mapping
+is not. `EFakturCsvWriter` declares its three column lists as data, one per row
+type, so an accountant's real template is a line-by-line diff rather than a
+reading of code. If the answer is XML, that is a second class against
+`FakturWriter` and a change to `pajak.format_ekspor`; nothing above it moves,
+and `faktur_exports.format` records which layout each past filing used so old
+ones stay readable. **No XML schema has been guessed at** — a plausible-looking
+tax file that is subtly wrong is worse than none.
+
+Three things a reviewer should look at hardest:
+
+- **`NOMOR_FAKTUR` is written empty.** The serial is not ours to choose. Our
+  invoice number goes in `REFERENSI`, which is what comes back beside the
+  assigned number and is the join key of the whole round trip.
+- **`DPP` under code 04 is the Nilai Lain**, 11/12 of the selling price, not
+  harga total less discount. Under code 01 those are the same number and the
+  distinction is invisible; under 04 they differ by a twelfth.
+- **Quantities are base units.** A line records 6 cartons *and* 72 pieces, and
+  the stored unit price is per base unit. The OF row has no unit column, so the
+  base pair is the only one that multiplies out.
+
+An export is a **record**, not a download: somebody will ask which invoices
+were reported for August and what came back for each. The file is kept as
+written rather than regenerated, because regenerating it next year would use
+whatever the code does by then.
+
+Blocked invoices are listed, never silently dropped. An invoice quietly missing
+from a filing is a sale we collected PPN on and did not report, and nobody
+notices until the tax office compares our figures with the customer's.
 
 ### Pricing — one pure function
 
@@ -556,8 +610,6 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- Faktur CSV export for Coretax — the faktur prints, but nothing writes the
-  import file or reads an NSFP back
 - Buyer self-service password reset
 - `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)
 - Nothing prunes abandoned carts
