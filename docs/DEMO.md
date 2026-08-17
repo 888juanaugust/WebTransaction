@@ -163,6 +163,33 @@ sold at cost so far. On the catalogue screen, finance and the owner can switch
 on **HPP rata-rata** — the moving average cost per part. Sales cannot see it,
 because cost plus selling price is margin.
 
+### The four reports — 2 min
+
+Open **Laporan**. Four questions, one screen each, every one downloadable as a
+spreadsheet.
+
+**Penjualan** — who bought and what it made. Regroup it by merk or category
+from the same screen. The total agrees with the Penjualan account in the
+ledger, and margin uses the cost frozen when the goods left rather than
+today's average.
+
+**Umur piutang** — what is owed, in 30/60/90 buckets. The total must equal
+Piutang Usaha in the neraca; if it ever does not, the report says so above the
+table rather than leaving somebody to find it.
+
+**Pelanggan pasif** — customers who have stopped ordering, measured against
+each customer's own rhythm rather than one threshold for everybody. A
+distributor ordering weekly and a bengkel ordering quarterly are both healthy;
+this catches the one that broke its habit.
+
+> "Nothing else in the system watches for this. A customer who stops just
+> stops — no queue empties, nobody complains."
+
+**Perputaran stok** — what is on the shelf and not moving, ranked by the money
+tied up in it, with months of cover beside each part. Nine parts here have
+never sold at all, and they are at the top of the list because that is where
+the cash is stuck. Finance and the owner only: it is a cost report.
+
 ---
 
 ## 4. Questions you will be asked
@@ -180,7 +207,10 @@ spread over the goods they belong to, with the share for stock already sold
 going to HPP rather than restating shipments that have gone. **Buku besar →
 Faktur pajak** exports a month's output VAT for filing and records the nomor
 seri that come back — read the note on that screen about the file format
-before the first real filing.
+before the first real filing. **Laporan** carries the four reports the numbers
+are actually read through — sales and margin, receivables ageing, customers who
+have stopped ordering, and stock that is not moving — each downloadable as a
+spreadsheet and each tied back to the ledger account it must agree with.
 
 Two things to raise with your accountant rather than take on trust: orders are
 invoiced when they move to awaiting payment, which is **before** they ship, so
@@ -189,7 +219,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 979 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1016 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

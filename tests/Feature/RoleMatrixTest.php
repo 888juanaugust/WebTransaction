@@ -73,6 +73,7 @@ class RoleMatrixTest extends TestCase
                 // statement to the tax office about what was sold, and the
                 // people paid on what was sold should not be making it.
                 'canExportFaktur' => false,
+                'canSeeReports' => true,
                 'canViewAuditLog' => false,
             ]],
             'warehouse' => [Role::Warehouse, [
@@ -97,6 +98,8 @@ class RoleMatrixTest extends TestCase
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
                 'canExportFaktur' => false,
+                // Every report is money, and this role never sees money.
+                'canSeeReports' => false,
                 'canViewAuditLog' => false,
             ]],
             'finance' => [Role::Finance, [
@@ -125,6 +128,7 @@ class RoleMatrixTest extends TestCase
                 // an allocation creates no payable and no stock.
                 'canAllocateLandedCost' => true,
                 'canExportFaktur' => true,
+                'canSeeReports' => true,
                 'canViewAuditLog' => false,
             ]],
             'owner' => [Role::Owner, [
@@ -147,6 +151,7 @@ class RoleMatrixTest extends TestCase
                 'canApproveStockCount' => true,
                 'canAllocateLandedCost' => true,
                 'canExportFaktur' => true,
+                'canSeeReports' => true,
                 'canViewAuditLog' => true,
             ]],
         ];

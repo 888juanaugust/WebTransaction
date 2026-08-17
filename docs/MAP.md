@@ -60,6 +60,10 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
+| `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
+| `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
+| `/admin/laporan/pelanggan-pasif` | Pelanggan pasif | Sales, Finance, Owner | Customers who broke their own ordering rhythm |
+| `/admin/laporan/perputaran-stok` | Perputaran stok | Finance, Owner | Dead stock, ranked by the money stuck in it |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
@@ -69,6 +73,13 @@ otherwise every surface falls back to the wordmark.
 The four accounting screens are behind `canSeeBooks()`. They carry cost and
 margin — everything Sales and Warehouse are kept away from elsewhere — and the
 route refuses, not just the menu item.
+
+The four report screens are behind `canSeeReports()`, then gated a second time
+per report: Sales reach the sales report but its HPP and margin columns are
+absent from both the screen and the CSV, since cost beside selling price is
+margin. They reach ageing too — they already see credit data, because they
+cannot place an order without it. Perputaran stok is `canSeeCost()`, so they
+do not see it at all. Warehouse see none of the four.
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 
@@ -583,6 +594,33 @@ DPP as the sale, but nothing here has been confirmed against the current
 Coretax treatment. Worth five minutes of their time before the first real
 return.
 
+### Reporting — reading, never writing
+
+| Function | Decides |
+|---|---|
+| `Period::between` / `month` / `lastMonth` / `yearToDate` | One place decides what "last month" means. `to` is always the **end** of its day |
+| `Period::asOf` | A snapshot, labelled as a day rather than a range that repeats itself |
+| `ReportTable` | Title, period, columns, rows, totals, notes — what every report returns |
+| `ReportColumn` | How a cell renders, **for the screen and the CSV in one place**, and who may see the column at all |
+| `ReportCsv::write` | Semicolons and a BOM, because Indonesian Excel reads comma-delimited as one column |
+| `SalesReport::build` | Revenue from **invoice line snapshots** less posted credit notes, by customer / brand / category / month |
+| `ReceivablesAgeing::build` | 30/60/90 buckets, unmatched payments in their own column |
+| `LapsedCustomers::build` | Customers silent for more than twice **their own** median ordering interval |
+| `StockAgeing::build` | On-hand value and months of cover, never-sold first |
+
+Every report is anchored to something it must agree with, and says so when it
+does not. Sales ties to the Penjualan account; ageing ties to Piutang Usaha and
+emits a `PERIKSA:` note in the report itself rather than quietly disagreeing
+with the ledger.
+
+Margin uses the cost **frozen when the goods left**, taken from the stock
+movement of the order the invoice bills — not the current average, and not
+whatever shipped in the same calendar month. A shipment slipping past a month
+end must not move an earlier month's margin.
+
+Nothing here writes. No report has a transaction, a ledger insert or a cached
+total; re-running one on a closed period produces the same figures forever.
+
 ### Cart
 
 | Function | Decides |
@@ -614,7 +652,8 @@ the real file have headers that disagree with the data below them.
 ### Access
 
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
-`canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`
+`canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`,
+`canSeeCost`, `canSeeBooks`, `canSeeReports`
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -656,6 +695,9 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
+- Retur pembelian — sending goods back to a supplier
+- Statement of account — one customer's invoices, credits and payments on a page
+- Reorder points, the question the stock report deliberately does not answer
 - Buyer self-service password reset
 - `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)
 - Nothing prunes abandoned carts

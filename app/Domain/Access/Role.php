@@ -190,6 +190,19 @@ enum Role: string
     }
 
     /**
+     * Open the reports.
+     *
+     * Everybody who sells or keeps the books. Warehouse is excluded for the
+     * usual reason — every report here is money — and what the others see
+     * inside them still differs: `canSeeCost()` decides whether margin
+     * columns exist at all, so Sales get what they sold without what it cost.
+     */
+    public function canSeeReports(): bool
+    {
+        return in_array($this, [self::Sales, self::Finance, self::Owner], true);
+    }
+
+    /**
      * Export fakturs for filing, and record the serial numbers that come back.
      *
      * Finance's job, and Owner's. It is not an accounting entry — nothing here

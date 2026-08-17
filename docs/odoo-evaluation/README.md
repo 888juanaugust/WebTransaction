@@ -173,6 +173,8 @@ Not to argue for it — so the comparison is like for like.
 | Credit notes: returns and price corrections, with the segregation control | Built and tested |
 | Warehouse transfers, and stock opname with counter/approver separated | Built and tested |
 | Landed cost, split between stock on hand and stock already sold | Built and tested |
+| Encrypted off-box backups, with a restore that is actually exercised | Built and tested |
+| Sales/margin, receivables ageing, lapsed customers, stock turnover — each tied to a ledger account | Built and tested |
 | Multi-currency, fixed assets, bank reconciliation | **Not built**, and not planned |
 
 The summary this file was written with — "tuned to your trade, no accounting
