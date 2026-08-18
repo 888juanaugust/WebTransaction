@@ -98,22 +98,37 @@ There is a `docker-compose.yml` in this repository, but read where it lives:
 Odoo" comparison. **It has nothing to do with running this application**, and
 deploying it would give you Odoo, not this.
 
-For this app on one VPS, plain Ubuntu is the better answer:
+**Nothing in this application prevents it**, and it is worth being exact about
+that rather than hand-waving. In particular the backup system does *not* care:
+`DatabaseDumper` runs `pg_dump` and `psql` over TCP using `--host`/`--port` from
+the connection config with `PGPASSWORD` in the environment, and both binaries
+are configurable through `BACKUP_PG_DUMP` and `BACKUP_PSQL`. Put
+`postgresql-client-16` in the PHP image, point `DB_HOST` at the database
+service, and dumps, restores and the restore drill all work untouched.
 
-- The backup system shells out to `pg_dump` and writes to a disk. Inside
-  containers that becomes a cross-container exec, and the restore drill in
-  `docs/BACKUP.md` — the part that has actually been tested — stops matching
-  reality.
-- Supervisor, cron and Caddy are already the deployment model, documented and
-  proven. Containerising means rewriting all three for no behaviour you gain.
-- One app, one box, one developer. Docker earns its keep when you are running
-  several things with conflicting dependencies, or deploying the same image to
-  more than one machine. Neither is true here.
+The case for plain Ubuntu here is smaller than that, and honest about its size:
 
-The exception, and it is a real one: **if you later want Odoo, Metabase or
-anything else alongside this on the same VPS**, put *those* in Docker and leave
-this app on the host. That keeps their dependency mess off your PHP and
-Postgres install. It is also the point at which KVM 2 stops being enough.
+- Supervisor, cron and Caddy are already the deployment model, written down and
+  proven. Containerising means expressing all three a second way for no change
+  in behaviour.
+- One app, one box, one developer. Docker earns its keep across several
+  services with conflicting dependencies, or one image deployed to more than one
+  machine. Neither is true yet.
+- The one real footgun: `storage/app` holds every uploaded price list **forever**
+  by project rule. Under Docker that must be a named volume. Get it wrong and a
+  `docker compose down -v` destroys the raw files behind every published price
+  version.
+
+What Docker genuinely buys, if you want it: a build that does not depend on
+`ondrej/php` still publishing what it published last year, rollback by pointing
+at the previous image tag, and one command to stand the whole thing up on a new
+machine.
+
+Two points where it stops being a preference and becomes the right answer:
+**running Odoo, Metabase or anything else alongside this on the same VPS** — put
+those in containers whatever you do with this app — and **more than one
+environment**, such as a staging box that has to match production exactly. The
+first is also roughly where KVM 2 stops being enough.
 
 ### Daily backup add-on: **yes, and it does not replace `docs/BACKUP.md`**
 
