@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Widgets\AccountsAwaitingApproval;
 use App\Filament\Widgets\BackupStatus;
+use App\Filament\Widgets\GiroDue;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
@@ -67,6 +68,8 @@ class AdminPanelProvider extends PanelProvider
                 UnmatchedPayments::class,
                 OrdersReadyToPick::class,
                 OverdueInvoices::class,
+                // Silent unless a giro is dated today or earlier.
+                GiroDue::class,
             ])
             ->middleware([
                 EncryptCookies::class,

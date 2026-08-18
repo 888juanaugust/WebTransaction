@@ -49,6 +49,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
 | `/admin/retur-pembelian` | Retur pembelian | Finance, Owner | Goods back to a supplier. Badge counts returns they have not acknowledged |
+| `/admin/giro` | Bilyet giro | Finance, Owner | Postdated cheques both ways. Badge counts giro that can be banked today |
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
@@ -92,6 +93,7 @@ do not see it at all. Warehouse see none of the four.
 | `UnmatchedPayments` | Money in that isn't allocated to an invoice |
 | `OrdersReadyToPick` | What the warehouse can pack today |
 | `OverdueInvoices` | Who is late, by age bucket |
+| `GiroDue` | **Silent when nothing is due.** Giro to bank today, and giro of ours that must be funded |
 | `BackupStatus` | **Owner only, and silent when healthy.** Appears above the queues when backups are stale, failing, or still on this machine |
 
 ### Buyer portal — customers, `customer` guard against `customer_users`
@@ -678,6 +680,56 @@ end must not move an earlier month's margin.
 Nothing here writes. No report has a transaction, a ledger insert or a cached
 total; re-running one on a closed period produces the same figures forever.
 
+### Giro — the postdated cheque the trade runs on
+
+| Function | Decides |
+|---|---|
+| `GiroRegister::receive` / `issue` | The paper changes hands. **Not a payment** |
+| `GiroRegister::markDeposited` | Banked. A date, not a state — no money, no journal |
+| `GiroRegister::clear` | It cleared: release the instrument, then take an ordinary payment |
+| `GiroRegister::bounce` / `cancel` | It failed, or came back uncashed. Same release, no payment |
+| `DocumentPoster::giroIssued` / `giroReleased` | One rule read in four directions |
+
+```
+masuk:   Dr Piutang Giro / Cr Piutang Usaha      … and the reverse on release
+keluar:  Dr Utang Usaha  / Cr Utang Giro         … and the reverse on release
+```
+
+**A giro is not a payment**, and everything else follows from that. Treat it as
+one and the books claim money that is not in the bank, *and* the customer's
+credit limit frees up the moment they hand over a promise — which is exactly
+how a customer who bounces giros keeps ordering.
+
+So the balance moves sideways into an account that says what backs it, and the
+invoice stays open. Clearing is the only ending where money moves, and it does
+so through `PaymentLedger` rather than posting to Bank directly: that costs one
+extra journal entry and buys invoice settlement, the ageing report, the
+unmatched-payments queue and the reversal machinery, none of it duplicated.
+
+A bounce needs nothing undone, because nothing was ever paid. That is the whole
+payoff for the design.
+
+**Two figures that deliberately disagree**, both in `OutstandingReceivables`:
+
+| Method | For | Net of giro? |
+|---|---|---|
+| `total()` | the Piutang Usaha control account | **yes** — the ledger moved it |
+| `forCompany()` / `exposureFor()` | the credit check | **no** — it can still bounce |
+
+`SupplierLedger` carries the same split: `totalPayable()` subtracts our issued
+giro, `outstandingFor()` does not, because we still owe it.
+
+Banking a giro is a **date, not a state**: nothing moves and nothing posts, and
+modelling it as a state would double the machine to answer a question one
+nullable column already answers.
+
+Warkat numbers are unique per issuing bank, and the bank name is folded to
+upper case first — without that, "BCA", "bca" and " Bca " let the same cheque
+in three times and triple the asset.
+
+Not built: cheques from a third party endorsed on to us, and partial clearing.
+Neither happens here.
+
 ### Cart
 
 | Function | Decides |
@@ -710,7 +762,7 @@ the real file have headers that disagree with the data below them.
 
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
 `canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`,
-`canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`
+`canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`, `canHandleGiro`
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -752,6 +804,7 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
+- Bank reconciliation — nothing matches the Bank account to a statement
 - Supplier credits with no goods behind them — a price correction on a bill
 - Statement of account — one customer's invoices, credits and payments on a page
 - Reorder points, the question the stock report deliberately does not answer

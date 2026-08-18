@@ -25,6 +25,22 @@ final class AccountCode
 
     public const PIUTANG_USAHA = '1-1200';
 
+    /**
+     * Receivables we hold a bilyet giro against, not yet cleared.
+     *
+     * Separate from Piutang Usaha because it is a different risk, not a
+     * different customer. A giro is a signed instrument with a date on it —
+     * better evidence than an invoice — and it can still bounce, which an
+     * invoice cannot do. Folding the two together would hide both halves of
+     * that: how much of the debt is documented, and how much of it is one
+     * bank rejection away from coming straight back.
+     *
+     * **A giro does not free the customer's credit limit.** The books move the
+     * balance here; the credit check goes on counting it. See
+     * OutstandingReceivables for why those are two different figures.
+     */
+    public const PIUTANG_GIRO = '1-1250';
+
     public const PERSEDIAAN = '1-1300';
 
     /**
@@ -53,6 +69,17 @@ final class AccountCode
 
     // Kewajiban
     public const UTANG_USAHA = '2-1000';
+
+    /**
+     * Bilyet giro we have issued that has not been cashed yet.
+     *
+     * The mirror of Piutang Giro, and it matters for the opposite reason: the
+     * money is committed and dated, so it is not available to spend even
+     * though it is still in the bank account. A supplier holding our giro for
+     * the 20th is a claim on the 20th's cash, and a payables figure that does
+     * not separate it makes next month's cash look better than it is.
+     */
+    public const UTANG_GIRO = '2-1050';
 
     /**
      * Goods received, not yet invoiced. The goods are on the shelf and the
@@ -111,6 +138,8 @@ final class AccountCode
                 'Rekening bank, termasuk penerimaan lewat Virtual Account.'),
             self::posting(self::PIUTANG_USAHA, 'Piutang Usaha', AccountType::Aset, '1-0000',
                 'Faktur yang sudah terbit dan belum dibayar. Harus sama dengan total tagihan terbuka pelanggan.'),
+            self::posting(self::PIUTANG_GIRO, 'Piutang Giro', AccountType::Aset, '1-0000',
+                'Bilyet giro dari pelanggan yang belum cair. Tetap dihitung sebagai eksposur kredit sampai cair.'),
             self::posting(self::PERSEDIAAN, 'Persediaan Barang Dagang', AccountType::Aset, '1-0000',
                 'Nilai persediaan dengan metode rata-rata bergerak. Harus sama dengan total nilai product_costs.'),
             self::posting(self::BIAYA_BELUM_DIALOKASIKAN, 'Biaya Perolehan Belum Dialokasikan', AccountType::Aset, '1-0000',
@@ -121,6 +150,8 @@ final class AccountCode
             self::header('2-0000', 'KEWAJIBAN', AccountType::Kewajiban),
             self::posting(self::UTANG_USAHA, 'Utang Usaha', AccountType::Kewajiban, '2-0000',
                 'Tagihan pemasok yang belum dibayar. Harus sama dengan total tagihan terbuka pemasok.'),
+            self::posting(self::UTANG_GIRO, 'Utang Giro', AccountType::Kewajiban, '2-0000',
+                'Bilyet giro yang kita terbitkan dan belum dicairkan pemasok. Uangnya masih di bank tapi sudah terikat tanggal.'),
             self::posting(self::UTANG_BELUM_DITAGIH, 'Utang Belum Ditagih', AccountType::Kewajiban, '2-0000',
                 'Barang sudah diterima, tagihan pemasok belum masuk. Idealnya kosong; sisanya adalah tagihan yang tidak pernah datang.'),
             self::posting(self::PPN_KELUARAN, 'PPN Keluaran', AccountType::Kewajiban, '2-0000',

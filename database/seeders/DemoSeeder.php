@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Domain\Access\Role;
 use App\Domain\Documents\DocumentNumberGenerator;
+use App\Domain\Giro\GiroRegister;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Payments\PaymentLedger;
 use App\Domain\Purchasing\GoodsReceiptPoster;
@@ -16,6 +17,7 @@ use App\Models\Company;
 use App\Models\CustomerUser;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
+use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\PriceListItem;
@@ -89,6 +91,7 @@ class DemoSeeder extends Seeder
 
         $this->ordersInEveryState($companies, $warehouse, $staff);
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
+        $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
 
         $this->command?->info('Demo data ready. See docs/DEMO.md for the walkthrough.');
     }
@@ -434,6 +437,69 @@ class DemoSeeder extends Seeder
      * goods were received at — so the three-way match has both kinds of
      * variance to show, which is the whole point of the screen.
      */
+    /**
+     * Three bilyet giro, chosen to show the three things that matter.
+     *
+     * One large one against a named invoice and months away — the ordinary
+     * case, and the one that proves the customer's credit has *not* come back.
+     * One small one already past its date and unbanked, so the dashboard queue
+     * and the sidebar badge have something in them. And one we issued to the
+     * supplier, so the balance sheet shows both accounts.
+     *
+     * @param  array<string, Company>  $companies
+     */
+    private function girosInTheDrawer(array $companies, Supplier $supplier, User $finance): void
+    {
+        $register = app(GiroRegister::class);
+        $distributor = $companies['distributor'];
+
+        $invoice = Invoice::query()
+            ->where('company_id', $distributor->id)
+            ->where('status', Invoice::STATUS_OPEN)
+            ->orderByDesc('total_rupiah')
+            ->first();
+
+        $register->receive(
+            company: $distributor,
+            nilaiRupiah: 20_000_000,
+            bankPenerbit: 'BCA',
+            nomorWarkat: 'AB123456',
+            jatuhTempo: now()->addDays(54),
+            actor: $finance,
+            invoice: $invoice,
+            diterima: now()->subDays(6),
+            catatan: 'Giro 60 hari, disepakati lewat WhatsApp',
+        );
+
+        // Due three days ago and still in the drawer: this is what puts the
+        // queue on the dashboard and the badge in the sidebar.
+        $register->receive(
+            company: $distributor,
+            nilaiRupiah: 8_500_000,
+            bankPenerbit: 'Mandiri',
+            nomorWarkat: 'CD778899',
+            jatuhTempo: now()->subDays(3),
+            actor: $finance,
+            diterima: now()->subDays(63),
+        );
+
+        $bill = SupplierBill::query()
+            ->where('supplier_id', $supplier->id)
+            ->where('status', SupplierBill::STATUS_OPEN)
+            ->first();
+
+        $register->issue(
+            supplier: $supplier,
+            nilaiRupiah: 6_000_000,
+            bankPenerbit: 'BCA',
+            nomorWarkat: 'KL445566',
+            jatuhTempo: now()->addDays(20),
+            actor: $finance,
+            bill: $bill,
+            diserahkan: now()->subDays(4),
+        );
+    }
+
     private function purchaseChainWithAVariance(Supplier $supplier, Warehouse $warehouse, User $finance): void
     {
         $flow = app(PurchaseOrderFlow::class);

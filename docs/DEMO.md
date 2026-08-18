@@ -181,6 +181,40 @@ the PPN rules the *buyer* issues it, so it carries our number and our NPWP, and
 the supplier's credit note comes back against it. Until it does, the return
 shows a badge in the sidebar — that gap is money nobody else is watching.
 
+### The cheque in the drawer — 2 min
+
+**Bilyet giro.** This is the one an Indonesian wholesaler will ask about first.
+
+> "A customer settles a forty-million invoice by handing over a piece of paper
+> dated sixty days out. What does your system do with that?"
+
+Open **Bilyet giro**. Three of them, sorted by the date printed on the paper —
+the top one is amber and says *sudah bisa disetor*, because it came due and
+nobody has banked it.
+
+Open the first giro and read the box at the bottom:
+
+> "Twenty million moved from Piutang Usaha to Piutang Giro. No money has come
+> in, the invoice is still open, and **the customer's credit limit has not come
+> back** — because a giro can bounce."
+
+That last part is the whole feature. Show it on **Buku besar → Neraca saldo**:
+Piutang Giro sits on the balance sheet as its own line, and the control check
+beside it ties to the register.
+
+> "If we called it a payment, the books would claim money that is not in the
+> bank, and the customer could order again on the strength of a promise. That
+> is exactly how somebody rolls one bounced cheque into the next order."
+
+Then **Cair** on one, and **Tolak** on another with "saldo tidak cukup".
+Clearing records a real payment and settles the invoice; the bounce puts the
+debt straight back and there is nothing to unwind — because nothing was ever
+paid.
+
+Giro we write to suppliers work the same way in reverse: **Terbitkan giro**
+moves what we owe into Utang Giro, so next month's cash figure knows the money
+is already committed to a date.
+
 ### Close on the numbers — 1 min
 
 > "Because every stock movement carries what it cost, the system can say what
@@ -228,7 +262,10 @@ neraca saldo, the journal and period close. Closing a month locks it: a
 document back-dated into it is refused, with the document, rather than quietly
 restating figures already reported. Closing December closes the year into Laba
 Ditahan. Returns are recorded as credit notes, which put stock back at the cost
-it left at and reverse the sale in the books. Stock moves between warehouses on
+it left at and reverse the sale in the books. Bilyet giro are a first-class
+document rather than a payment: a customer's cheque sits in Piutang Giro until
+it clears, and one we write sits in Utang Giro, so the balance sheet says what
+is backed by paper and what is not. Stock moves between warehouses on
 a transfer document, and the shelf is counted on an opname sheet that Warehouse
 fills in and Finance approves — never the same person. Goods sent back to a
 supplier come off the shelf on a retur pembelian, which reduces what we owe them
@@ -249,7 +286,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1080 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1130 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

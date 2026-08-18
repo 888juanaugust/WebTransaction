@@ -42,6 +42,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_PURCHASE_RETURN = 'purchase_return';
 
+    public const SCOPE_GIRO = 'giro';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -146,6 +148,19 @@ class DocumentNumberGenerator
     public function nextPurchaseReturnNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_PURCHASE_RETURN, 'RP', $date);
+    }
+
+    /**
+     * Bilyet Giro: BG-202608-0001.
+     *
+     * Our own reference, not the giro's identity — that is the warkat number
+     * printed on the paper by the issuing bank. This is what the journal
+     * entry and the register are keyed by, so a giro stays findable after the
+     * paper itself has gone to the bank and not come back.
+     */
+    public function nextGiroNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_GIRO, 'BG', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

@@ -45,10 +45,12 @@
                                 <span class="font-mono text-xs text-gray-400 dark:text-gray-500">{{ $check->kode }}</span>
                                 <span class="ml-2">{{ $check->nama }}</span>
                             </td>
-                            <td class="py-2 px-3 text-right font-mono tabular-nums">{{ Money::format($check->buku) }}</td>
-                            <td class="py-2 px-3 text-right font-mono tabular-nums">{{ Money::format($check->subledger) }}</td>
+                            {{-- nowrap: a rupiah figure broken across two lines is unreadable,
+                                 and the sumber column beside it will grow again. --}}
+                            <td class="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">{{ Money::format($check->buku) }}</td>
+                            <td class="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">{{ Money::format($check->subledger) }}</td>
                             <td @class([
-                                'py-2 px-3 text-right font-mono font-semibold tabular-nums',
+                                'py-2 px-3 text-right font-mono font-semibold tabular-nums whitespace-nowrap',
                                 'text-danger-600 dark:text-danger-400' => ! $check->agrees(),
                                 'text-gray-400 dark:text-gray-500' => $check->agrees(),
                             ])>{{ $check->agrees() ? '—' : Money::format($check->selisih()) }}</td>

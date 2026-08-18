@@ -6,6 +6,7 @@ namespace App\Domain\Purchasing;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Models\Giro;
 use App\Models\PurchaseReturn;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
@@ -158,7 +159,13 @@ class SupplierLedger
         });
     }
 
-    /** What we still owe a supplier across every open bill. */
+    /**
+     * What we still owe a supplier across every open bill.
+     *
+     * Not net of giro: a giro we have issued is still money we owe, committed
+     * to a date rather than paid. The mirror of how a customer's giro does not
+     * free their credit — see OutstandingReceivables.
+     */
     public function outstandingFor(Supplier $supplier): int
     {
         return $this->billed($supplier->id)
@@ -182,7 +189,22 @@ class SupplierLedger
      */
     public function totalPayable(): int
     {
-        return $this->billed(null) - $this->paid(null) - $this->returned(null);
+        return $this->billed(null)
+            - $this->paid(null)
+            - $this->returned(null)
+            - $this->giroIssued();
+    }
+
+    /**
+     * Face value of our own giro that suppliers hold and have not cashed.
+     *
+     * The books moved that balance into Utang Giro when the paper was handed
+     * over, so the Utang Usaha control account has to subtract it — while
+     * `outstandingFor()` above deliberately does not, because we still owe it.
+     */
+    public function giroIssued(): int
+    {
+        return (int) Giro::query()->open()->keluar()->sum('nilai_rupiah');
     }
 
     private function billed(?int $supplierId): int

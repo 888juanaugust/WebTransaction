@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Reporting;
 
 use App\Domain\Billing\OutstandingReceivables;
+use App\Domain\Giro\GiroDirection;
+use App\Domain\Giro\GiroStatus;
 use App\Domain\Money;
 use App\Models\CreditNote;
 use App\Models\Invoice;
@@ -57,6 +59,7 @@ class ReceivablesAgeing
                 'b3' => 0,
                 'b4' => 0,
                 'belum_dicocokkan' => 0,
+                'dijamin_giro' => 0,
                 'total' => 0,
                 'tertua' => null,
             ];
@@ -97,11 +100,33 @@ class ReceivablesAgeing
             $rows[$companyId] ??= [
                 'dimensi' => $payment['nama'],
                 'belum_jatuh_tempo' => 0, 'b1' => 0, 'b2' => 0, 'b3' => 0, 'b4' => 0,
-                'belum_dicocokkan' => 0, 'total' => 0, 'tertua' => null,
+                'belum_dicocokkan' => 0, 'dijamin_giro' => 0, 'total' => 0, 'tertua' => null,
             ];
 
             $rows[$companyId]['belum_dicocokkan'] -= $payment['nilai'];
             $rows[$companyId]['total'] -= $payment['nilai'];
+        }
+
+        /*
+         * Giro in hand, for the same reason unmatched payments get their own
+         * column: it reduces what Piutang Usaha carries and belongs to no
+         * bucket. Bucketing it would be wrong twice over — the buckets grade
+         * *invoices* by age, and a giro has its own due date that has nothing
+         * to do with the invoice's.
+         *
+         * The customer still owes this money. What has changed is that they
+         * have signed something dated, which is why it comes off the ledger
+         * balance and not off their credit limit.
+         */
+        foreach ($this->giroHeld() as $companyId => $giro) {
+            $rows[$companyId] ??= [
+                'dimensi' => $giro['nama'],
+                'belum_jatuh_tempo' => 0, 'b1' => 0, 'b2' => 0, 'b3' => 0, 'b4' => 0,
+                'belum_dicocokkan' => 0, 'dijamin_giro' => 0, 'total' => 0, 'tertua' => null,
+            ];
+
+            $rows[$companyId]['dijamin_giro'] -= $giro['nilai'];
+            $rows[$companyId]['total'] -= $giro['nilai'];
         }
 
         $rows = array_values(array_filter($rows, fn (array $row) => $row['total'] !== 0));
@@ -156,6 +181,27 @@ class ReceivablesAgeing
             ->get();
     }
 
+    /**
+     * Face value of outstanding customer giro, per customer.
+     *
+     * @return array<int, array{nama: string, nilai: int}>
+     */
+    private function giroHeld(): array
+    {
+        return DB::table('giros')
+            ->join('companies', 'giros.company_id', '=', 'companies.id')
+            ->where('giros.arah', GiroDirection::Masuk->value)
+            ->where('giros.status', GiroStatus::Beredar->value)
+            ->groupBy('giros.company_id', 'companies.nama')
+            ->selectRaw('giros.company_id AS id, MIN(companies.nama) AS nama, SUM(nilai_rupiah) AS nilai')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(int) $row->id => [
+                'nama' => (string) $row->nama,
+                'nilai' => (int) $row->nilai,
+            ]])
+            ->all();
+    }
+
     /** @return array<int, array{nama: string, nilai: int}> */
     private function unmatchedPayments(): array
     {
@@ -194,6 +240,15 @@ class ReceivablesAgeing
             ReportColumn::money('b3', '61–90 hari'),
             ReportColumn::money('b4', '> 90 hari'),
             ReportColumn::money('belum_dicocokkan', 'Belum dicocokkan'),
+            /*
+             * Hidden entirely when nobody is holding a giro. Eight money
+             * columns is the most that fits, and a business that settles by
+             * transfer would carry a column of zeroes to the right edge
+             * forever. It appears the day the first cheque comes in, which is
+             * the day it starts meaning something.
+             */
+            ReportColumn::money('dijamin_giro', 'Dijamin giro',
+                fn () => $this->receivables->giroHeld(null) !== 0),
             ReportColumn::money('total', 'Total'),
             /*
              * There is deliberately no "oldest debt in days" column. It reads
@@ -209,7 +264,10 @@ class ReceivablesAgeing
     {
         $totals = ['dimensi' => 'TOTAL', 'tertua' => null];
 
-        foreach (['belum_jatuh_tempo', 'b1', 'b2', 'b3', 'b4', 'belum_dicocokkan', 'total'] as $key) {
+        foreach ([
+            'belum_jatuh_tempo', 'b1', 'b2', 'b3', 'b4',
+            'belum_dicocokkan', 'dijamin_giro', 'total',
+        ] as $key) {
             $totals[$key] = array_sum(array_column($rows, $key));
         }
 

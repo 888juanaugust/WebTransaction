@@ -46,9 +46,21 @@
                     <thead>
                         <tr class="border-b border-gray-200 text-xs uppercase tracking-wide
                                    text-gray-500 dark:border-white/10 dark:text-gray-400">
+                            {{--
+                                Headers wrap; data does not.
+
+                                A header was the widest thing in its column and
+                                set the column's width — "Belum jatuh tempo" is
+                                half again the width of the figures under it.
+                                With eight money columns that pushed Total off
+                                the right edge, which on an ageing report is the
+                                one column somebody came for. Letting the label
+                                take two lines costs one row of height and gives
+                                every column back to its numbers.
+                            --}}
                             @foreach ($columns as $column)
                                 <th @class([
-                                    'whitespace-nowrap px-3 py-2',
+                                    'px-2 py-2 align-bottom',
                                     'text-right' => $column->alignsRight(),
                                     'text-left' => ! $column->alignsRight(),
                                 ])>{{ $column->label }}</th>
@@ -61,7 +73,7 @@
                             <tr class="border-b border-gray-100 last:border-0 dark:border-white/5">
                                 @foreach ($columns as $column)
                                     <td @class([
-                                        'px-3 py-2',
+                                        'px-2 py-2',
                                         'text-right font-mono whitespace-nowrap' => $column->alignsRight(),
                                     ])>{{ $column->format($row[$column->key] ?? null) }}</td>
                                 @endforeach
@@ -74,7 +86,7 @@
                             <tr class="border-t-2 border-gray-300 font-semibold dark:border-white/20">
                                 @foreach ($columns as $i => $column)
                                     <td @class([
-                                        'px-3 py-2',
+                                        'px-2 py-2',
                                         'text-right font-mono whitespace-nowrap' => $column->alignsRight(),
                                     ])>
                                         {{ $i === 0

@@ -6,6 +6,7 @@ namespace App\Domain\Accounting;
 
 use App\Domain\Money;
 use App\Models\CreditNote;
+use App\Models\Giro;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
@@ -18,6 +19,7 @@ use App\Models\StockOpname;
 use App\Models\SupplierBill;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
+use DateTimeInterface;
 
 /**
  * Every posting rule in the system, in one file.
@@ -509,6 +511,92 @@ class DocumentPoster
         }
 
         return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A bilyet giro coming in or going out.
+     *
+     *   masuk:   Dr Piutang Giro   / Cr Piutang Usaha
+     *   keluar:  Dr Utang Usaha    / Cr Utang Giro
+     *
+     * Nothing is earned, spent or settled here — a balance moves sideways into
+     * an account that says what backs it. That is the whole point: a
+     * receivable a customer has handed us signed paper for is a different
+     * asset from one backed by an invoice and goodwill, and the neraca should
+     * say which is which rather than averaging the two into one number.
+     *
+     * It is emphatically **not** a payment. No cash has moved, the invoice is
+     * still open, and the customer's credit limit has not come back. See
+     * OutstandingReceivables for why the control account and the credit check
+     * read two different figures from here on.
+     */
+    public function giroIssued(Giro $giro, User $actor): JournalEntry
+    {
+        return $this->ledger->post($this->giroDraft(
+            $giro,
+            "Terima giro {$giro->nomor_warkat} ({$giro->bank_penerbit})",
+            $giro->tanggal_terima,
+            reverse: false,
+        ), $actor);
+    }
+
+    /**
+     * A giro leaving the register without money moving.
+     *
+     * The exact reverse of the entry above, and it covers three endings that
+     * are the same journal three times: it bounced, it was handed back
+     * uncashed, or it cleared — because clearing unwinds the instrument first
+     * and *then* takes an ordinary payment through the ledger that already
+     * knows how to settle an invoice.
+     *
+     * Routing clearing through the normal payment path rather than posting
+     * Dr Bank / Cr Piutang Giro directly costs one extra journal entry and
+     * buys the whole of it: invoice settlement, the ageing report, the
+     * unmatched-payments queue, and the reversal machinery, none of it
+     * duplicated and all of it already tested.
+     */
+    public function giroReleased(Giro $giro, User $actor, string $keterangan): JournalEntry
+    {
+        return $this->ledger->post($this->giroDraft(
+            $giro,
+            $keterangan,
+            $giro->tanggal_selesai,
+            reverse: true,
+            jenis: JournalEntry::JENIS_GIRO_SELESAI,
+        ), $actor);
+    }
+
+    /**
+     * One rule, read in four directions.
+     *
+     * Incoming and outgoing giros are mirror images, and issuing and releasing
+     * are mirror images again. Writing that as four branches would be four
+     * places for a debit and a credit to get swapped, in a document whose
+     * whole job is to keep two accounts honest against each other.
+     */
+    private function giroDraft(
+        Giro $giro,
+        string $keterangan,
+        ?DateTimeInterface $tanggal,
+        bool $reverse,
+        string $jenis = JournalEntry::JENIS_GIRO,
+    ): JournalDraft {
+        $amount = (int) $giro->nilai_rupiah;
+        $arah = $giro->arah;
+
+        $draft = JournalDraft::for($giro, $jenis, $keterangan, $tanggal);
+
+        $debitsGiro = $arah->debitsGiroAccountOnIssue() !== $reverse;
+
+        [$debit, $kredit] = $debitsGiro
+            ? [$arah->giroAccount(), $arah->ordinaryAccount()]
+            : [$arah->ordinaryAccount(), $arah->giroAccount()];
+
+        return $draft
+            ->debit($debit, $amount, $giro->counterpartyName(),
+                company: $giro->company, supplier: $giro->supplier)
+            ->kredit($kredit, $amount, $giro->nomor_warkat,
+                company: $giro->company, supplier: $giro->supplier);
     }
 
     /**

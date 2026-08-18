@@ -50,6 +50,20 @@ class JournalEntry extends Model
 
     public const JENIS_HPP_RETUR = 'hpp_retur';
 
+    /** A bilyet giro changing hands: the balance moves into a giro account. */
+    public const JENIS_GIRO = 'giro';
+
+    /**
+     * The same giro leaving the register — cleared, bounced or handed back.
+     *
+     * A separate type rather than a second entry of the same one, because
+     * `Ledger::post()` is idempotent on (source, jenis) and would otherwise
+     * treat the release as a duplicate of the issue and silently drop it. The
+     * giro would stay parked in Piutang Giro forever and the control account
+     * would drift the first time anything cleared.
+     */
+    public const JENIS_GIRO_SELESAI = 'giro_selesai';
+
     /** Goods going back to a supplier, and the payable coming down with them. */
     public const JENIS_RETUR_PEMBELIAN = 'retur_pembelian';
 

@@ -238,6 +238,26 @@ enum Role: string
     }
 
     /**
+     * Register a bilyet giro, bank it, and record whether it cleared.
+     *
+     * Follows canConfirmPayment(), because that is what this is: a giro
+     * clearing *is* a payment, and it goes through the same ledger. Receiving
+     * the paper is money handling too — somebody is walking a negotiable
+     * instrument into the office and putting it in a drawer.
+     *
+     * Sales are excluded even though they are usually the ones handed the
+     * giro at the counter. CLAUDE.md's hard rule is that whoever confirms a
+     * payment must not be able to move what a customer owes, and a giro is
+     * both at once: recording one changes the books, and recording a bounce
+     * changes them back. Sales see the giro on the customer's record; they do
+     * not decide its fate.
+     */
+    public function canHandleGiro(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /**
      * Send goods back to a supplier.
      *
      * Follows canRecordPurchases(), because this is the receipt read backwards

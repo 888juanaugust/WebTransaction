@@ -346,6 +346,27 @@ final class DataInventory
             ],
 
             /*
+             * Bilyet giro. A negotiable instrument names its issuing bank and
+             * carries a number that identifies the account it is drawn on,
+             * which for a CV or a sole trader is effectively the owner's own
+             * bank account. `alasan_selesai` records why one bounced, which is
+             * a statement about somebody's finances in the bank's words.
+             */
+            'giros' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => [
+                    'bank_penerbit', 'nomor_warkat', 'alasan_selesai', 'catatan',
+                    'created_by', 'resolved_by',
+                ],
+                'bukan' => [
+                    'nomor', 'arah', 'company_id', 'supplier_id', 'invoice_id',
+                    'supplier_bill_id', 'nilai_rupiah', 'tanggal_terima',
+                    'tanggal_jatuh_tempo', 'tanggal_setor', 'status', 'tanggal_selesai',
+                    'payment_entry_id', 'supplier_payment_entry_id',
+                ],
+            ],
+
+            /*
              * Purchase returns — goods going back to a supplier. `alasan` is
              * mandatory free text saying why, and free text on a dispute names
              * people the same way a credit note's does: who found the fault,
