@@ -204,7 +204,7 @@ Requires PostgreSQL and Redis running locally.
 ### Verifying the install
 
 ```bash
-php artisan test          # 99 tests
+php artisan test          # 1,197 tests
 ./vendor/bin/pint --test  # formatting
 ```
 
@@ -214,6 +214,10 @@ refused`, Postgres is not up; if login returns 500, Redis is not up.
 ---
 
 ## 9. Production deploy checklist
+
+`docs/DEPLOY.md` is the full procedure for a bare Hostinger VPS — what to pick
+in the setup wizard, Caddy, supervisor, the Xendit dashboard side, and the
+launch blockers. What follows is just the command sequence.
 
 ```bash
 composer install --no-dev --optimize-autoloader

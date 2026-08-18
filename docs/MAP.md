@@ -870,6 +870,11 @@ Landed cost has one approximation worth knowing about rather than a gap: which
 cartons the sold ones came from is unknowable under average costing, so a
 first-in-first-out reading is laid over it. See the section above.
 
+Deployment is written up in `docs/DEPLOY.md` — a bare Hostinger VPS through to
+taking real money, plus `php artisan xendit:verify`, which checks the gateway
+keys, the container binding, the callback path and the queue worker on the
+machine they are actually deployed on.
+
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.
 Two commercial values in `config/legal.php` are marked `>>> PUTUSKAN` and need
