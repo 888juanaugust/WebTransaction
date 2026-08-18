@@ -61,6 +61,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
+| `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick the Bank account against a statement. Badge counts days since the last one |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
@@ -73,7 +74,8 @@ otherwise every surface falls back to the wordmark.
 | `/dokumen/retur-pembelian/{purchaseReturn}` | Nota retur | Finance, Owner | Goes back with the goods. **We** issue it, not the supplier. Drafts are a 404 |
 | `/dokumen/faktur-pajak/{export}` | Ekspor faktur pajak | Finance, Owner | The filing file, served from disk as written — never regenerated |
 
-The four accounting screens are behind `canSeeBooks()`. They carry cost and
+The accounting screens are behind `canSeeBooks()` — except the reconciliation
+desk, which is behind `canReconcileBank()` because it posts. They carry cost and
 margin — everything Sales and Warehouse are kept away from elsewhere — and the
 route refuses, not just the menu item.
 
@@ -728,6 +730,55 @@ upper case first — without that, "BCA", "bca" and " Bca " let the same cheque
 in three times and triple the asset.
 
 Not built: cheques from a third party endorsed on to us, and partial clearing.
+
+### Rekonsiliasi bank — the only outside witness
+
+| Function | Decides |
+|---|---|
+| `BankReconciler::open` | A statement date and the closing balance typed off the paper |
+| `BankReconciler::tick` / `untick` / `tickAll` | This ledger line appeared on the statement |
+| `BankReconciler::recordStatementItem` | Something the statement had and the books did not. **Posts immediately** |
+| `BankReconciler::summarise` | The statement, recomputed live — never stored until finalised |
+| `BankReconciler::finalise` | Signs it off. **Refused while any difference remains** |
+| `BankReconciler::daysSinceLastReconciled` | `null` means never, which is worse than a big number |
+
+```
+saldo per buku besar
+  − setoran dalam perjalanan   recorded in, the bank has not seen it
+  + cek/giro beredar           recorded out, the bank has not paid it
+  = saldo yang seharusnya di rekening koran   … compared to what it says
+```
+
+Every other control account is proved against a subledger **we also wrote**:
+Piutang Usaha against our invoices, Persediaan against our costing. Those prove
+the posting rules agree with each other and cannot prove the money exists. This
+is the only check in the system where one side comes from outside it.
+
+Three decisions worth keeping:
+
+- **Ticks live in their own table**, not a column on `journal_lines`. A posted
+  line is immutable and has no `updated_at`; whether the bank has seen it is a
+  fact about the bank, learned weeks later. An unticked line simply has no row,
+  which is what carries an outstanding cheque forward with nothing tracking it.
+- **Statement items post immediately**, not at finalisation. The bank already
+  took the fee; the books being ignorant of it is the defect being fixed. The
+  journal is sourced on the *item*, not the reconciliation, because
+  `Ledger::post()` is idempotent on (source, jenis) and four charges must be
+  four entries.
+- **Finalising is refused while a difference stands**, and the button is
+  disabled rather than hidden. A reconciliation that can be signed off with
+  "Rp 43.500 unexplained" is one nobody chases, and three months later the
+  figure is Rp 900.000 with no idea when it started. The honest way out is to
+  name the difference as a statement item, which leaves the fudge visible in
+  the books with an account against it.
+
+The summary is frozen onto the record at finalisation. A reconciliation is a
+claim about a moment, and recomputing it later against a ledger that has moved
+would rewrite what was signed off.
+
+**One bank account.** The chart has a single Bank account and every payment rule
+posts to it. Two real accounts would need a bank dimension on those rules first
+— the reconciliation tables are the last thing that would change, not the first.
 Neither happens here.
 
 ### Cart
@@ -762,7 +813,8 @@ the real file have headers that disagree with the data below them.
 
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
 `canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`,
-`canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`, `canHandleGiro`
+`canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`, `canHandleGiro`,
+`canReconcileBank`
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -792,7 +844,7 @@ All idempotent — assume they run twice.
 
 ## 4. Data
 
-25 models, 30 migrations. The ones that carry money or stock:
+56 models, 51 migrations. The ones that carry money or stock:
 
 `orders` · `order_lines` (price snapshots) · `order_events` (every transition)
 `invoices` · `payment_entries` (append-only) · `webhook_events` (UNIQUE gateway event id)
@@ -804,7 +856,8 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- Bank reconciliation — nothing matches the Bank account to a statement
+- More than one bank account — see the reconciliation section above
+- Importing a statement file; every line is ticked by hand
 - Supplier credits with no goods behind them — a price correction on a bill
 - Statement of account — one customer's invoices, credits and payments on a page
 - Reorder points, the question the stock report deliberately does not answer

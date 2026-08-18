@@ -100,6 +100,16 @@ final class AccountCode
     // Pendapatan
     public const PENJUALAN = '4-1000';
 
+    /**
+     * Income that is not selling parts: bank interest, mostly.
+     *
+     * Kept out of Penjualan on purpose. Penjualan is the top line every margin
+     * figure in the system divides into, and a few hundred thousand of bank
+     * interest folded into it would flatter the gross margin on goods that
+     * were never sold.
+     */
+    public const PENDAPATAN_LAIN = '4-9000';
+
     // Beban
     public const HARGA_POKOK_PENJUALAN = '5-1000';
 
@@ -165,6 +175,8 @@ final class AccountCode
             self::header('4-0000', 'PENDAPATAN', AccountType::Pendapatan),
             self::posting(self::PENJUALAN, 'Penjualan', AccountType::Pendapatan, '4-0000',
                 'Nilai jual sebelum PPN. Bukan DPP — DPP adalah 11/12 harga jual dan hanya dipakai untuk menghitung PPN.'),
+            self::posting(self::PENDAPATAN_LAIN, 'Pendapatan Lain-lain', AccountType::Pendapatan, '4-0000',
+                'Bunga bank dan penerimaan lain di luar penjualan barang. Sengaja dipisah supaya tidak masuk hitungan margin.'),
 
             self::header('5-0000', 'HARGA POKOK PENJUALAN', AccountType::Beban),
             self::posting(self::HARGA_POKOK_PENJUALAN, 'Harga Pokok Penjualan', AccountType::Beban, '5-0000',

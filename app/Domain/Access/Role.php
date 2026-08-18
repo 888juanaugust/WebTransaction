@@ -238,6 +238,30 @@ enum Role: string
     }
 
     /**
+     * Reconcile the bank account against a statement.
+     *
+     * Finance and Owner, following the books rather than payment authority —
+     * this posts adjustments and asserts that a balance is real, which is
+     * bookkeeping judgement.
+     *
+     * It is worth naming what this control does *not* do. Everywhere else in
+     * this system the dangerous pair is separated: whoever confirms a payment
+     * cannot move an invoice amount, whoever counts stock cannot approve the
+     * variance. Here the person who records payments is also the person who
+     * proves the bank balance, which is the classic segregation failure — and
+     * it is unavoidable in a company with one finance clerk. What stands in
+     * for the split is that the statement balance comes from outside: they can
+     * mis-tick a line, but they cannot make the bank's own closing figure
+     * agree with a book they have fiddled. The Owner reading a finalised
+     * reconciliation is the real control, which is why it records who
+     * finalised it and when.
+     */
+    public function canReconcileBank(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
+
+    /**
      * Register a bilyet giro, bank it, and record whether it cleared.
      *
      * Follows canConfirmPayment(), because that is what this is: a giro

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Domain\Access\Role;
+use App\Domain\Accounting\AccountCode;
+use App\Domain\Accounting\Ledger;
+use App\Domain\Banking\BankReconciler;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Giro\GiroRegister;
 use App\Domain\Orders\OrderStateMachine;
@@ -92,6 +95,7 @@ class DemoSeeder extends Seeder
         $this->ordersInEveryState($companies, $warehouse, $staff);
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
+        $this->bankStatements($companies, $staff['finance']);
 
         $this->command?->info('Demo data ready. See docs/DEMO.md for the walkthrough.');
     }
@@ -497,6 +501,76 @@ class DemoSeeder extends Seeder
             actor: $finance,
             bill: $bill,
             diserahkan: now()->subDays(4),
+        );
+    }
+
+    /**
+     * Two bank statements: one signed off, one still open with a difference.
+     *
+     * The finished one exists so the screen is not showing its own empty state
+     * — a system that has never once proved its bank account is exactly what
+     * the warning on that page is about, and demoing the warning teaches
+     * nobody how the work is done.
+     *
+     * The open one carries a Rp 17.500 difference, because a reconciliation
+     * that balances on the first click shows only half the feature. What
+     * somebody needs to see is the hint naming a bank charge and the button
+     * that records it, which is the half that changes the books.
+     *
+     * The statement balances are computed rather than invented: this seeder
+     * cannot know what the demo ledger happens to add up to, and a hard-coded
+     * figure would leave the screen showing a difference of several million
+     * that means nothing.
+     *
+     * @param  array<string, Company>  $companies
+     */
+    private function bankStatements(array $companies, User $finance): void
+    {
+        $reconciler = app(BankReconciler::class);
+        $ledger = app(Ledger::class);
+
+        // Yesterday's, signed off. Everything the bank had seen by then is
+        // ticked, so the closing balance is simply what the books said.
+        $kemarin = now()->subDay()->startOfDay();
+
+        $selesai = $reconciler->open(
+            $kemarin,
+            $ledger->balanceOf(AccountCode::BANK, $kemarin),
+            $finance,
+            'Rekening koran BCA (data demo).',
+        );
+
+        $reconciler->tickAll($selesai, $finance);
+        $reconciler->finalise($selesai->refresh(), $finance);
+
+        // Today's, still open. The bank took an administration fee nobody
+        // entered, so the books read Rp 17.500 higher than the statement.
+        $hariIni = now()->startOfDay();
+
+        $draft = $reconciler->open(
+            $hariIni,
+            $ledger->balanceOf(AccountCode::BANK, $hariIni) - 17_500,
+            $finance,
+            'Rekening koran BCA (data demo) — masih ada selisih.',
+        );
+
+        $reconciler->tickAll($draft, $finance);
+
+        /*
+         * And one receipt entered after the statement was printed, so the
+         * screen has a genuine setoran dalam perjalanan rather than a row of
+         * zeroes — the row that is the reason the arithmetic exists at all.
+         *
+         * It does not move the difference by a rupiah, which is the thing
+         * worth seeing: the receipt raises the book balance and the
+         * outstanding deposits by the same amount, so they cancel. A deposit
+         * in transit is not a discrepancy. It is timing.
+         */
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $companies['bengkel'],
+            amountRupiah: 4_250_000,
+            actor: $finance,
+            catatan: 'Transfer sore, setelah rekening koran dicetak (data demo).',
         );
     }
 

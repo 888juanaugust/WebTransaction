@@ -64,6 +64,16 @@ class JournalEntry extends Model
      */
     public const JENIS_GIRO_SELESAI = 'giro_selesai';
 
+    /**
+     * Something found on a bank statement that the books had never heard of.
+     *
+     * A fee, interest, a standing order, a transfer nobody matched. Its source
+     * is the reconciliation *item* rather than the reconciliation, so a month
+     * with four of them posts four entries — `Ledger::post()` is idempotent on
+     * (source, jenis), and one source would collapse them into one.
+     */
+    public const JENIS_REKONSILIASI_BANK = 'rekonsiliasi_bank';
+
     /** Goods going back to a supplier, and the payable coming down with them. */
     public const JENIS_RETUR_PEMBELIAN = 'retur_pembelian';
 

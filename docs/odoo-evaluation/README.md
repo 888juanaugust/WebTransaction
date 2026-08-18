@@ -149,8 +149,10 @@ needs a custom Python module / cannot do it.** That table is the decision.
 Add the two costs that are not features:
 
 - **Odoo Enterprise** is roughly €20–24 per user per month, and full accounting
-  — bank reconciliation, automated matching, vendor bill OCR — is Enterprise
-  only. Community has invoicing, not the complete accounting module.
+  — automated bank-feed matching, vendor bill OCR — is Enterprise only.
+  Community has invoicing, not the complete accounting module. Worth noting
+  that what is behind that licence is the *automation*: reconciliation itself,
+  done by hand against a statement, is built here.
 - **Upgrade churn.** Odoo releases annually. Odoo 19 is from September 2025;
   20 is due around September 2026. Custom modules are re-tested every year.
 
@@ -177,13 +179,14 @@ Not to argue for it — so the comparison is like for like.
 | Bilyet giro both ways, on their own balance-sheet accounts, not freeing credit until cleared | Built and tested |
 | Encrypted off-box backups, with a restore that is actually exercised | Built and tested |
 | Sales/margin, receivables ageing, lapsed customers, stock turnover — each tied to a ledger account | Built and tested |
-| Multi-currency, fixed assets, bank reconciliation | **Not built** |
+| Bank reconciliation against a statement, with the difference refused until explained | Built and tested |
+| Multi-currency, fixed assets, more than one bank account | **Not built** |
 
 The summary this file was written with — "tuned to your trade, no accounting
 core" — is now out of date: the ledger exists, every document posts to it, and
 the four control accounts tie to their subledgers. What Odoo still has and this
-does not is depth rather than presence: bank reconciliation, fixed assets,
-multi-currency. Weigh that against how much Python the five tests
+does not is depth rather than presence: fixed assets, multi-currency, and
+more than one bank account. Weigh that against how much Python the five tests
 above turn out to need.
 
 ## One timing note

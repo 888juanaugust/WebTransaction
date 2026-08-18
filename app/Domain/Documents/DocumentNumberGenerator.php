@@ -44,6 +44,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_GIRO = 'giro';
 
+    public const SCOPE_BANK_RECONCILIATION = 'bank_reconciliation';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -161,6 +163,12 @@ class DocumentNumberGenerator
     public function nextGiroNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_GIRO, 'BG', $date);
+    }
+
+    /** Rekonsiliasi Bank: RB-202608-0001. */
+    public function nextBankReconciliationNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_BANK_RECONCILIATION, 'RB', $date);
     }
 
     /** Nota Kredit: NK-202608-0001. */

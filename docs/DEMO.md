@@ -5,7 +5,7 @@ prices, nothing to look at. That is deliberate (a seeded price is a price
 nobody approved), and it also makes the system impossible to show to anybody.
 
 `DemoSeeder` fills that gap: a believable day in the life of the business, with
-every dashboard queue populated and a real variance waiting to be found. Ten
+every dashboard queue populated and a real variance waiting to be found. Twelve
 minutes, start to finish.
 
 ---
@@ -61,7 +61,7 @@ has paid everything and their invoice screen is empty.
 
 ---
 
-## 3. The ten-minute script
+## 3. The twelve-minute script
 
 Tell it as a day in the business, not as a tour of features. The order below
 builds on itself.
@@ -215,6 +215,37 @@ Giro we write to suppliers work the same way in reverse: **Terbitkan giro**
 moves what we owe into Utang Giro, so next month's cash figure knows the money
 is already committed to a date.
 
+### Proving the bank — 2 min
+
+**Buku besar → Rekonsiliasi bank.** The one control in the whole system whose
+other side is not our own arithmetic.
+
+> "Every other check here proves our records agree with each other. Piutang
+> Usaha against our invoices, Persediaan against our costing. Not one of them
+> can prove the money is actually in the bank. Only the statement can."
+
+A reconciliation is already open against yesterday's statement, and it does not
+balance — **Selisih Rp 17.500**, with the yellow panel naming the likely cause:
+a bank charge nobody entered. Note two things before fixing it:
+
+- **Setoran dalam perjalanan Rp 4.250.000** — a transfer recorded after the
+  statement was printed. It is not a discrepancy, it is timing, and it moves
+  the difference by nothing at all.
+- **Selesaikan is greyed out.** It stays that way until the difference is nil.
+
+> "The temptation in every accounting package is to let somebody sign off with
+> a small unexplained figure. Three months later it is nine hundred thousand
+> and nobody knows when it started."
+
+Click **Tambah item rekening koran** → *Biaya administrasi Agustus*, uang
+keluar, 17.500, against Beban Operasional. The journal posts on the spot — the
+bank has already taken the money — the line ticks itself, and the difference
+falls to nil. **Selesaikan** comes alive; sign it off and the figures freeze
+onto the record.
+
+Then **Neraca saldo**: Bank ties to the balance that was just proved, and the
+Rp 17.500 is sitting in Beban Operasional with a name on it.
+
 ### Close on the numbers — 1 min
 
 > "Because every stock movement carries what it cost, the system can say what
@@ -277,7 +308,10 @@ seri that come back — read the note on that screen about the file format
 before the first real filing. **Laporan** carries the four reports the numbers
 are actually read through — sales and margin, receivables ageing, customers who
 have stopped ordering, and stock that is not moving — each downloadable as a
-spreadsheet and each tied back to the ledger account it must agree with.
+spreadsheet and each tied back to the ledger account it must agree with. And
+**Buku besar → Rekonsiliasi bank** ticks the Bank account off against a real
+statement — the only check in the system whose other side did not come from us,
+and the one that finds the charge nobody entered or the payment recorded twice.
 
 Two things to raise with your accountant rather than take on trust: orders are
 invoiced when they move to awaiting payment, which is **before** they ship, so
@@ -286,7 +320,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1130 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1187 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
@@ -295,8 +329,8 @@ exactly that in `docs/odoo-evaluation/` — including a sample of the real
 supplier workbook to throw at it. The comparison has moved since it was
 written: this now has a general ledger, so the gap is narrower than the
 "tuned to your trade but no accounting" summary suggests. What Odoo still has
-and this does not is depth — multi-currency, fixed assets, bank
-reconciliation.
+and this does not is depth — multi-currency and fixed assets. Bank
+reconciliation is no longer on that list.
 
 **"Can I break it?"** Encourage it. Try to approve an order that exceeds the
 credit limit, or ship stock that isn't there. Refusals are the feature.

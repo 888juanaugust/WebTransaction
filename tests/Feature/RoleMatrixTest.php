@@ -76,6 +76,10 @@ class RoleMatrixTest extends TestCase
                 // decide its fate: recording a bounce moves what a customer
                 // owes, which is the one thing this role must not do to money.
                 'canHandleGiro' => false,
+                // Proving the bank means posting the charges the statement
+                // shows and nobody entered — journal authority, which this
+                // role does not have.
+                'canReconcileBank' => false,
                 // They issue the invoices behind it, but filing is a
                 // statement to the tax office about what was sold, and the
                 // people paid on what was sold should not be making it.
@@ -108,6 +112,7 @@ class RoleMatrixTest extends TestCase
                 // the same compromise canRecordPurchases already names.
                 'canReturnToSupplier' => false,
                 'canHandleGiro' => false,
+                'canReconcileBank' => false,
                 'canExportFaktur' => false,
                 // Every report is money, and this role never sees money.
                 'canSeeReports' => false,
@@ -144,6 +149,10 @@ class RoleMatrixTest extends TestCase
                 // A giro clearing is a payment and goes through the same
                 // ledger, so it follows payment authority.
                 'canHandleGiro' => true,
+                // The compromise named in Role::canReconcileBank(): the people
+                // who record the receipts also prove the bank saw them. A
+                // second pair of eyes is the owner reading the audit log.
+                'canReconcileBank' => true,
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
@@ -169,6 +178,7 @@ class RoleMatrixTest extends TestCase
                 'canAllocateLandedCost' => true,
                 'canReturnToSupplier' => true,
                 'canHandleGiro' => true,
+                'canReconcileBank' => true,
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => true,

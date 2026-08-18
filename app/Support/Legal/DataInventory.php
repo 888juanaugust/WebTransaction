@@ -367,6 +367,43 @@ final class DataInventory
             ],
 
             /*
+             * Bank reconciliations. The header holds no personal data beyond
+             * who did it — the figures are our own balances and one number
+             * typed off a statement.
+             */
+            'bank_reconciliations' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by', 'finalised_by'],
+                'bukan' => [
+                    'nomor', 'tanggal_rekening', 'saldo_rekening_rupiah', 'saldo_buku_rupiah',
+                    'setoran_beredar_rupiah', 'penarikan_beredar_rupiah', 'selisih_rupiah',
+                    'status', 'finalised_at',
+                ],
+            ],
+
+            // A tick is two foreign keys. It says nothing about anybody.
+            'bank_reconciliation_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => [],
+                'bukan' => ['bank_reconciliation_id', 'journal_line_id'],
+            ],
+
+            /*
+             * Items off the statement. `keterangan` is free text copied from a
+             * bank statement line, and a bank's own wording routinely names the
+             * counterparty — "TRF DR CV SINAR", "BIAYA RTGS KE BUDI S". Typing
+             * it in verbatim is the point, so it is treated as personal.
+             */
+            'bank_reconciliation_items' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['keterangan', 'created_by'],
+                'bukan' => [
+                    'bank_reconciliation_id', 'tanggal', 'account_id', 'arah',
+                    'amount_rupiah', 'journal_entry_id',
+                ],
+            ],
+
+            /*
              * Purchase returns — goods going back to a supplier. `alasan` is
              * mandatory free text saying why, and free text on a dispute names
              * people the same way a credit note's does: who found the fault,
