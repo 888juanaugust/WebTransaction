@@ -1,13 +1,28 @@
 {{--
     One named block of a financial statement, with its subtotal.
 
-    Zero rows are shown rather than hidden. On a chart this small an account
-    that disappears reads as an account that does not exist, and "where did
-    Utang Belum Ditagih go" is a worse question than a row of nils.
+    Whether a nil row is worth printing depends on what the statement is.
+
+    On a **position** statement — the neraca — it is. "We owe nothing on this"
+    is a fact, and an account that vanishes reads as an account that does not
+    exist: "where did Utang Belum Ditagih go" is a worse question than a row of
+    nils. So the default is to show them.
+
+    On a **movement** statement — the laba rugi — it is not. An expense account
+    with no movement did not happen this month, and saying so ten times is
+    noise on a document somebody reads to find out where the money went. That
+    is why `sembunyikanNol` exists, and why it is opt-in rather than the
+    default.
 --}}
 @php use App\Domain\Money; @endphp
 
-@props(['section'])
+@props(['section', 'sembunyikanNol' => false])
+
+@php
+    $lines = $sembunyikanNol
+        ? array_values(array_filter($section->lines, fn ($l) => $l->amount !== 0))
+        : $section->lines;
+@endphp
 
 <section class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900">
     <h2 class="border-b border-gray-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide
@@ -15,12 +30,12 @@
         {{ $section->label }}
     </h2>
 
-    @if ($section->isEmpty())
+    @if ($lines === [])
         <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Belum ada saldo.</p>
     @else
         <table class="w-full text-sm">
             <tbody>
-                @foreach ($section->lines as $line)
+                @foreach ($lines as $line)
                     <tr class="border-b border-gray-100 last:border-0 dark:border-white/5">
                         <td class="py-2 pl-4 pr-2">
                             @if ($line->kode())

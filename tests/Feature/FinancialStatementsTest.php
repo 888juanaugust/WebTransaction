@@ -69,6 +69,63 @@ class FinancialStatementsTest extends TestCase
         $this->assertSame(2_500_000, $pl->labaBersih());
     }
 
+    public function test_each_kind_of_overhead_is_its_own_line_on_the_statement(): void
+    {
+        /*
+         * The reason the expense accounts exist. A laba rugi whose whole
+         * expense side reads "Beban Operasional Rp 47.000.000" cannot answer
+         * the question it is asked, and the only fix after the fact is reading
+         * a year of journal lines by hand.
+         *
+         * Nothing in ProfitAndLoss lists these codes — it takes every expense
+         * group that is not cost of sales — so this also holds for whatever
+         * gets added next.
+         */
+        $this->trade(sale: 20_000_000, cost: 12_000_000);
+
+        $this->journal(
+            JournalDraft::manual('Beban Agustus', new DateTime('2026-08-20'))
+                ->debit(AccountCode::BEBAN_GAJI, 6_000_000)
+                ->debit(AccountCode::BEBAN_SEWA, 2_500_000)
+                ->debit(AccountCode::BEBAN_ONGKOS_KIRIM, 900_000)
+                ->debit(AccountCode::BEBAN_ADMIN_BANK, 35_000)
+                ->kredit(AccountCode::BANK, 9_435_000)
+        );
+
+        $pl = ProfitAndLoss::forPeriod(new DateTime('2026-08-01'), new DateTime('2026-08-31'));
+
+        $this->assertSame(6_000_000, $this->line($pl->beban(), 'Beban Gaji & Upah')->amount);
+        $this->assertSame(2_500_000, $this->line($pl->beban(), 'Beban Sewa')->amount);
+        $this->assertSame(900_000, $this->line($pl->beban(), 'Beban Ongkos Kirim')->amount);
+        $this->assertSame(35_000, $this->line($pl->beban(), 'Beban Administrasi Bank')->amount);
+
+        // Still one total, and gross profit is untouched by any of it.
+        $this->assertSame(9_435_000, $pl->totalBeban());
+        $this->assertSame(8_000_000, $pl->labaKotor());
+    }
+
+    public function test_outward_freight_is_an_expense_and_never_touches_stock_value(): void
+    {
+        /*
+         * The one pair in the chart that is genuinely easy to confuse. Freight
+         * *inward* is part of what the goods cost and goes through
+         * Biaya Perolehan into Persediaan; freight *outward* is a cost of
+         * selling. Booking delivery to customers as landed cost would inflate
+         * the value of every part on the shelf and flatter margin on all of it.
+         */
+        $this->journal(
+            JournalDraft::manual('Ongkos kirim ke pelanggan', new DateTime('2026-08-20'))
+                ->debit(AccountCode::BEBAN_ONGKOS_KIRIM, 750_000)
+                ->kredit(AccountCode::BANK, 750_000)
+        );
+
+        $pl = ProfitAndLoss::forPeriod(new DateTime('2026-08-01'), new DateTime('2026-08-31'));
+
+        $this->assertSame(750_000, $pl->totalBeban());
+        $this->assertSame(0, $pl->totalHargaPokok());
+        $this->assertSame(0, $this->ledger->balanceOf(AccountCode::PERSEDIAAN));
+    }
+
     public function test_the_purchase_price_variance_is_cost_of_sales_not_overhead(): void
     {
         // It hangs under the HPP header in the chart, so it must land above

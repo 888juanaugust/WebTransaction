@@ -367,6 +367,21 @@ final class DataInventory
             ],
 
             /*
+             * Expenses. `keterangan` and `referensi` are free text about a
+             * payment, and both routinely name people — "gaji Budi Agustus",
+             * "sewa ruko Bu Sri". Salary lines in particular make this table
+             * more sensitive than its size suggests.
+             */
+            'expenses' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['keterangan', 'referensi', 'catatan', 'created_by'],
+                'bukan' => [
+                    'nomor', 'tanggal', 'account_id', 'dibayar_dari', 'amount_rupiah',
+                    'supplier_id', 'reverses_expense_id',
+                ],
+            ],
+
+            /*
              * Bank reconciliations. The header holds no personal data beyond
              * who did it — the figures are our own balances and one number
              * typed off a statement.

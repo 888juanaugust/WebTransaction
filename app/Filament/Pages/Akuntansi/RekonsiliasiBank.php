@@ -294,7 +294,7 @@ class RekonsiliasiBank extends Page
                 Select::make('account')
                     ->label('Lawan jurnal')
                     ->options(fn () => static::contraAccounts())
-                    ->default(AccountCode::BEBAN_OPERASIONAL)
+                    ->default(AccountCode::BEBAN_ADMIN_BANK)
                     ->required()
                     ->helperText('Ke mana sisi satunya masuk.'),
 
@@ -427,11 +427,13 @@ class RekonsiliasiBank extends Page
     private static function contraAccounts(): array
     {
         $codes = [
-            AccountCode::BEBAN_OPERASIONAL,
+            // Ordered by how often a statement line turns out to be each one.
+            AccountCode::BEBAN_ADMIN_BANK,
             AccountCode::PENDAPATAN_LAIN,
             AccountCode::PIUTANG_USAHA,
             AccountCode::UTANG_USAHA,
             AccountCode::KAS,
+            AccountCode::BEBAN_OPERASIONAL,
         ];
 
         return Account::query()

@@ -5,7 +5,7 @@ prices, nothing to look at. That is deliberate (a seeded price is a price
 nobody approved), and it also makes the system impossible to show to anybody.
 
 `DemoSeeder` fills that gap: a believable day in the life of the business, with
-every dashboard queue populated and a real variance waiting to be found. Twelve
+every dashboard queue populated and a real variance waiting to be found. Thirteen
 minutes, start to finish.
 
 ---
@@ -61,7 +61,7 @@ has paid everything and their invoice screen is empty.
 
 ---
 
-## 3. The twelve-minute script
+## 3. The thirteen-minute script
 
 Tell it as a day in the business, not as a tour of features. The order below
 builds on itself.
@@ -245,6 +245,24 @@ onto the record.
 
 Then **Neraca saldo**: Bank ties to the balance that was just proved, and the
 Rp 17.500 is sitting in Beban Operasional with a name on it.
+
+### Where the money actually went — 1 min
+
+**Buku besar → Laba rugi.** Scroll to Beban Operasional.
+
+> "Most systems this size have one line here that says 'expenses'. That is not
+> an answer to anything."
+
+Gaji, sewa, listrik, kendaraan, ongkos kirim, perlengkapan — each its own line,
+each traceable to a document under **Beban**. Note the net profit against the
+gross: overheads take roughly Rp 31,6 juta out of Rp 51,3 juta of gross profit.
+
+> "Without those entries the system would have reported the gross figure as
+> profit, and that is the number tax gets calculated on."
+
+Two of them came out of the cash box rather than the bank — BBM and the packing
+materials — which is why Kas has a balance on the neraca. Recording those
+against the bank instead is how a bank reconciliation stops balancing.
 
 ### Close on the numbers — 1 min
 

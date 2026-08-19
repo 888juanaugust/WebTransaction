@@ -164,7 +164,12 @@ class DocumentPostingTest extends TestCase
 
         // Not creditable against what we collect, so it is not an asset.
         $this->assertSame(0, $this->balance(AccountCode::PPN_MASUKAN));
-        $this->assertSame(660_000, $this->balance(AccountCode::BEBAN_OPERASIONAL));
+
+        // Its own expense account rather than general overhead: the total is
+        // what buying from non-PKP suppliers cost over the year, and that is a
+        // figure worth being able to read off the laba rugi.
+        $this->assertSame(660_000, $this->balance(AccountCode::BEBAN_PPN_TIDAK_KREDIT));
+        $this->assertSame(0, $this->balance(AccountCode::BEBAN_OPERASIONAL));
     }
 
     public function test_paying_a_supplier_clears_the_payable(): void

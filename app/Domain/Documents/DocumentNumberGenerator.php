@@ -46,6 +46,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_BANK_RECONCILIATION = 'bank_reconciliation';
 
+    public const SCOPE_EXPENSE = 'expense';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -163,6 +165,12 @@ class DocumentNumberGenerator
     public function nextGiroNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_GIRO, 'BG', $date);
+    }
+
+    /** Beban: BB-202608-0001. */
+    public function nextExpenseNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_EXPENSE, 'BB', $date);
     }
 
     /** Rekonsiliasi Bank: RB-202608-0001. */

@@ -74,6 +74,15 @@ class JournalEntry extends Model
      */
     public const JENIS_REKONSILIASI_BANK = 'rekonsiliasi_bank';
 
+    /**
+     * Money out on something other than goods: rent, wages, fuel, the courier.
+     *
+     * Distinct from JENIS_MANUAL, which has no document behind it. Every one of
+     * these is sourced on an `expenses` row, which is what makes double-clicking
+     * the button harmless — the ledger is idempotent on (source, jenis).
+     */
+    public const JENIS_BEBAN = 'beban';
+
     /** Goods going back to a supplier, and the payable coming down with them. */
     public const JENIS_RETUR_PEMBELIAN = 'retur_pembelian';
 

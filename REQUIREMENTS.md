@@ -204,7 +204,7 @@ Requires PostgreSQL and Redis running locally.
 ### Verifying the install
 
 ```bash
-php artisan test          # 1,197 tests
+php artisan test          # 1,231 tests
 ./vendor/bin/pint --test  # formatting
 ```
 

@@ -9,6 +9,8 @@ use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Banking\BankReconciler;
 use App\Domain\Documents\DocumentNumberGenerator;
+use App\Domain\Expenses\ExpenseRecorder;
+use App\Domain\Expenses\PaidFrom;
 use App\Domain\Giro\GiroRegister;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Payments\PaymentLedger;
@@ -95,6 +97,7 @@ class DemoSeeder extends Seeder
         $this->ordersInEveryState($companies, $warehouse, $staff);
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
+        $this->monthlyOverheads($staff['finance']);
         $this->bankStatements($companies, $staff['finance']);
 
         $this->command?->info('Demo data ready. See docs/DEMO.md for the walkthrough.');
@@ -502,6 +505,40 @@ class DemoSeeder extends Seeder
             bill: $bill,
             diserahkan: now()->subDays(4),
         );
+    }
+
+    /**
+     * A month of running costs.
+     *
+     * Without these the laba rugi shows revenue, cost of sales and almost
+     * nothing else, and the demo's profit figure is a lie of the exact kind the
+     * expense accounts were added to stop. Rent and wages go out by transfer;
+     * the small ones come out of the cash box, which is also the only thing in
+     * the demo that puts a balance on Kas.
+     */
+    private function monthlyOverheads(User $finance): void
+    {
+        $recorder = app(ExpenseRecorder::class);
+
+        $rows = [
+            [AccountCode::BEBAN_GAJI, 18_500_000, PaidFrom::Bank, 'Gaji staf Agustus 2026', 12],
+            [AccountCode::BEBAN_SEWA, 7_000_000, PaidFrom::Bank, 'Sewa gudang Agustus 2026', 12],
+            [AccountCode::BEBAN_UTILITAS, 1_850_000, PaidFrom::Bank, 'Listrik & internet Agustus', 9],
+            [AccountCode::BEBAN_KENDARAAN, 1_200_000, PaidFrom::Kas, 'BBM & tol pengiriman', 6],
+            [AccountCode::BEBAN_ONGKOS_KIRIM, 2_400_000, PaidFrom::Bank, 'Ekspedisi luar kota', 5],
+            [AccountCode::BEBAN_PERLENGKAPAN, 640_000, PaidFrom::Kas, 'Kardus, lakban dan materai', 3],
+        ];
+
+        foreach ($rows as [$akun, $nilai, $dari, $keterangan, $daysAgo]) {
+            $recorder->record(
+                tanggal: now()->subDays($daysAgo),
+                accountCode: $akun,
+                paidFrom: $dari,
+                amountRupiah: $nilai,
+                keterangan: $keterangan,
+                actor: $finance,
+            );
+        }
     }
 
     /**

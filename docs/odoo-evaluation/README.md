@@ -180,7 +180,8 @@ Not to argue for it — so the comparison is like for like.
 | Encrypted off-box backups, with a restore that is actually exercised | Built and tested |
 | Sales/margin, receivables ageing, lapsed customers, stock turnover — each tied to a ledger account | Built and tested |
 | Bank reconciliation against a statement, with the difference refused until explained | Built and tested |
-| Multi-currency, fixed assets, more than one bank account | **Not built** |
+| Operating expenses on their own accounts, recorded from a screen and reversed rather than edited | Built and tested |
+| Multi-currency, fixed assets and depreciation, more than one bank account | **Not built** |
 
 The summary this file was written with — "tuned to your trade, no accounting
 core" — is now out of date: the ledger exists, every document posts to it, and

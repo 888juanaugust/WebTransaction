@@ -160,22 +160,26 @@ class PurchaseReturnTest extends TestCase
     public function test_input_vat_that_was_never_creditable_reverses_where_it_went(): void
     {
         /*
-         * A bill with no faktur pajak books its PPN to Beban Operasional, not
-         * to PPN Masukan — it was never an asset. Reversing it to PPN Masukan
-         * anyway would leave that account contra and an expense standing
-         * forever, so the reversal has to follow where the money actually
-         * went.
+         * A bill with no faktur pajak books its PPN to the non-creditable
+         * expense account, not to PPN Masukan — it was never an asset.
+         * Reversing it to PPN Masukan anyway would leave that account contra
+         * and an expense standing forever, so the reversal has to follow where
+         * the money actually went. Both sides name the same constant for that
+         * reason; splitting them is how the two accounts drift for good.
          */
         $receipt = $this->postedReceipt([[self::SKU_A, 100, 60_000]]);
         $this->postedBillFor($receipt, fakturPajak: false);
 
         $ledger = app(Ledger::class);
-        $this->assertSame(660_000, $ledger->balanceOf(AccountCode::BEBAN_OPERASIONAL));
+        $this->assertSame(660_000, $ledger->balanceOf(AccountCode::BEBAN_PPN_TIDAK_KREDIT));
 
         $this->postReturn($receipt, [[self::SKU_A, 100]]);
 
-        $this->assertSame(0, $ledger->balanceOf(AccountCode::BEBAN_OPERASIONAL));
+        $this->assertSame(0, $ledger->balanceOf(AccountCode::BEBAN_PPN_TIDAK_KREDIT));
         $this->assertSame(0, $ledger->balanceOf(AccountCode::PPN_MASUKAN));
+
+        // And nothing leaked into the general bucket on the way through.
+        $this->assertSame(0, $ledger->balanceOf(AccountCode::BEBAN_OPERASIONAL));
     }
 
     public function test_a_half_billed_delivery_splits_the_return_between_both_accounts(): void

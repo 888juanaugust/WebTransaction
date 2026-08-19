@@ -56,6 +56,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
+| `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
@@ -731,6 +732,44 @@ in three times and triple the asset.
 
 Not built: cheques from a third party endorsed on to us, and partial clearing.
 
+### Beban — the expense side of the books
+
+| Function | Decides |
+|---|---|
+| `ExpenseRecorder::record` | Posts immediately. There is no draft |
+| `ExpenseRecorder::reverse` | Writes the opposite, dated today. Never an edit |
+| `PaidFrom` | Kas or Bank, and nothing else |
+| `DocumentPoster::expenseRecorded` | `Dr <akun beban> / Cr Kas\|Bank` |
+
+The quiet gap this closed: `JournalDraft::manual()` existed from the beginning
+and **nothing ever called it**, so rent, wages, electricity and fuel had no way
+into the books at all. A laba rugi showing revenue and cost of sales against
+almost no overhead is not conservative — it overstates the profit that PPh is
+calculated on.
+
+The chart gained nine expense accounts at the same time, because splitting them
+afterwards means re-coding a year of postings by hand. `ProfitAndLoss` needed no
+change: it groups the expense side by parent and treats everything that is not
+the cost-of-sales group as operating expense, so accounts added later appear
+without being listed anywhere.
+
+Three refusals, each protecting something that would be quiet if it broke:
+
+- **Harga pokok penjualan, and anything under it.** HPP is derived from stock
+  movements at the cost frozen on each one. A hand-entered debit puts a figure
+  into gross margin that no goods back, and the check proving Persediaan equals
+  what is on the shelves stops meaning anything.
+- **Anything that is not an expense.** Buying a vehicle is an asset, not a cost
+  of August. This is what stops the screen becoming a general-purpose journal
+  entry form by accident.
+- **Header accounts.** `6-0000` is a heading, and a total that includes itself
+  is not a total.
+
+`Kas` finally has a use. It had been in the chart since the beginning with
+nothing posting to it, which meant petty cash spending would have been booked
+against Bank — where it then fails to reconcile against a statement that never
+mentioned it.
+
 ### Rekonsiliasi bank — the only outside witness
 
 | Function | Decides |
@@ -814,7 +853,7 @@ the real file have headers that disagree with the data below them.
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
 `canEditOrderPrices`, `canOverrideCreditLimit`, `canPickAndShip`, `canViewAuditLog`,
 `canSeeCost`, `canSeeBooks`, `canSeeReports`, `canReturnToSupplier`, `canHandleGiro`,
-`canReconcileBank`
+`canReconcileBank`, `canPostJournals`
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -844,7 +883,7 @@ All idempotent — assume they run twice.
 
 ## 4. Data
 
-56 models, 51 migrations. The ones that carry money or stock:
+57 models, 53 migrations. The ones that carry money or stock:
 
 `orders` · `order_lines` (price snapshots) · `order_events` (every transition)
 `invoices` · `payment_entries` (append-only) · `webhook_events` (UNIQUE gateway event id)
@@ -856,6 +895,14 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
+- Fixed assets and depreciation. `6-1700 Beban Penyusutan` exists and nothing
+  posts to it, so the neraca understates assets and the laba rugi overstates
+  profit by the depreciation charge — which matters, because that is the figure
+  PPh is calculated on
+- Statement of account: one customer's invoices, credits, payments and giro on
+  a page, which is what they ask for before they pay
+- Uang muka pelanggan — a deposit against a specific order rather than the
+  floating unallocated credit an unmatched payment currently becomes
 - More than one bank account — see the reconciliation section above
 - Importing a statement file; every line is ticked by hand
 - Supplier credits with no goods behind them — a price correction on a bill

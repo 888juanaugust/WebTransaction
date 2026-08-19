@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <x-akuntansi.bagian :section="$pl->beban()" />
+        <x-akuntansi.bagian :section="$pl->beban()" :sembunyikan-nol="true" />
 
         <div class="rounded-xl border-2 border-primary-200 bg-primary-50 px-4 py-3
                     dark:border-primary-500/30 dark:bg-primary-500/10">

@@ -131,7 +131,51 @@ final class AccountCode
      */
     public const SELISIH_PERSEDIAAN = '5-3000';
 
+    /**
+     * The default bucket, and deliberately not the only one.
+     *
+     * Anything that recurs monthly belongs in one of the accounts below
+     * instead. A laba rugi whose entire expense side reads "Beban Operasional
+     * Rp 47.000.000" cannot answer the one question it is asked — where the
+     * money went — and re-coding a year of postings to find out is not work
+     * anybody does twice.
+     */
     public const BEBAN_OPERASIONAL = '6-1000';
+
+    public const BEBAN_GAJI = '6-1100';
+
+    public const BEBAN_SEWA = '6-1200';
+
+    public const BEBAN_UTILITAS = '6-1300';
+
+    public const BEBAN_KENDARAAN = '6-1400';
+
+    /**
+     * Getting goods to the customer.
+     *
+     * Not the same as `BIAYA_BELUM_DIALOKASIKAN`, which is freight *inward* and
+     * belongs in the cost of the goods. Outward freight is a cost of selling —
+     * it never touches stock value, and putting it there would inflate the
+     * margin on every part in the warehouse.
+     */
+    public const BEBAN_ONGKOS_KIRIM = '6-1500';
+
+    public const BEBAN_PERLENGKAPAN = '6-1600';
+
+    /** Waiting for the asset register. Nothing posts here until then. */
+    public const BEBAN_PENYUSUTAN = '6-1700';
+
+    public const BEBAN_ADMIN_BANK = '6-1800';
+
+    /**
+     * Input VAT on a supplier bill that arrived without a faktur pajak.
+     *
+     * Its own account rather than general overhead because the total is a
+     * number the accountant will want at year end: it is what buying from
+     * non-PKP suppliers cost, and it is the argument for pushing a supplier to
+     * register.
+     */
+    public const BEBAN_PPN_TIDAK_KREDIT = '6-1900';
 
     /**
      * The whole chart, in report order.
@@ -187,7 +231,25 @@ final class AccountCode
                 'Selisih hasil stok opname terhadap catatan. Idealnya kecil; kalau besar, cari sebabnya.'),
 
             self::header('6-0000', 'BEBAN OPERASIONAL', AccountType::Beban),
-            self::posting(self::BEBAN_OPERASIONAL, 'Beban Operasional', AccountType::Beban, '6-0000'),
+            self::posting(self::BEBAN_OPERASIONAL, 'Beban Operasional Umum', AccountType::Beban, '6-0000',
+                'Tempat sementara untuk biaya yang belum punya akun sendiri. Kalau sebuah biaya muncul tiap bulan, buatkan akunnya.'),
+            self::posting(self::BEBAN_GAJI, 'Beban Gaji & Upah', AccountType::Beban, '6-0000',
+                'Gaji staf, upah harian, THR dan lembur.'),
+            self::posting(self::BEBAN_SEWA, 'Beban Sewa', AccountType::Beban, '6-0000',
+                'Sewa gudang, toko dan kantor.'),
+            self::posting(self::BEBAN_UTILITAS, 'Beban Listrik, Air & Internet', AccountType::Beban, '6-0000'),
+            self::posting(self::BEBAN_KENDARAAN, 'Beban Kendaraan', AccountType::Beban, '6-0000',
+                'BBM, servis, pajak dan tol kendaraan operasional.'),
+            self::posting(self::BEBAN_ONGKOS_KIRIM, 'Beban Ongkos Kirim', AccountType::Beban, '6-0000',
+                'Ongkos mengirim barang ke pelanggan. Ongkos angkut pembelian tidak ke sini — itu masuk nilai barang lewat biaya perolehan.'),
+            self::posting(self::BEBAN_PERLENGKAPAN, 'Beban Perlengkapan Kantor', AccountType::Beban, '6-0000',
+                'Alat tulis, kemasan, materai dan barang habis pakai.'),
+            self::posting(self::BEBAN_PENYUSUTAN, 'Beban Penyusutan', AccountType::Beban, '6-0000',
+                'Penyusutan aktiva tetap. Belum ada yang mengisi akun ini sampai daftar aktiva tetap dibuat.'),
+            self::posting(self::BEBAN_ADMIN_BANK, 'Beban Administrasi Bank', AccountType::Beban, '6-0000',
+                'Biaya administrasi, biaya transfer dan potongan bank lain yang muncul di rekening koran.'),
+            self::posting(self::BEBAN_PPN_TIDAK_KREDIT, 'PPN Masukan Tidak Dapat Dikreditkan', AccountType::Beban, '6-0000',
+                'PPN dari tagihan pemasok tanpa faktur pajak. Jadi biaya, bukan aset — dan angkanya adalah harga membeli dari pemasok non-PKP.'),
         ];
     }
 

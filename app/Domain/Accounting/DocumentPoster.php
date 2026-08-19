@@ -6,6 +6,7 @@ namespace App\Domain\Accounting;
 
 use App\Domain\Money;
 use App\Models\CreditNote;
+use App\Models\Expense;
 use App\Models\Giro;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
@@ -501,7 +502,9 @@ class DocumentPoster
 
         if ($ppn > 0) {
             $draft->kredit(
-                $inputVatCreditable ? AccountCode::PPN_MASUKAN : AccountCode::BEBAN_OPERASIONAL,
+                // Must be the account the bill debited, or the return unwinds
+                // the charge somewhere else and both accounts drift for good.
+                $inputVatCreditable ? AccountCode::PPN_MASUKAN : AccountCode::BEBAN_PPN_TIDAK_KREDIT,
                 $ppn,
                 $inputVatCreditable
                     ? "Nota retur {$return->nomor}"
@@ -530,6 +533,44 @@ class DocumentPoster
      * OutstandingReceivables for why the control account and the credit check
      * read two different figures from here on.
      */
+    /**
+     * An expense, and its reversal, which is the same journal read backwards.
+     *
+     *     Dr  <akun beban>        the cost
+     *       Cr  Kas | Bank        whichever pocket it left
+     *
+     * The simplest posting rule in the system, and the one whose absence did
+     * the most damage: with no way to record an expense, the laba rugi showed
+     * revenue and cost of sales against almost no overhead, which overstates
+     * the profit that tax is calculated on.
+     *
+     * Sourced on the expense row rather than posted manually, so the ledger's
+     * idempotency on (source, jenis) makes a double-click harmless. The
+     * reversal is its own row and therefore its own entry, which is why it can
+     * carry the same `jenis` without colliding.
+     */
+    public function expenseRecorded(Expense $expense, User $actor, bool $reverse = false): JournalEntry
+    {
+        $draft = JournalDraft::for(
+            $expense,
+            JournalEntry::JENIS_BEBAN,
+            "{$expense->nomor} — {$expense->keterangan}",
+            $expense->tanggal,
+        );
+
+        $beban = $expense->account->kode;
+        $sumber = $expense->dibayar_dari->accountCode();
+        $amount = (int) $expense->amount_rupiah;
+
+        [$debit, $kredit] = $reverse ? [$sumber, $beban] : [$beban, $sumber];
+
+        $draft
+            ->debit($debit, $amount, $expense->keterangan, supplier: $expense->supplier)
+            ->kredit($kredit, $amount, $expense->keterangan, supplier: $expense->supplier);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
     public function giroIssued(Giro $giro, User $actor): JournalEntry
     {
         return $this->ledger->post($this->giroDraft(
@@ -694,7 +735,7 @@ class DocumentPoster
         }
 
         $draft->debit(
-            AccountCode::BEBAN_OPERASIONAL,
+            AccountCode::BEBAN_PPN_TIDAK_KREDIT,
             $ppn,
             'PPN tanpa faktur pajak — tidak dapat dikreditkan',
             supplier: $bill->supplier,
