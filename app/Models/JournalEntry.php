@@ -83,6 +83,20 @@ class JournalEntry extends Model
      */
     public const JENIS_BEBAN = 'beban';
 
+    /** Buying something the business uses rather than sells. */
+    public const JENIS_AKTIVA_TETAP = 'aktiva_tetap';
+
+    /**
+     * One month's wear on one asset.
+     *
+     * Sourced on the depreciation row, not the asset — an asset depreciates
+     * forty-eight times, and one source would collapse them into one entry.
+     */
+    public const JENIS_PENYUSUTAN = 'penyusutan';
+
+    /** Selling or scrapping one, and the gain or loss that falls out. */
+    public const JENIS_PELEPASAN_ASET = 'pelepasan_aset';
+
     /** Goods going back to a supplier, and the payable coming down with them. */
     public const JENIS_RETUR_PEMBELIAN = 'retur_pembelian';
 

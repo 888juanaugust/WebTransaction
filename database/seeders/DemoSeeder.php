@@ -7,6 +7,9 @@ namespace Database\Seeders;
 use App\Domain\Access\Role;
 use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\Ledger;
+use App\Domain\Assets\DepreciationGroup;
+use App\Domain\Assets\DepreciationRunner;
+use App\Domain\Assets\FixedAssetRegister;
 use App\Domain\Banking\BankReconciler;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Expenses\ExpenseRecorder;
@@ -97,6 +100,7 @@ class DemoSeeder extends Seeder
         $this->ordersInEveryState($companies, $warehouse, $staff);
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
+        $this->fixedAssets($staff['finance']);
         $this->monthlyOverheads($staff['finance']);
         $this->bankStatements($companies, $staff['finance']);
 
@@ -505,6 +509,56 @@ class DemoSeeder extends Seeder
             bill: $bill,
             diserahkan: now()->subDays(4),
         );
+    }
+
+    /**
+     * The van, the racking and a computer — plus a year of wear on them.
+     *
+     * Without these the neraca shows a business with no assets but its stock,
+     * which is not what a parts distributor looks like, and the laba rugi
+     * carries no depreciation at all. The van is deliberately bought early
+     * enough to have a visible accumulated figure, because "aktiva tetap
+     * Rp 240 juta, akumulasi Rp 0" is the version that teaches nothing.
+     *
+     * One month is left un-run on purpose, so the sidebar badge has something
+     * in it and the demo can show what the button does.
+     */
+    private function fixedAssets(User $finance): void
+    {
+        $register = app(FixedAssetRegister::class);
+
+        $assets = [
+            ['Mitsubishi L300 — pengiriman', DepreciationGroup::Kelompok2, 'kendaraan', 245_000_000, 14],
+            ['Rak gudang 12 bay', DepreciationGroup::Kelompok2, 'peralatan', 38_000_000, 11],
+            ['Komputer kantor & printer', DepreciationGroup::Kelompok1, 'peralatan', 22_500_000, 7],
+        ];
+
+        foreach ($assets as [$nama, $kelompok, $kategori, $harga, $monthsAgo]) {
+            $register->acquire(
+                nama: $nama,
+                kelompok: $kelompok,
+                tanggal: now()->subMonthsNoOverflow($monthsAgo)->startOfMonth()->addDays(4),
+                hargaPerolehan: $harga,
+                paidFrom: PaidFrom::Bank,
+                actor: $finance,
+                kategori: $kategori,
+            );
+        }
+
+        /*
+         * Depreciation up to the month before last. Last month is left
+         * outstanding: the badge is the only thing in the system that ever
+         * mentions a month nobody ran, and a demo where it is already zero
+         * cannot show that.
+         */
+        $runner = app(DepreciationRunner::class);
+        $month = now()->subMonthsNoOverflow(14)->startOfMonth();
+        $stop = now()->subMonthsNoOverflow(2)->startOfMonth();
+
+        while ($month->lessThanOrEqualTo($stop)) {
+            $runner->run($month->format('Y-m'), $finance);
+            $month->addMonth();
+        }
     }
 
     /**

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Accounting;
 
+use App\Domain\Expenses\PaidFrom;
 use App\Domain\Money;
 use App\Models\CreditNote;
 use App\Models\Expense;
+use App\Models\FixedAsset;
+use App\Models\FixedAssetDepreciation;
 use App\Models\Giro;
 use App\Models\GoodsReceipt;
 use App\Models\Invoice;
@@ -567,6 +570,109 @@ class DocumentPoster
         $draft
             ->debit($debit, $amount, $expense->keterangan, supplier: $expense->supplier)
             ->kredit($kredit, $amount, $expense->keterangan, supplier: $expense->supplier);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * Buying a fixed asset.
+     *
+     *   Dr Aktiva Tetap        what it cost
+     *     Cr Kas | Bank
+     *
+     * Not an expense, which is the whole distinction: a van is not a cost of
+     * the month it was bought in, it is a cost of the eight years it is used
+     * for. Booking it to expense understates this year's profit and overstates
+     * every later year's.
+     */
+    public function assetAcquired(FixedAsset $asset, User $actor): JournalEntry
+    {
+        $draft = JournalDraft::for(
+            $asset,
+            JournalEntry::JENIS_AKTIVA_TETAP,
+            "{$asset->nomor} — {$asset->nama}",
+            $asset->tanggal_perolehan,
+        )
+            ->debit(AccountCode::AKTIVA_TETAP, (int) $asset->harga_perolehan_rupiah, $asset->nama)
+            ->kredit($asset->dibayar_dari->accountCode(), (int) $asset->harga_perolehan_rupiah, $asset->nama);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * One month's wear.
+     *
+     *   Dr Beban Penyusutan
+     *     Cr Akumulasi Penyusutan
+     *
+     * Never a credit to Aktiva Tetap itself. Keeping cost and accumulated wear
+     * apart is what lets anybody see how old the fleet is; netting them into
+     * one figure loses that permanently, and no report can get it back.
+     */
+    public function depreciationPosted(FixedAssetDepreciation $row, User $actor): JournalEntry
+    {
+        $asset = $row->asset;
+
+        $draft = JournalDraft::for(
+            $row,
+            JournalEntry::JENIS_PENYUSUTAN,
+            "Penyusutan {$row->periode} — {$asset->nomor} {$asset->nama}",
+            $row->tanggal,
+        )
+            ->debit(AccountCode::BEBAN_PENYUSUTAN, (int) $row->amount_rupiah, $asset->nama)
+            ->kredit(AccountCode::AKUMULASI_PENYUSUTAN, (int) $row->amount_rupiah, $asset->nama);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * Selling or scrapping one.
+     *
+     *   Dr Kas | Bank                  what it sold for, if anything
+     *   Dr Akumulasi Penyusutan        all the wear taken on it, removed
+     *   Dr/Cr Laba/Rugi Pelepasan      the balancing figure
+     *     Cr Aktiva Tetap              what it originally cost
+     *
+     * Both sides of the asset leave together — cost and accumulated
+     * depreciation — which is why an asset sold for exactly its book value
+     * produces no gain and no loss, and an asset scrapped with book value left
+     * produces a loss of exactly that.
+     *
+     * The gain or loss is a **balancing figure**, computed as whatever makes
+     * the entry balance rather than derived separately. Deriving it twice is
+     * how a rounding difference becomes an unbalanced journal.
+     */
+    public function assetDisposed(FixedAsset $asset, User $actor, PaidFrom $proceedsTo): JournalEntry
+    {
+        $cost = (int) $asset->harga_perolehan_rupiah;
+        $accumulated = $asset->accumulated();
+        $proceeds = (int) ($asset->harga_jual_rupiah ?? 0);
+
+        $draft = JournalDraft::for(
+            $asset,
+            JournalEntry::JENIS_PELEPASAN_ASET,
+            "Pelepasan {$asset->nomor} — {$asset->nama}",
+            $asset->tanggal_pelepasan,
+        );
+
+        if ($proceeds > 0) {
+            $draft->debit($proceedsTo->accountCode(), $proceeds, "Hasil pelepasan {$asset->nama}");
+        }
+
+        if ($accumulated > 0) {
+            $draft->debit(AccountCode::AKUMULASI_PENYUSUTAN, $accumulated, 'Akumulasi penyusutan dihapus');
+        }
+
+        // Positive = a loss (needs a debit); negative = a gain (needs a credit).
+        $selisih = $cost - $accumulated - $proceeds;
+
+        if ($selisih > 0) {
+            $draft->debit(AccountCode::LABA_RUGI_PELEPASAN_ASET, $selisih, 'Rugi pelepasan aktiva');
+        } elseif ($selisih < 0) {
+            $draft->kredit(AccountCode::LABA_RUGI_PELEPASAN_ASET, -$selisih, 'Laba pelepasan aktiva');
+        }
+
+        $draft->kredit(AccountCode::AKTIVA_TETAP, $cost, $asset->nama);
 
         return $this->ledger->post($draft, $actor);
     }

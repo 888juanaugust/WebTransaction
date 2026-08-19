@@ -48,6 +48,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_EXPENSE = 'expense';
 
+    public const SCOPE_FIXED_ASSET = 'fixed_asset';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -171,6 +173,12 @@ class DocumentNumberGenerator
     public function nextExpenseNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_EXPENSE, 'BB', $date);
+    }
+
+    /** Aktiva Tetap: AT-202608-0001. */
+    public function nextFixedAssetNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_FIXED_ASSET, 'AT', $date);
     }
 
     /** Rekonsiliasi Bank: RB-202608-0001. */

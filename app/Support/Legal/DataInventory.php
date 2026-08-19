@@ -367,6 +367,32 @@ final class DataInventory
             ],
 
             /*
+             * Fixed assets. Mostly corporate property, with one honest
+             * exception: `nama` on a vehicle is usually its registration
+             * plate, which identifies a vehicle and through it a company —
+             * and for a sole trader, a person.
+             */
+            'fixed_assets' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['nama', 'keterangan', 'alasan_pelepasan', 'created_by', 'disposed_by'],
+                'bukan' => [
+                    'nomor', 'kelompok', 'masa_manfaat_bulan', 'tanggal_perolehan',
+                    'harga_perolehan_rupiah', 'nilai_residu_rupiah', 'kategori', 'status',
+                    'dibayar_dari', 'tanggal_pelepasan', 'harga_jual_rupiah',
+                ],
+            ],
+
+            // A month's depreciation is arithmetic about a thing, not a person.
+            'fixed_asset_depreciations' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by'],
+                'bukan' => [
+                    'fixed_asset_id', 'periode', 'tanggal', 'amount_rupiah',
+                    'nilai_buku_setelah_rupiah', 'journal_entry_id',
+                ],
+            ],
+
+            /*
              * Expenses. `keterangan` and `referensi` are free text about a
              * payment, and both routinely name people — "gaji Budi Agustus",
              * "sewa ruko Bu Sri". Salary lines in particular make this table

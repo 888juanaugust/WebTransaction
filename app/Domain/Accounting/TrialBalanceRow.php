@@ -49,9 +49,18 @@ final readonly class TrialBalanceRow
     /**
      * A balance on the wrong side. Not always wrong — a bank account can be
      * overdrawn — but negative inventory or negative sales is a question.
+     *
+     * Contra accounts are excluded. Akumulasi Penyusutan holds a credit
+     * balance for its entire life by design, and flagging it every month
+     * would train whoever reads this screen to ignore the label — including
+     * the month it turns up on Persediaan, which is the one that matters.
      */
     public function isContrary(): bool
     {
+        if (in_array($this->account->kode, AccountCode::contraAccounts(), true)) {
+            return false;
+        }
+
         return $this->balance() < 0;
     }
 }

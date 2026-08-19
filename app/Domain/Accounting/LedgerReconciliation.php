@@ -8,6 +8,8 @@ use App\Domain\Billing\OutstandingReceivables;
 use App\Domain\Money;
 use App\Domain\Purchasing\SupplierLedger;
 use App\Domain\Stock\InventoryValuation;
+use App\Models\FixedAsset;
+use App\Models\FixedAssetDepreciation;
 use App\Models\GoodsReceiptLine;
 use App\Models\LandedCost;
 use App\Models\PurchaseReturn;
@@ -92,6 +94,20 @@ class LedgerReconciliation
                 buku: $this->ledger->balanceOf(AccountCode::BIAYA_BELUM_DIALOKASIKAN),
                 subledger: $this->unallocatedCharges(),
                 sumber: 'Biaya angkut dan bea yang belum dibebankan ke barangnya',
+            ),
+            new ControlAccountCheck(
+                kode: AccountCode::AKTIVA_TETAP,
+                nama: 'Aktiva Tetap',
+                buku: $this->ledger->balanceOf(AccountCode::AKTIVA_TETAP),
+                subledger: $this->assetsAtCost(),
+                sumber: 'Harga perolehan aktiva tetap yang masih dimiliki',
+            ),
+            new ControlAccountCheck(
+                kode: AccountCode::AKUMULASI_PENYUSUTAN,
+                nama: 'Akumulasi Penyusutan',
+                buku: $this->ledger->balanceOf(AccountCode::AKUMULASI_PENYUSUTAN),
+                subledger: $this->accumulatedDepreciation(),
+                sumber: 'Penyusutan yang sudah dibebankan atas aktiva yang masih dimiliki',
             ),
         ];
     }
@@ -201,6 +217,37 @@ class LedgerReconciliation
      * Zero is the healthy answer, and it is the number the queue on the
      * dashboard counts.
      */
+    /**
+     * What the assets still held cost.
+     *
+     * Disposed assets are excluded on both sides: their cost and their
+     * accumulated depreciation leave the books together in the disposal entry,
+     * so counting either here would leave the check permanently out by the
+     * value of everything ever sold.
+     */
+    private function assetsAtCost(): int
+    {
+        return (int) FixedAsset::query()
+            ->aktif()
+            ->sum('harga_perolehan_rupiah');
+    }
+
+    /**
+     * Depreciation posted against assets still held, as a negative figure.
+     *
+     * Negative because Akumulasi Penyusutan is a contra-asset: it is typed as
+     * an asset so it sits with them, and every posting to it is a credit, so
+     * its ledger balance reads negative. The subledger side has to match that
+     * sign or the check would report a discrepancy of exactly twice the
+     * depreciation on a system that is working perfectly.
+     */
+    private function accumulatedDepreciation(): int
+    {
+        return -(int) FixedAssetDepreciation::query()
+            ->whereHas('asset', fn ($q) => $q->aktif())
+            ->sum('amount_rupiah');
+    }
+
     private function unallocatedCharges(): int
     {
         $billed = (int) SupplierBillLine::query()

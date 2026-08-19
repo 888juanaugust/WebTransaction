@@ -57,6 +57,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
+| `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
@@ -761,6 +762,64 @@ A reversed payment appears as a charge, dated when the reversal was made rather
 than back on the payment it undoes — so it lands in the month somebody noticed
 instead of silently restating a statement already sent.
 
+### Aktiva tetap — what is owned, and the wear on it
+
+| Function | Decides |
+|---|---|
+| `DepreciationGroup` | Which UU PPh Pasal 11 group, and so how many months |
+| `FixedAssetRegister::acquire` | `Dr Aktiva Tetap / Cr Kas\|Bank`. Not an expense |
+| `DepreciationSchedule::charge` | What one asset owes one month, and nothing else |
+| `DepreciationRunner::run` | A month across every asset. **Idempotent per (asset, month)** |
+| `FixedAssetRegister::dispose` | Cost and accumulated depreciation leave together |
+
+Two things were wrong before this, and both flatter the business: the neraca
+showed no fixed assets, because buying a van had nowhere to go — the expense
+screen refuses non-expense accounts on purpose — and the laba rugi carried no
+depreciation, so profit was overstated by the whole wear on everything owned.
+That second one is the figure PPh is calculated on.
+
+**Life comes from the tax group, not from judgement.** Pasal 11 fixes it:
+kelompok 1 is four years, 2 is eight, 3 is sixteen, 4 is twenty, and buildings
+have their own two. Book life is set equal to tax life deliberately — they may
+differ, and in a larger company they do, which produces deferred tax and a set
+of workings this business has no use for. Only garis lurus is implemented;
+saldo menurun is a per-asset election and would need a column recording it.
+
+Three boundaries, each of which is a real month of money:
+
+- **Starts** in the month of acquisition, as a full month — Pasal 11 ayat (3).
+  Bought on the 29th, charged for all of August.
+- **The final month takes everything left**, rather than another rounded
+  instalment. Forty-seven charges of 208,333 against 10,000,000 leave 208,349;
+  charging the rounded figure again strands sixteen rupiah on the books for the
+  life of the company.
+- **Stops** in the month of disposal, which takes no charge — the disposal
+  entry already settles the book value, and charging as well takes the wear
+  twice. An asset sold in September still owes August, so the run includes
+  disposed assets and lets the schedule decide.
+
+**Running a month twice is the failure that costs money**, because both runs
+succeed and the books quietly carry double. The unique index on
+`(fixed_asset_id, periode)` makes it impossible rather than unlikely; the
+ledger's own idempotency does not cover it, since each row is its own source.
+
+Depreciation is a **button, not a cron job** — it belongs next to whoever is
+closing the month, who can see the result before the period locks.
+
+Disposal takes cost and accumulated depreciation off together and lands the
+difference in `6-2000 Laba/Rugi Pelepasan Aktiva Tetap`, never in Penjualan:
+selling the old van is not trade, and putting it through the top line would
+inflate the figure every margin divides into. The gain or loss is a balancing
+figure rather than a second calculation, so a rounding difference cannot
+unbalance the entry.
+
+`1-2900 Akumulasi Penyusutan` is the chart's **only contra account** — typed
+`aset` so it sits with them and reduces their total, holding a credit balance
+for its whole life. `AccountCode::contraAccounts()` exists so the trial balance
+does not flag it as a reversed balance every month; a warning that can never be
+cleared teaches people to ignore the label, including the month it appears on
+Persediaan.
+
 ### Beban — the expense side of the books
 
 | Function | Decides |
@@ -912,7 +971,7 @@ All idempotent — assume they run twice.
 
 ## 4. Data
 
-57 models, 53 migrations. The ones that carry money or stock:
+59 models, 56 migrations. The ones that carry money or stock:
 
 `orders` · `order_lines` (price snapshots) · `order_events` (every transition)
 `invoices` · `payment_entries` (append-only) · `webhook_events` (UNIQUE gateway event id)
@@ -924,10 +983,9 @@ All idempotent — assume they run twice.
 
 ## 5. Not built yet
 
-- Fixed assets and depreciation. `6-1700 Beban Penyusutan` exists and nothing
-  posts to it, so the neraca understates assets and the laba rugi overstates
-  profit by the depreciation charge — which matters, because that is the figure
-  PPh is calculated on
+- Saldo menurun (declining-balance) depreciation, and a book life that differs
+  from the tax life
+- Revaluation and impairment of fixed assets
 - Uang muka pelanggan — a deposit against a specific order rather than the
   floating unallocated credit an unmatched payment currently becomes
 - More than one bank account — see the reconciliation section above

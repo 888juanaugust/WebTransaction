@@ -182,13 +182,14 @@ Not to argue for it — so the comparison is like for like.
 | Bank reconciliation against a statement, with the difference refused until explained | Built and tested |
 | Operating expenses on their own accounts, recorded from a screen and reversed rather than edited | Built and tested |
 | Customer statement of account, tying to the same figure as the credit check | Built and tested |
-| Multi-currency, fixed assets and depreciation, more than one bank account | **Not built** |
+| Fixed assets and straight-line depreciation on the UU PPh Pasal 11 groups | Built and tested |
+| Multi-currency, declining-balance depreciation, more than one bank account | **Not built** |
 
 The summary this file was written with — "tuned to your trade, no accounting
 core" — is now out of date: the ledger exists, every document posts to it, and
 the four control accounts tie to their subledgers. What Odoo still has and this
-does not is depth rather than presence: fixed assets, multi-currency, and
-more than one bank account. Weigh that against how much Python the five tests
+does not is depth rather than presence: multi-currency, more than one bank
+account, and the depreciation methods beyond straight line. Weigh that against how much Python the five tests
 above turn out to need.
 
 ## One timing note

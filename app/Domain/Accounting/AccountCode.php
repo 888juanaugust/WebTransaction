@@ -67,6 +67,28 @@ final class AccountCode
      */
     public const PPN_MASUKAN = '1-1400';
 
+    /**
+     * What the fixed assets cost, at the price they were bought for.
+     *
+     * Never touched by depreciation — that goes to the contra account below.
+     * Carrying assets at cost and the wear against them separately is what lets
+     * anybody see how old the fleet is; netting them into one figure destroys
+     * that and cannot be recovered.
+     */
+    public const AKTIVA_TETAP = '1-2100';
+
+    /**
+     * Accumulated depreciation — **the one asset account that holds a credit
+     * balance on purpose.**
+     *
+     * A contra-asset: typed `aset` so it sits with the assets on the neraca,
+     * but every posting to it is a credit, so its balance reads negative and
+     * reduces total assets by exactly the wear taken so far. That is the
+     * intended reading, and the one place in this chart where a negative
+     * balance is not a warning sign.
+     */
+    public const AKUMULASI_PENYUSUTAN = '1-2900';
+
     // Kewajiban
     public const UTANG_USAHA = '2-1000';
 
@@ -132,6 +154,16 @@ final class AccountCode
     public const SELISIH_PERSEDIAAN = '5-3000';
 
     /**
+     * Selling a fixed asset for more or less than it is carried at.
+     *
+     * Not revenue: selling the old delivery van is not trade, and putting it
+     * through Penjualan would inflate the top line that every margin figure
+     * divides into. Sits in cost of sales' sibling group so it lands below
+     * gross profit.
+     */
+    public const LABA_RUGI_PELEPASAN_ASET = '6-2000';
+
+    /**
      * The default bucket, and deliberately not the only one.
      *
      * Anything that recurs monthly belongs in one of the accounts below
@@ -178,6 +210,25 @@ final class AccountCode
     public const BEBAN_PPN_TIDAK_KREDIT = '6-1900';
 
     /**
+     * Accounts whose balance is *meant* to sit on the far side of their type.
+     *
+     * Only one so far. Akumulasi Penyusutan is typed `aset` so it appears with
+     * the assets and reduces their total, and every posting to it is a credit —
+     * so it reads negative, permanently and correctly.
+     *
+     * Named here because the trial balance flags reversed balances, and a
+     * warning that can never be cleared is worse than no warning: it teaches
+     * whoever reads that screen to skip the amber label, including the day it
+     * appears on Persediaan.
+     *
+     * @return list<string>
+     */
+    public static function contraAccounts(): array
+    {
+        return [self::AKUMULASI_PENYUSUTAN];
+    }
+
+    /**
      * The whole chart, in report order.
      *
      * @return list<array{kode: string, nama: string, tipe: AccountType, dapat_diposting: bool, induk: ?string, catatan: ?string}>
@@ -200,6 +251,10 @@ final class AccountCode
                 'Ongkos angkut, bea masuk dan sejenisnya yang belum dibebankan ke barangnya. Idealnya kosong di akhir bulan.'),
             self::posting(self::PPN_MASUKAN, 'PPN Masukan', AccountType::Aset, '1-0000',
                 'Hanya dari tagihan pemasok yang disertai faktur pajak.'),
+            self::posting(self::AKTIVA_TETAP, 'Aktiva Tetap', AccountType::Aset, '1-0000',
+                'Harga perolehan kendaraan, peralatan dan bangunan. Harus sama dengan total daftar aktiva tetap.'),
+            self::posting(self::AKUMULASI_PENYUSUTAN, 'Akumulasi Penyusutan', AccountType::Aset, '1-0000',
+                'Akun lawan aktiva tetap. Saldonya kredit — jadi tampil negatif dan mengurangi total aset. Itu memang maksudnya.'),
 
             self::header('2-0000', 'KEWAJIBAN', AccountType::Kewajiban),
             self::posting(self::UTANG_USAHA, 'Utang Usaha', AccountType::Kewajiban, '2-0000',
@@ -248,6 +303,8 @@ final class AccountCode
                 'Penyusutan aktiva tetap. Belum ada yang mengisi akun ini sampai daftar aktiva tetap dibuat.'),
             self::posting(self::BEBAN_ADMIN_BANK, 'Beban Administrasi Bank', AccountType::Beban, '6-0000',
                 'Biaya administrasi, biaya transfer dan potongan bank lain yang muncul di rekening koran.'),
+            self::posting(self::LABA_RUGI_PELEPASAN_ASET, 'Laba/Rugi Pelepasan Aktiva Tetap', AccountType::Beban, '6-0000',
+                'Selisih antara harga jual aktiva tetap dan nilai bukunya. Bukan penjualan barang dagangan.'),
             self::posting(self::BEBAN_PPN_TIDAK_KREDIT, 'PPN Masukan Tidak Dapat Dikreditkan', AccountType::Beban, '6-0000',
                 'PPN dari tagihan pemasok tanpa faktur pajak. Jadi biaya, bukan aset — dan angkanya adalah harga membeli dari pemasok non-PKP.'),
         ];

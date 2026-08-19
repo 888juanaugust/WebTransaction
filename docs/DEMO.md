@@ -5,7 +5,7 @@ prices, nothing to look at. That is deliberate (a seeded price is a price
 nobody approved), and it also makes the system impossible to show to anybody.
 
 `DemoSeeder` fills that gap: a believable day in the life of the business, with
-every dashboard queue populated and a real variance waiting to be found. Fourteen
+every dashboard queue populated and a real variance waiting to be found. Fifteen
 minutes, start to finish.
 
 ---
@@ -61,7 +61,7 @@ has paid everything and their invoice screen is empty.
 
 ---
 
-## 3. The fourteen-minute script
+## 3. The fifteen-minute script
 
 Tell it as a day in the business, not as a tour of features. The order below
 builds on itself.
@@ -274,6 +274,26 @@ sold at cost so far. On the catalogue screen, finance and the owner can switch
 on **HPP rata-rata** — the moving average cost per part. Sales cannot see it,
 because cost plus selling price is margin.
 
+### The van nobody was depreciating — 1 min
+
+**Buku besar → Aktiva tetap.** A van, racking, and the office computers.
+
+> "Before this, buying a van had nowhere to go. It is not a cost of the month
+> you bought it — it is a cost of the next eight years."
+
+Each row shows harga perolehan, accumulated depreciation and book value. Note
+the **badge on the sidebar**: a month nobody has run.
+
+> "That badge is the only thing in the entire system that will ever mention it.
+> A month of depreciation nobody posted is a profit figure that is too high,
+> and nothing else notices."
+
+**Jalankan penyusutan** → pick the outstanding month → it posts. Press it again
+and it says the month was already done rather than charging it twice.
+
+On **Neraca saldo**, Akumulasi Penyusutan sits under the assets with a negative
+balance, and both new control accounts tie to the register.
+
 ### The statement that settles an argument — 1 min
 
 **Laporan → Rekening pelanggan.** Pick CV Sinar Distribusi.
@@ -353,7 +373,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1259 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1299 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
