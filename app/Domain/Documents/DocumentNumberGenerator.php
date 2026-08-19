@@ -52,6 +52,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_SUPPLIER_CREDIT_NOTE = 'supplier_credit_note';
 
+    public const SCOPE_CUSTOMER_DEPOSIT = 'customer_deposit';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -187,6 +189,18 @@ class DocumentNumberGenerator
     public function nextSupplierCreditNoteNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_SUPPLIER_CREDIT_NOTE, 'NKP', $date);
+    }
+
+    /**
+     * Uang Muka Pelanggan: UM-202608-0001.
+     *
+     * The receipt the customer is handed. It is the only paper they get for the
+     * money until an invoice exists to apply it to, so it needs a number of its
+     * own rather than borrowing the order's.
+     */
+    public function nextCustomerDepositNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_CUSTOMER_DEPOSIT, 'UM', $date);
     }
 
     /** Aktiva Tetap: AT-202608-0001. */

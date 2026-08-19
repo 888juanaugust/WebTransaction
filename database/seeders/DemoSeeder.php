@@ -11,6 +11,7 @@ use App\Domain\Assets\DepreciationGroup;
 use App\Domain\Assets\DepreciationRunner;
 use App\Domain\Assets\FixedAssetRegister;
 use App\Domain\Banking\BankReconciler;
+use App\Domain\Billing\CustomerDepositRegister;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Expenses\ExpenseRecorder;
 use App\Domain\Expenses\PaidFrom;
@@ -102,6 +103,7 @@ class DemoSeeder extends Seeder
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
         $this->supplierPriceCorrection($supplier, $staff['finance']);
+        $this->customerDeposits($companies, $staff['finance']);
         $this->fixedAssets($staff['finance']);
         $this->monthlyOverheads($staff['finance']);
         $this->bankStatements($companies, $staff['finance']);
@@ -544,6 +546,61 @@ class DemoSeeder extends Seeder
             bill: $bill,
             ppnRupiah: 132_000,
             nomorNotaSupplier: 'CN-AS-2026-0117',
+        );
+    }
+
+    /**
+     * Two deposits, in the two states that matter.
+     *
+     * One is cash over the counter from the bengkel and is left **unapplied**,
+     * so the neraca carries a real Uang Muka Pelanggan balance and the sidebar
+     * badge has something in it. The other is a transfer from the distributor
+     * that has already been put against their oldest open invoice, so the demo
+     * can show the same document at both ends of its life.
+     *
+     * The bengkel one is deliberately cash: a customer with no credit line is
+     * exactly who is asked for a deposit, and they are the ones who pay at the
+     * counter.
+     */
+    private function customerDeposits(array $companies, User $finance): void
+    {
+        $register = app(CustomerDepositRegister::class);
+
+        $register->receive(
+            company: $companies['bengkel'],
+            jumlahRupiah: 5_000_000,
+            diterimaDi: PaidFrom::Kas,
+            tanggal: now()->subDays(6),
+            actor: $finance,
+            referensi: 'Kuitansi 0091',
+            catatan: 'Uang muka pesanan kampas rem, belum ada faktur',
+        );
+
+        $deposit = $register->receive(
+            company: $companies['distributor'],
+            jumlahRupiah: 8_000_000,
+            diterimaDi: PaidFrom::Bank,
+            tanggal: now()->subDays(9),
+            actor: $finance,
+            referensi: 'TRF-BCA-88412',
+        );
+
+        $invoice = Invoice::query()
+            ->where('company_id', $companies['distributor']->id)
+            ->where('status', Invoice::STATUS_OPEN)
+            ->orderBy('issued_on')
+            ->first();
+
+        if ($invoice === null) {
+            return;
+        }
+
+        $register->apply(
+            deposit: $deposit,
+            invoice: $invoice,
+            jumlahRupiah: min(8_000_000, $invoice->amountOutstanding()),
+            actor: $finance,
+            tanggal: now()->subDays(3),
         );
     }
 

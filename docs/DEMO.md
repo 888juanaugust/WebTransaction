@@ -294,6 +294,41 @@ and it says the month was already done rather than charging it twice.
 On **Neraca saldo**, Akumulasi Penyusutan sits under the assets with a negative
 balance, and both new control accounts tie to the register.
 
+### The customer who paid first — 1 min
+
+**Penjualan → Uang muka.** Two: Rp 5 juta cash from Bengkel Jaya Motor, and
+Rp 8 juta transferred by CV Sinar Distribusi of which Rp 4.415.025 has already
+been put against a faktur.
+
+> "A new customer with no credit line pays up front. Before this, the only place
+> to put that money was an unmatched payment — which credits Piutang Usaha. So
+> a customer who owed nothing and had paid five million showed a receivable of
+> minus five million."
+
+On **Buku besar → Neraca saldo**, point at 2-1300 Uang Muka Pelanggan sitting
+under the liabilities.
+
+> "It is not a receivable with a minus sign. We are holding their money and have
+> shipped nothing for it, so it is something we owe. And it has its own control
+> account — the register and the ledger have to agree."
+
+Back on the list, open the row menu for Bengkel Jaya Motor.
+
+> "**Pakai untuk faktur** is greyed out, because they have no open invoice yet.
+> The deposit waits. Nothing here offers you a form it cannot fill."
+
+Then the distributor's already-applied one, on **Buku besar → Jurnal**, filtered
+to **Uang muka dipakai**:
+
+> "Uang muka down, piutang down. No cash account on either side — the money was
+> banked two weeks ago. If this had gone through Bank, the bank reconciliation
+> would spend next month hunting a transfer that never happened."
+
+Finish on the buyer's own screen — log in as `bengkel@pembeli.example`:
+
+> "And they can see it. Fourth tile: uang muka Anda Rp 5.000.000, received, not
+> yet used. That is the phone call you don't get."
+
 ### The supplier who overcharged — 1 min
 
 **Pembelian → Nota kredit pemasok.** One draft: PT Anugerah Sparepart, against

@@ -7,6 +7,8 @@ namespace App\Domain\Accounting;
 use App\Domain\Expenses\PaidFrom;
 use App\Domain\Money;
 use App\Models\CreditNote;
+use App\Models\CustomerDeposit;
+use App\Models\CustomerDepositMovement;
 use App\Models\Expense;
 use App\Models\FixedAsset;
 use App\Models\FixedAssetDepreciation;
@@ -52,8 +54,10 @@ use DateTimeInterface;
  *                             unchanged and there is nothing to say.
  *   Utang Belum Ditagih     = goods received and not yet billed, less returns
  *                             of goods nobody had billed for
+ *   Uang Muka Pelanggan     = deposits taken, less what has been applied to an
+ *                             invoice or handed back
  *
- * `LedgerReconciliation` checks all four against their subledgers. If one
+ * `LedgerReconciliation` checks every one of them against its subledger. If one
  * drifts, a rule below is wrong.
  */
 class DocumentPoster
@@ -819,6 +823,100 @@ class DocumentPoster
         )
             ->debitSigned(AccountCode::BANK, $amount, $entry->gateway_reference)
             ->kreditSigned(AccountCode::PIUTANG_USAHA, $amount, $company?->nama, company: $company);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A deposit taken before anything is owed.
+     *
+     *   Dr Kas or Bank    what arrived
+     *     Cr Uang Muka Pelanggan
+     *
+     * The credit is a liability, not a negative receivable. We are holding
+     * their money and have delivered nothing for it, and a balance sheet that
+     * nets that against Piutang Usaha reports both halves wrong.
+     *
+     * Unlike customerPaymentReceived this one asks where the money landed,
+     * because a deposit is very often cash handed over at the counter by a new
+     * customer who has no account yet — which is the same circumstance that
+     * produces the deposit in the first place.
+     */
+    public function customerDepositReceived(CustomerDeposit $deposit, ?User $actor = null): JournalEntry
+    {
+        $amount = (int) $deposit->jumlah_rupiah;
+        $company = $deposit->company;
+
+        $draft = JournalDraft::for(
+            $deposit,
+            JournalEntry::JENIS_UANG_MUKA,
+            "Uang muka {$deposit->nomor} dari {$company?->nama}",
+            $deposit->tanggal,
+        )
+            ->debit($deposit->diterima_di->accountCode(), $amount, $deposit->referensi)
+            ->kredit(AccountCode::UANG_MUKA_PELANGGAN, $amount, $company?->nama, company: $company);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A deposit meeting the invoice it was taken for.
+     *
+     *   Dr Uang Muka Pelanggan    the part being used
+     *     Cr Piutang Usaha
+     *
+     * **No cash account on either side.** The money was banked when the deposit
+     * was taken; today's event is a debt being settled out of it. Posting this
+     * through Bank would invent a receipt that never happened and leave the
+     * bank reconciliation hunting for it.
+     *
+     * Keyed on the movement rather than the payment entry, because the movement
+     * is the thing that consumed the deposit — and a deposit applied across
+     * three invoices produces three of these.
+     */
+    public function customerDepositApplied(CustomerDepositMovement $movement, ?User $actor = null): JournalEntry
+    {
+        $amount = (int) $movement->jumlah_rupiah;
+        $company = $movement->deposit?->company;
+        $invoice = $movement->invoice;
+
+        $draft = JournalDraft::for(
+            $movement,
+            JournalEntry::JENIS_UANG_MUKA_DIPAKAI,
+            "Uang muka {$movement->deposit?->nomor} dipakai untuk faktur {$invoice?->nomor}",
+            $movement->tanggal,
+        )
+            ->debit(AccountCode::UANG_MUKA_PELANGGAN, $amount, $company?->nama, company: $company)
+            ->kredit(AccountCode::PIUTANG_USAHA, $amount, $invoice?->nomor, company: $company);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A deposit handed back.
+     *
+     *   Dr Uang Muka Pelanggan
+     *     Cr Kas or Bank
+     *
+     * The exact reverse of taking it, and deliberately not a reversal of the
+     * original entry: the money genuinely came in and genuinely went out again,
+     * and the bank statement will show both. Cancelling the first entry would
+     * leave the reconciliation two movements short.
+     */
+    public function customerDepositRefunded(CustomerDepositMovement $movement, ?User $actor = null): JournalEntry
+    {
+        $amount = (int) $movement->jumlah_rupiah;
+        $deposit = $movement->deposit;
+        $company = $deposit?->company;
+
+        $draft = JournalDraft::for(
+            $movement,
+            JournalEntry::JENIS_UANG_MUKA_KEMBALI,
+            "Uang muka {$deposit?->nomor} dikembalikan ke {$company?->nama}",
+            $movement->tanggal,
+        )
+            ->debit(AccountCode::UANG_MUKA_PELANGGAN, $amount, $company?->nama, company: $company)
+            ->kredit($deposit->diterima_di->accountCode(), $amount, $movement->catatan);
 
         return $this->ledger->post($draft, $actor);
     }

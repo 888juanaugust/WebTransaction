@@ -41,10 +41,20 @@ class InvoiceFactory extends Factory
         ]);
     }
 
+    /**
+     * An invoice for exactly this total, with no tax on it.
+     *
+     * The tax columns move with the subtotal rather than keeping the default's
+     * 110.000. Left behind they make an invoice whose parts do not add up to
+     * its total — harmless while nothing posts it, and an unbalanced journal
+     * the moment something does.
+     */
     public function totalling(int $rupiah): static
     {
         return $this->state(fn () => [
             'subtotal_rupiah' => $rupiah,
+            'dpp_rupiah' => $rupiah,
+            'ppn_rupiah' => 0,
             'total_rupiah' => $rupiah,
         ]);
     }

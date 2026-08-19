@@ -53,6 +53,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/giro` | Bilyet giro | Finance, Owner | Postdated cheques both ways. Badge counts giro that can be banked today |
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
+| `/admin/uang-muka` | Uang muka | Finance, Owner | Money in before anything is owed. Badge counts deposits no invoice has claimed |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
@@ -566,6 +567,9 @@ The rules, all of them:
 | Pembayaran pelanggan | Dr Bank / Cr Piutang Usaha |
 | Pembayaran pemasok | Dr Utang Usaha / Cr Bank |
 | Nota kredit pemasok | Dr Utang Usaha / Cr the account named on the note + Cr PPN Masukan |
+| Uang muka diterima | Dr Kas or Bank / Cr Uang Muka Pelanggan |
+| Uang muka dipakai | Dr Uang Muka Pelanggan / Cr Piutang Usaha — **no cash account on either side** |
+| Uang muka dikembalikan | Dr Uang Muka Pelanggan / Cr Kas or Bank |
 
 **Closing the books.**
 
@@ -665,7 +669,7 @@ see.
 | `CreditNoteIssuer::creditable` | What may still be credited: shipped, less already credited, with the invoiced price and the frozen cost |
 | `CreditNoteIssuer::draft` | Opens a draft. Requires a reason, and a gudang for a retur |
 | `CreditNotePoster::post` | **Every figure is decided here.** Stock back in, books reversed, invoice re-settled |
-| `OutstandingReceivables` | **One definition** of what customers owe: invoiced − paid − credited |
+| `OutstandingReceivables` | **One definition** of what customers owe: invoiced − paid − credited, less deposits held where exposure is the question |
 
 Two kinds. A **retur barang** puts stock back and reverses cost of sales; a
 **potongan** moves only money. Getting that wrong either invents inventory or
@@ -760,10 +764,15 @@ payoff for the design.
 
 **Two figures that deliberately disagree**, both in `OutstandingReceivables`:
 
-| Method | For | Net of giro? |
-|---|---|---|
-| `total()` | the Piutang Usaha control account | **yes** — the ledger moved it |
-| `forCompany()` / `exposureFor()` | the credit check | **no** — it can still bounce |
+| Method | For | Net of giro? | Net of deposits held? |
+|---|---|---|---|
+| `total()` | the Piutang Usaha control account | **yes** — the ledger moved it | **no** — it never touched the account |
+| `forCompany()` / `exposureFor()` | the credit check | **no** — it can still bounce | **yes** — we already have the cash |
+
+The two columns pull opposite ways for the same reason. A giro is a promise
+that can bounce, so exposure keeps counting it; a deposit is money in the bank,
+so exposure stops. And the control account follows what was actually posted:
+the ledger moved a giro out of Piutang Usaha and never put a deposit into it.
 
 `SupplierLedger` carries the same split: `totalPayable()` subtracts our issued
 giro, `outstandingFor()` does not, because we still owe it.
@@ -778,16 +787,70 @@ in three times and triple the asset.
 
 Not built: cheques from a third party endorsed on to us, and partial clearing.
 
+### Uang muka pelanggan — money in before anything is owed
+
+| Function | Decides |
+|---|---|
+| `CustomerDepositRegister::receive` | Takes the money, into Kas or Bank, as a liability |
+| `CustomerDepositRegister::apply` | Spends some of it against one invoice |
+| `CustomerDepositRegister::refund` | Hands back what is left |
+| `OutstandingReceivables::depositsHeld` | The one definition of what is still ours to hold |
+| `DocumentPoster::customerDeposit*` | The three entries — see the posting table |
+
+The gap was never that a deposit could not be recorded — finance could always
+key in a payment with no invoice on it. It is that doing so posts **Cr Piutang
+Usaha**, so a customer who owes nothing and has paid ten million shows a
+receivable of *minus* ten million. The neraca then understates what customers
+owe and shows no liability at all, when we are holding their cash and have
+delivered nothing for it. Those are opposite sides of the sheet.
+
+```
+Pembayaran belum cocok   Dr Bank / Cr Piutang Usaha   a debt exists, we cannot
+                                                      yet say which
+Uang muka                Dr Bank / Cr Uang Muka       no debt exists yet
+```
+
+The distinction is **which question is open**, and staff will get it wrong, so
+the screen says which is which instead of assuming.
+
+**No draft and no posting step**, unlike every other document here. The event
+already happened somewhere else — the money is in the bank — and a draft would
+be cash in the account the books have not heard about, which is the condition a
+deposit register exists to prevent. Mistakes are unwound by refunding.
+
+**An application writes a payment entry** of its own kind. Four things need to
+know a deposit came off an invoice — the invoice's settlement, the ageing
+report, the statement, the portal — and all four already read
+`payment_entries`. A parallel table would mean teaching all four about a second
+source and getting one of them wrong. The separate kind exists because no cash
+moves that day, so the journal has to say something different.
+
+A **refund is a second movement, not a cancelled first one.** The money came in
+and went out again and the bank statement shows both; reversing the receipt
+would leave the reconciliation two movements short.
+
+Bounded twice on application: not more than the deposit holds, not more than
+the invoice owes. The second is the one that matters — overpaying pushes
+Piutang Usaha negative for that customer, the exact condition the document
+exists to prevent.
+
+`depositsHeld` filters on the arithmetic rather than the `status` column. The
+two cannot disagree today, but this figure proves a control account, and a
+control account that trusts a cached flag only proves the flag agrees with
+itself.
+
 ### Rekening koran pelanggan — the statement that settles an argument
 
 `CustomerStatement::build(company, period)` → opening balance, every movement
 in date order, closing balance.
 
-**It closes on the same figure the credit check and the ageing report use.**
-`OutstandingReceivables::forCompany()` is invoiced less paid less credited, and
-this lists exactly those three things one row at a time. Two rules that happen
-to agree today is not the same as one rule — and when a statement and an ageing
-report disagree about one customer, somebody has to work out which lied.
+**It closes on the same figure the ageing report uses** — invoiced less paid
+less credited, listed one row at a time. Two rules that happen to agree today is
+not the same as one rule, and when a statement and an ageing report disagree
+about one customer, somebody has to work out which lied.
+
+Credit exposure is lower by exactly the deposits held, and the screen says so
+rather than leaving two figures to be discovered.
 
 Three decisions that come from it being **sent out** rather than read by us:
 

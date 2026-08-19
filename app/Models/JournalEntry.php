@@ -45,6 +45,23 @@ class JournalEntry extends Model
 
     public const JENIS_PEMBAYARAN_PEMASOK = 'pembayaran_pemasok';
 
+    /** Money in before anything is owed: Dr Bank / Cr Uang Muka Pelanggan. */
+    public const JENIS_UANG_MUKA = 'uang_muka';
+
+    /**
+     * A deposit meeting the invoice it was taken for.
+     *
+     * Separate from JENIS_PEMBAYARAN_PELANGGAN because no cash moves: the debt
+     * is settled out of money already banked weeks ago. Sharing the jenis would
+     * make a deposit application look like a receipt on the day it was applied,
+     * and the bank reconciliation would go looking for a transfer that never
+     * happened.
+     */
+    public const JENIS_UANG_MUKA_DIPAKAI = 'uang_muka_dipakai';
+
+    /** A deposit handed back: Dr Uang Muka Pelanggan / Cr Kas or Bank. */
+    public const JENIS_UANG_MUKA_KEMBALI = 'uang_muka_kembali';
+
     /** A credit note: the sale unwound, and the goods back on the shelf. */
     public const JENIS_NOTA_KREDIT = 'nota_kredit';
 

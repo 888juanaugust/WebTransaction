@@ -383,6 +383,30 @@ final class DataInventory
             ],
 
             /*
+             * A deposit is a customer's money, so the row is about them by
+             * definition — but the columns that identify a person are the same
+             * ones as anywhere else. `referensi` carries their transfer
+             * reference, which on a personal account can be a name.
+             */
+            'customer_deposits' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['referensi', 'catatan', 'created_by'],
+                'bukan' => [
+                    'nomor', 'company_id', 'order_id', 'tanggal', 'jumlah_rupiah',
+                    'diterima_di', 'terpakai_rupiah', 'dikembalikan_rupiah', 'status',
+                ],
+            ],
+
+            'customer_deposit_movements' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'actor_id'],
+                'bukan' => [
+                    'customer_deposit_id', 'jenis', 'jumlah_rupiah', 'invoice_id',
+                    'payment_entry_id', 'tanggal',
+                ],
+            ],
+
+            /*
              * Fixed assets. Mostly corporate property, with one honest
              * exception: `nama` on a vehicle is usually its registration
              * plate, which identifies a vehicle and through it a company —

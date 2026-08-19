@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Billing\CustomerDepositRegister;
 use App\Domain\Billing\OutstandingReceivables;
+use App\Domain\Expenses\PaidFrom;
 use App\Domain\Giro\GiroRegister;
 use App\Domain\Payments\PaymentLedger;
 use App\Domain\Reporting\CustomerStatement;
@@ -22,9 +24,13 @@ use Tests\TestCase;
  * The statement a customer gets before they pay.
  *
  * The property that matters is not the layout: it is that this closes on the
- * same figure the ageing report and the credit check use. A statement that
- * disagrees with the ageing report about one customer means somebody has to
- * work out which of the two lied, and by then neither is trusted.
+ * same figure the ageing report uses. A statement that disagrees with the
+ * ageing report about one customer means somebody has to work out which of the
+ * two lied, and by then neither is trusted.
+ *
+ * Credit exposure is the one figure that deliberately differs, and only by
+ * deposits held — we cannot lose cash we are already holding, and no line on
+ * this page is the one a held deposit reduced.
  */
 class CustomerStatementTest extends TestCase
 {
@@ -59,6 +65,10 @@ class CustomerStatementTest extends TestCase
          * this lists those three things in date order, so the closing balance
          * is that subtraction done one row at a time. Two rules that happen to
          * agree today is not the same as one rule.
+         *
+         * The one thing that separates them is a deposit still held, which
+         * exposure subtracts and a statement does not — see the pair of tests
+         * below.
          */
         $this->invoice(30_000_000, '2026-08-05');
         $this->invoice(12_500_000, '2026-08-20');
@@ -250,6 +260,100 @@ class CustomerStatementTest extends TestCase
         $this->assertNotEmpty(array_filter(
             $table->catatan,
             fn (string $c) => str_contains($c, 'giro'),
+        ));
+    }
+
+    public function test_a_deposit_still_held_is_noted_but_never_netted_off(): void
+    {
+        /*
+         * The mirror of the giro rule, and it lands the other way round. A giro
+         * is a promise we have not banked; a deposit is money we have. Neither
+         * has been put against any invoice on this page, so neither reduces the
+         * balance — but the customer needs to see we are holding theirs, or the
+         * closing figure reads as money they still have to find.
+         */
+        $this->invoice(20_000_000, '2026-08-05');
+
+        app(CustomerDepositRegister::class)->receive(
+            company: $this->company,
+            jumlahRupiah: 8_000_000,
+            diterimaDi: PaidFrom::Bank,
+            tanggal: Carbon::parse('2026-08-06'),
+            actor: $this->finance,
+        );
+
+        $table = $this->statement->build(
+            $this->company,
+            Period::between('2026-08-01', '2026-08-31'),
+        );
+
+        $this->assertSame(20_000_000, $table->totals['saldo']);
+
+        $this->assertNotEmpty(array_filter(
+            $table->catatan,
+            fn (string $c) => str_contains($c, 'uang muka'),
+        ));
+    }
+
+    public function test_credit_exposure_is_lower_than_the_statement_by_the_deposit(): void
+    {
+        // Both figures are right and they are not the same figure. The
+        // statement says what these invoices come to; exposure says what we
+        // stand to lose, and we cannot lose cash we are already holding.
+        $this->invoice(20_000_000, '2026-08-05');
+
+        app(CustomerDepositRegister::class)->receive(
+            company: $this->company,
+            jumlahRupiah: 8_000_000,
+            diterimaDi: PaidFrom::Bank,
+            tanggal: Carbon::parse('2026-08-06'),
+            actor: $this->finance,
+        );
+
+        $table = $this->statement->build(
+            $this->company,
+            Period::between('2026-08-01', '2026-08-31'),
+        );
+
+        $exposure = app(OutstandingReceivables::class)->forCompany($this->company);
+
+        $this->assertSame(12_000_000, $exposure);
+        $this->assertSame($table->totals['saldo'] - 8_000_000, $exposure);
+    }
+
+    public function test_a_deposit_applied_to_an_invoice_shows_as_a_payment(): void
+    {
+        // Once it is against an invoice it is an ordinary settlement on this
+        // page, because that is exactly what the customer experienced.
+        $invoice = $this->invoice(20_000_000, '2026-08-05');
+
+        $deposit = app(CustomerDepositRegister::class)->receive(
+            company: $this->company,
+            jumlahRupiah: 8_000_000,
+            diterimaDi: PaidFrom::Bank,
+            tanggal: Carbon::parse('2026-08-06'),
+            actor: $this->finance,
+        );
+
+        app(CustomerDepositRegister::class)->apply(
+            $deposit,
+            $invoice,
+            8_000_000,
+            $this->finance,
+            Carbon::parse('2026-08-10'),
+        );
+
+        $table = $this->statement->build(
+            $this->company,
+            Period::between('2026-08-01', '2026-08-31'),
+        );
+
+        $this->assertSame(12_000_000, $table->totals['saldo']);
+
+        // And the note is gone: nothing is being held any more.
+        $this->assertEmpty(array_filter(
+            $table->catatan,
+            fn (string $c) => str_contains($c, 'uang muka'),
         ));
     }
 

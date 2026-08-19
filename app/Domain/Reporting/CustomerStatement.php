@@ -21,20 +21,29 @@ use Illuminate\Support\Carbon;
  * out, which is why it reads as a running account rather than a table of
  * balances.
  *
- * **It closes on the same figure the ageing report and the credit check use.**
- * `OutstandingReceivables::forCompany()` is invoiced less paid less credited,
- * and this lists exactly those three things in date order, so the closing
- * balance is that subtraction performed one row at a time. If a statement and
- * an ageing report disagree about one customer, somebody has to work out which
- * lied — so they are built on the same rule rather than two rules that happen
- * to agree today.
+ * **It closes on what the invoices say, one row at a time.** Billed, less paid,
+ * less credited, in date order — the same three things
+ * `OutstandingReceivables` counts and the same rule the ageing report is built
+ * on, rather than two rules that happen to agree today.
  *
- * **Giro is not a payment here either**, and this is the one place that
- * decision meets a customer face to face. Somebody who handed over a postdated
- * cheque believes they have paid; the invoice stays open until it clears. So
- * the paper is named in a note under the statement rather than shown as a
- * credit — leaving it out entirely is what starts the argument, and crediting
- * it is what makes the books claim money that is not in the bank.
+ * **Two things are named in a note rather than shown as a credit**, and both
+ * for the same reason: neither has been put against any invoice on this page,
+ * so there is no line here either of them reduced.
+ *
+ * A **giro** is the decision meeting a customer face to face. Somebody who
+ * handed over a postdated cheque believes they have paid; the invoice stays
+ * open until it clears. Leaving it out entirely is what starts the argument,
+ * and crediting it is what makes the books claim money that is not in the bank.
+ *
+ * A **deposit still held** is the mirror of that — money genuinely in our
+ * account that no invoice has claimed. It is named so the customer can see we
+ * have it, and it is not netted off, so the balance keeps meaning "what these
+ * invoices come to".
+ *
+ * Credit exposure differs from this closing balance by exactly the deposits
+ * held: we cannot lose cash we already have, so `forCompany()` subtracts them
+ * and this does not. That is the same asymmetry as giro, in the other
+ * direction.
  */
 class CustomerStatement
 {
@@ -226,6 +235,23 @@ class CustomerStatement
                 'Termasuk %s yang dijamin bilyet giro dan belum cair. Faktur tetap '
                 .'terbuka sampai gironya cair.',
                 Money::format($giro),
+            );
+        }
+
+        $uangMuka = $this->receivables->depositsHeld($company);
+
+        if ($uangMuka > 0) {
+            /*
+             * Not netted off the balance, for the same reason a deposit is not
+             * a payment: it has not been put against any invoice on this
+             * statement, so no line here would be the one it reduced. Saying
+             * the figure and saying it is theirs is what stops the customer
+             * reading the closing balance as money they still have to find.
+             */
+            $catatan[] = sprintf(
+                'Kami masih memegang uang muka %s dari Anda yang belum dipakai untuk faktur '
+                .'mana pun. Saldo di atas belum dikurangi jumlah ini.',
+                Money::format($uangMuka),
             );
         }
 

@@ -62,6 +62,13 @@ class LedgerReconciliation
                     .'dan giro yang kita terbitkan',
             ),
             new ControlAccountCheck(
+                kode: AccountCode::UANG_MUKA_PELANGGAN,
+                nama: 'Uang Muka Pelanggan',
+                buku: $this->ledger->balanceOf(AccountCode::UANG_MUKA_PELANGGAN),
+                subledger: $this->receivables->depositsHeld(null),
+                sumber: 'Uang muka yang sudah diterima, dikurangi yang sudah dipakai untuk faktur atau dikembalikan',
+            ),
+            new ControlAccountCheck(
                 kode: AccountCode::PIUTANG_GIRO,
                 nama: 'Piutang Giro',
                 buku: $this->ledger->balanceOf(AccountCode::PIUTANG_GIRO),

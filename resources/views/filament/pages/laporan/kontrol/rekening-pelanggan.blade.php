@@ -31,8 +31,10 @@
     </div>
 
     <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
-        Saldo akhirnya sama dengan angka yang dipakai pemeriksaan kredit dan laporan umur
-        piutang. Bilyet giro yang belum cair tidak mengurangi saldo — disebut sebagai catatan
-        di bawah tabel.
+        Saldo akhirnya adalah jumlah faktur, dikurangi pembayaran dan nota kredit — sama
+        dengan laporan umur piutang. Dua hal tidak mengurangi saldo dan hanya disebut sebagai
+        catatan di bawah tabel: bilyet giro yang belum cair, dan uang muka yang belum dipakai
+        untuk faktur mana pun. Pemeriksaan kredit memakai angka yang sudah dikurangi uang
+        muka, karena uang itu sudah ada di tangan kita.
     </p>
 </div>

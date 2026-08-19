@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Portal\Widgets;
 
+use App\Domain\Billing\OutstandingReceivables;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Money;
 use Filament\Widgets\StatsOverviewWidget;
@@ -30,7 +31,7 @@ class KreditTersedia extends StatsOverviewWidget
 
         $status = app(CreditChecker::class)->status($company);
 
-        return [
+        $stats = [
             Stat::make('Sisa limit kredit', Money::format($status->available()))
                 ->description('dari limit '.Money::format($status->limit))
                 ->color($status->available() > 0 ? 'primary' : 'danger'),
@@ -38,10 +39,28 @@ class KreditTersedia extends StatsOverviewWidget
             Stat::make('Terpakai', Money::format($status->outstanding + $status->committed))
                 ->description('faktur terbuka dan order berjalan')
                 ->color('gray'),
-
-            Stat::make('Termin pembayaran', $company->payment_terms_days.' hari')
-                ->description($company->nama)
-                ->color('gray'),
         ];
+
+        /*
+         * Only when there is one. A permanent "Rp 0" tile trains people to
+         * stop reading the row, and most buyers never pay a deposit.
+         *
+         * It earns its place when it is there: the deposit is already netted
+         * out of Terpakai above, so without this line a buyer sees a smaller
+         * figure than their invoices come to and has nothing to explain it.
+         */
+        $uangMuka = app(OutstandingReceivables::class)->depositsHeld($company);
+
+        if ($uangMuka > 0) {
+            $stats[] = Stat::make('Uang muka Anda', Money::format($uangMuka))
+                ->description('sudah kami terima, belum dipakai untuk faktur')
+                ->color('primary');
+        }
+
+        $stats[] = Stat::make('Termin pembayaran', $company->payment_terms_days.' hari')
+            ->description($company->nama)
+            ->color('gray');
+
+        return $stats;
     }
 }

@@ -33,6 +33,18 @@ class PaymentEntry extends Model
 
     public const KIND_WRITEOFF = 'writeoff';
 
+    /**
+     * A deposit being applied to an invoice.
+     *
+     * It is a payment entry because every consumer of this table — the invoice
+     * settlement, the ageing report, the customer statement, the portal — is
+     * asking "what has come off this invoice", and the answer is the same
+     * whether the money arrived today or three weeks ago. But no money moves
+     * on the day it is applied, so it posts a different journal: the cash was
+     * already banked when the deposit was taken.
+     */
+    public const KIND_DEPOSIT_APPLICATION = 'deposit_application';
+
     protected function casts(): array
     {
         return [

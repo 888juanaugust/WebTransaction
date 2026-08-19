@@ -114,6 +114,19 @@ final class AccountCode
 
     public const PPN_KELUARAN = '2-1200';
 
+    /**
+     * Money a customer has paid before anything was owed.
+     *
+     * Cash in hand, nothing earned — so it is a liability, not a receivable
+     * with a minus sign. Booking a down payment straight to Piutang Usaha
+     * understates both what customers owe and what we owe them, and on a
+     * balance sheet those are two different sides.
+     *
+     * It clears the day the deposit is applied to an invoice, or the day it is
+     * refunded. Whatever is left in it is money we are holding for somebody.
+     */
+    public const UANG_MUKA_PELANGGAN = '2-1300';
+
     // Modal
     public const MODAL_DISETOR = '3-1000';
 
@@ -265,6 +278,8 @@ final class AccountCode
                 'Barang sudah diterima, tagihan pemasok belum masuk. Idealnya kosong; sisanya adalah tagihan yang tidak pernah datang.'),
             self::posting(self::PPN_KELUARAN, 'PPN Keluaran', AccountType::Kewajiban, '2-0000',
                 'PPN yang dipungut dari pelanggan dan terutang ke negara.'),
+            self::posting(self::UANG_MUKA_PELANGGAN, 'Uang Muka Pelanggan', AccountType::Kewajiban, '2-0000',
+                'Uang pelanggan yang sudah diterima sebelum ada yang ditagih. Belum jadi pendapatan — masih utang kita ke mereka.'),
 
             self::header('3-0000', 'MODAL', AccountType::Modal),
             self::posting(self::MODAL_DISETOR, 'Modal Disetor', AccountType::Modal, '3-0000'),
