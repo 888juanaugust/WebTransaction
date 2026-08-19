@@ -181,6 +181,7 @@ Not to argue for it — so the comparison is like for like.
 | Sales/margin, receivables ageing, lapsed customers, stock turnover — each tied to a ledger account | Built and tested |
 | Bank reconciliation against a statement, with the difference refused until explained | Built and tested |
 | Operating expenses on their own accounts, recorded from a screen and reversed rather than edited | Built and tested |
+| Customer statement of account, tying to the same figure as the credit check | Built and tested |
 | Multi-currency, fixed assets and depreciation, more than one bank account | **Not built** |
 
 The summary this file was written with — "tuned to your trade, no accounting

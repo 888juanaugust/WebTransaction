@@ -5,7 +5,7 @@ prices, nothing to look at. That is deliberate (a seeded price is a price
 nobody approved), and it also makes the system impossible to show to anybody.
 
 `DemoSeeder` fills that gap: a believable day in the life of the business, with
-every dashboard queue populated and a real variance waiting to be found. Thirteen
+every dashboard queue populated and a real variance waiting to be found. Fourteen
 minutes, start to finish.
 
 ---
@@ -61,7 +61,7 @@ has paid everything and their invoice screen is empty.
 
 ---
 
-## 3. The thirteen-minute script
+## 3. The fourteen-minute script
 
 Tell it as a day in the business, not as a tour of features. The order below
 builds on itself.
@@ -274,6 +274,21 @@ sold at cost so far. On the catalogue screen, finance and the owner can switch
 on **HPP rata-rata** — the moving average cost per part. Sales cannot see it,
 because cost plus selling price is margin.
 
+### The statement that settles an argument — 1 min
+
+**Laporan → Rekening pelanggan.** Pick CV Sinar Distribusi.
+
+> "Every B2B customer's bookkeeper has a figure, and it never matches yours.
+> This is the document that settles it."
+
+Opening balance, every invoice and payment in date order, closing balance —
+and the yellow note: Rp 28,5 juta of that is covered by a giro that has not
+cleared, so the invoices stay open. **Cetak untuk pelanggan** produces the
+version you email.
+
+> "It closes on exactly the number the credit check uses. If this and the
+> ageing report ever disagreed, you'd have to work out which one lied."
+
 ### The four reports — 2 min
 
 Open **Laporan**. Four questions, one screen each, every one downloadable as a
@@ -338,7 +353,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1231 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1259 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

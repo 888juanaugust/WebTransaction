@@ -66,6 +66,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
+| `/admin/laporan/rekening-pelanggan` | Rekening pelanggan | Sales, Finance, Owner | One customer's account, and the statement to send them |
 | `/admin/laporan/pelanggan-pasif` | Pelanggan pasif | Sales, Finance, Owner | Customers who broke their own ordering rhythm |
 | `/admin/laporan/perputaran-stok` | Perputaran stok | Finance, Owner | Dead stock, ranked by the money stuck in it |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
@@ -73,6 +74,7 @@ otherwise every surface falls back to the wordmark.
 | `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
 | `/dokumen/pesanan-pembelian/{po}` | Pesanan pembelian | Finance, Owner | The PO as the supplier receives it. Not printable as a draft |
 | `/dokumen/retur-pembelian/{purchaseReturn}` | Nota retur | Finance, Owner | Goes back with the goods. **We** issue it, not the supplier. Drafts are a 404 |
+| `/dokumen/rekening-pelanggan/{company}` | Rekening koran | Sales, Finance, Owner | The statement, print-styled. Window comes from the query string |
 | `/dokumen/faktur-pajak/{export}` | Ekspor faktur pajak | Finance, Owner | The filing file, served from disk as written — never regenerated |
 
 The accounting screens are behind `canSeeBooks()` — except the reconciliation
@@ -80,12 +82,12 @@ desk, which is behind `canReconcileBank()` because it posts. They carry cost and
 margin — everything Sales and Warehouse are kept away from elsewhere — and the
 route refuses, not just the menu item.
 
-The four report screens are behind `canSeeReports()`, then gated a second time
+The five report screens are behind `canSeeReports()`, then gated a second time
 per report: Sales reach the sales report but its HPP and margin columns are
 absent from both the screen and the CSV, since cost beside selling price is
 margin. They reach ageing too — they already see credit data, because they
 cannot place an order without it. Perputaran stok is `canSeeCost()`, so they
-do not see it at all. Warehouse see none of the four.
+do not see it at all. Warehouse see none of the five.
 
 **Dashboard queues** (`app/Filament/Widgets/`):
 
@@ -732,6 +734,33 @@ in three times and triple the asset.
 
 Not built: cheques from a third party endorsed on to us, and partial clearing.
 
+### Rekening koran pelanggan — the statement that settles an argument
+
+`CustomerStatement::build(company, period)` → opening balance, every movement
+in date order, closing balance.
+
+**It closes on the same figure the credit check and the ageing report use.**
+`OutstandingReceivables::forCompany()` is invoiced less paid less credited, and
+this lists exactly those three things one row at a time. Two rules that happen
+to agree today is not the same as one rule — and when a statement and an ageing
+report disagree about one customer, somebody has to work out which lied.
+
+Three decisions that come from it being **sent out** rather than read by us:
+
+- **Charges and payments are separate columns**, never one signed one. This is
+  read by somebody else's bookkeeper, and the misreading is always the one
+  where they think they owe less.
+- **Giro is named in a note, never credited.** This is the one place the "a
+  giro is not a payment" rule meets a customer who believes their cheque paid
+  the invoice. Crediting it makes the books claim money that is not in the
+  bank; leaving it out entirely is what starts the argument.
+- **No cost, no margin, no credit limit.** The first two are never a customer's
+  business; the third is ours to set rather than theirs to negotiate against.
+
+A reversed payment appears as a charge, dated when the reversal was made rather
+than back on the payment it undoes — so it lands in the month somebody noticed
+instead of silently restating a statement already sent.
+
 ### Beban — the expense side of the books
 
 | Function | Decides |
@@ -899,8 +928,6 @@ All idempotent — assume they run twice.
   posts to it, so the neraca understates assets and the laba rugi overstates
   profit by the depreciation charge — which matters, because that is the figure
   PPh is calculated on
-- Statement of account: one customer's invoices, credits, payments and giro on
-  a page, which is what they ask for before they pay
 - Uang muka pelanggan — a deposit against a specific order rather than the
   floating unallocated credit an unmatched payment currently becomes
 - More than one bank account — see the reconciliation section above

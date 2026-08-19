@@ -6,6 +6,7 @@ use App\Http\Controllers\FakturController;
 use App\Http\Controllers\FakturExportController;
 use App\Http\Controllers\NotaKreditController;
 use App\Http\Controllers\PesananPembelianController;
+use App\Http\Controllers\RekeningPelangganController;
 use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\XenditWebhookController;
@@ -110,6 +111,19 @@ Route::middleware(['web', 'auth:web'])
 Route::middleware(['web', 'auth:customer'])
     ->get('/portal/dokumen/nota-kredit/{creditNote}', [NotaKreditController::class, 'pelanggan'])
     ->name('portal.dokumen.nota-kredit');
+
+/*
+ * Rekening koran pelanggan — the statement a customer gets before they pay.
+ *
+ * Staff only, and no portal twin. A buyer's own account is already on their
+ * portal dashboard; this is the version somebody sends with a covering
+ * message when the two sides disagree about a figure. Its window comes from
+ * the query string, because unlike a faktur this document has no period of
+ * its own.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/rekening-pelanggan/{company}', RekeningPelangganController::class)
+    ->name('dokumen.rekening-pelanggan');
 
 /*
  * Pesanan pembelian — the first of the three print documents that travels
