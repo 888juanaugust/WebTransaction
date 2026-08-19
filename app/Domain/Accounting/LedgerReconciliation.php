@@ -58,7 +58,8 @@ class LedgerReconciliation
                 nama: 'Utang Usaha',
                 buku: $this->ledger->balanceOf(AccountCode::UTANG_USAHA),
                 subledger: $this->suppliers->totalPayable(),
-                sumber: 'Tagihan pemasok, dikurangi pembayaran, retur pembelian dan giro yang kita terbitkan',
+                sumber: 'Tagihan pemasok, dikurangi pembayaran, retur pembelian, nota kredit pemasok '
+                    .'dan giro yang kita terbitkan',
             ),
             new ControlAccountCheck(
                 kode: AccountCode::PIUTANG_GIRO,

@@ -367,6 +367,22 @@ final class DataInventory
             ],
 
             /*
+             * Supplier credit notes. `alasan` is mandatory free text about a
+             * commercial dispute, and free text on a dispute names people the
+             * same way a customer credit note's does — who agreed the price,
+             * who rang about it.
+             */
+            'supplier_credit_notes' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['alasan', 'catatan', 'created_by', 'posted_by'],
+                'bukan' => [
+                    'nomor', 'supplier_id', 'supplier_bill_id', 'tanggal',
+                    'nomor_nota_supplier', 'account_id', 'dasar_rupiah', 'ppn_rupiah',
+                    'ada_faktur_pajak_retur', 'total_rupiah', 'status', 'posted_at',
+                ],
+            ],
+
+            /*
              * Fixed assets. Mostly corporate property, with one honest
              * exception: `nama` on a vehicle is usually its registration
              * plate, which identifies a vehicle and through it a company —

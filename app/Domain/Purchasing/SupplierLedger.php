@@ -10,6 +10,7 @@ use App\Models\Giro;
 use App\Models\PurchaseReturn;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
+use App\Models\SupplierCreditNote;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
 use DateTimeInterface;
@@ -170,7 +171,8 @@ class SupplierLedger
     {
         return $this->billed($supplier->id)
             - $this->paid($supplier->id)
-            - $this->returned($supplier->id);
+            - $this->returned($supplier->id)
+            - $this->credited($supplier->id);
     }
 
     /**
@@ -192,6 +194,7 @@ class SupplierLedger
         return $this->billed(null)
             - $this->paid(null)
             - $this->returned(null)
+            - $this->credited(null)
             - $this->giroIssued();
     }
 
@@ -239,6 +242,27 @@ class SupplierLedger
      * on that — the day a draft shows a provisional figure on screen, this is
      * the line that stops the figure reaching the books.
      */
+    /**
+     * Credit notes the supplier issued: a price corrected, no goods moved.
+     *
+     * A fourth term, and it has to be here for the same reason the third one
+     * does — the bill's total is not editable by anybody, so the only way a
+     * corrected price reaches the payable is as a separate document. Miss it
+     * and Utang Usaha drifts from the subledger every time a supplier admits
+     * they overcharged.
+     *
+     * Drafts excluded: a note somebody typed while querying it with the
+     * supplier is not yet an agreement, and letting it reduce a payable would
+     * show a debt as settled on the strength of a phone call.
+     */
+    private function credited(?int $supplierId): int
+    {
+        return (int) SupplierCreditNote::query()
+            ->posted()
+            ->when($supplierId !== null, fn ($q) => $q->where('supplier_id', $supplierId))
+            ->sum('total_rupiah');
+    }
+
     private function returned(?int $supplierId): int
     {
         return (int) PurchaseReturn::query()

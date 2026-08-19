@@ -294,6 +294,28 @@ and it says the month was already done rather than charging it twice.
 On **Neraca saldo**, Akumulasi Penyusutan sits under the assets with a negative
 balance, and both new control accounts tie to the register.
 
+### The supplier who overcharged — 1 min
+
+**Pembelian → Nota kredit pemasok.** One draft: PT Anugerah Sparepart, against
+TP-202608-0001, Rp 1.332.000 including PPN Rp 132.000.
+
+> "The three-way match caught them billing above the agreed price. They agreed.
+> Now what? The goods are on the shelf and staying there — nothing is going
+> back. So this is not a return."
+
+Point at the badge before posting it.
+
+> "A draft is a payable that is still too high. We know about the credit and
+> the books do not. That is what the badge counts."
+
+**Posting** → confirm. The notification names the amount the payable fell by.
+
+> "Utang usaha down by exactly that. Stock: untouched. Not one movement."
+
+On **Buku besar → Neraca saldo**, Utang Usaha still ties to the supplier
+subledger, and Selisih Harga Pembelian — the account that took the overcharge
+when the bill was posted — has had it taken back out.
+
 ### The statement that settles an argument — 1 min
 
 **Laporan → Rekening pelanggan.** Pick CV Sinar Distribusi.

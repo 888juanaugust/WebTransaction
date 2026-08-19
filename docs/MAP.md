@@ -49,6 +49,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
 | `/admin/retur-pembelian` | Retur pembelian | Finance, Owner | Goods back to a supplier. Badge counts returns they have not acknowledged |
+| `/admin/nota-kredit-pemasok` | Nota kredit pemasok | Finance, Owner | A supplier knocking money off with **no goods moving**. Badge counts drafts nobody has posted |
 | `/admin/giro` | Bilyet giro | Finance, Owner | Postdated cheques both ways. Badge counts giro that can be banked today |
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
@@ -416,8 +417,49 @@ Under the PPN rules the nota retur is issued by the **buyer**, so the printed
 document carries our number and the supplier's credit note comes back against
 it. `nomor_nota_kredit_supplier` sitting empty is the sidebar badge.
 
-Not built: a supplier knocking money off without goods moving. That is a credit
-against the bill rather than a return, and it needs its own document.
+A supplier knocking money off without goods moving is **not** this document —
+it is a nota kredit pemasok, below.
+
+### Nota kredit pemasok — money off, nothing moving
+
+| Function | Decides |
+|---|---|
+| `SupplierCreditNoteIssuer::draft` | Records the agreement. Posts nothing |
+| `SupplierCreditNoteIssuer::post` | The entry, and the point the payable actually falls |
+| `SupplierCreditNoteIssuer::discard` | Throws a draft away — there is nothing to reverse |
+| `DocumentPoster::supplierCreditNotePosted` | Dr Utang Usaha / Cr the named account + Cr PPN Masukan |
+| `SupplierLedger::outstandingFor` | Subtracts posted credits from what a bill still owes |
+
+The three-way match finds a supplier who billed more than was agreed. Until now
+the only instrument for that was a purchase return, which moves stock — and
+stock that never moved. This is the document for the other half: the price was
+wrong, the goods are on the shelf and staying there.
+
+```
+Dr Utang Usaha                 the whole credit, PPN included
+  Cr Selisih Harga Pembelian   the part that is not tax
+  Cr PPN Masukan               only where they issued a faktur pajak retur
+```
+
+**No stock movement of any kind.** That is the entire distinction from a retur
+pembelian, and the screen says so in both the empty state and the posting
+confirmation, because picking the wrong one of the two is the mistake this
+document invites.
+
+The account credited is chosen, not assumed, but the choice is narrowed: the
+issuer refuses Persediaan (that would be a return wearing a disguise), Utang
+Usaha (both sides of one entry), header accounts, and anything that is not an
+asset or expense. **The screen offers exactly the set the issuer accepts** —
+offering a choice that is then rejected is a screen that lied.
+
+Against a specific bill, the credit may not exceed what that bill still owes,
+and that is checked **at posting, not at drafting**: a bill can be paid down
+between the two, and the number that matters is the one at the moment the books
+change.
+
+Draft is a real state, not a formality. A draft is a payable still overstated —
+the supplier has agreed and the books have not heard — which is why it is what
+the sidebar badge counts.
 
 ### Costing — moving average, frozen at the movement
 
@@ -511,7 +553,7 @@ inventory is the money arriving in cost of sales. That is what this does.
 | `Ledger::balanceOf` | One account, in its own normal direction, optionally as at a date |
 | `TrialBalance::asOf` | Neraca saldo, every postable account, in one query |
 | `DocumentPoster::*` | **Every posting rule in the system**, in one file |
-| `LedgerReconciliation::checks` | The four control accounts against the subledgers they summarise |
+| `LedgerReconciliation::checks` | Every control account against the subledger it summarises |
 
 The rules, all of them:
 
@@ -523,6 +565,7 @@ The rules, all of them:
 | Tagihan pemasok | Dr Utang Belum Ditagih + Dr Selisih Harga + Dr PPN Masukan / Cr Utang Usaha |
 | Pembayaran pelanggan | Dr Bank / Cr Piutang Usaha |
 | Pembayaran pemasok | Dr Utang Usaha / Cr Bank |
+| Nota kredit pemasok | Dr Utang Usaha / Cr the account named on the note + Cr PPN Masukan |
 
 **Closing the books.**
 

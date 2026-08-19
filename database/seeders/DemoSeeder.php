@@ -20,6 +20,7 @@ use App\Domain\Payments\PaymentLedger;
 use App\Domain\Purchasing\GoodsReceiptPoster;
 use App\Domain\Purchasing\PurchaseOrderFlow;
 use App\Domain\Purchasing\SupplierBillPoster;
+use App\Domain\Purchasing\SupplierCreditNoteIssuer;
 use App\Domain\Uom\Unit;
 use App\Models\Company;
 use App\Models\CustomerUser;
@@ -100,6 +101,7 @@ class DemoSeeder extends Seeder
         $this->ordersInEveryState($companies, $warehouse, $staff);
         $this->purchaseChainWithAVariance($supplier, $warehouse, $staff['finance']);
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
+        $this->supplierPriceCorrection($supplier, $staff['finance']);
         $this->fixedAssets($staff['finance']);
         $this->monthlyOverheads($staff['finance']);
         $this->bankStatements($companies, $staff['finance']);
@@ -508,6 +510,40 @@ class DemoSeeder extends Seeder
             actor: $finance,
             bill: $bill,
             diserahkan: now()->subDays(4),
+        );
+    }
+
+    /**
+     * The supplier admitting the price was wrong.
+     *
+     * The other half of the variance the three-way match finds. That screen
+     * shows the bill came in 5% over what the goods were received at; this is
+     * the document that settles it once the supplier agrees — and it is left
+     * as a **draft** on purpose, so the demo can show that a payable stays
+     * overstated until somebody posts it.
+     */
+    private function supplierPriceCorrection(Supplier $supplier, User $finance): void
+    {
+        $bill = SupplierBill::query()
+            ->where('supplier_id', $supplier->id)
+            ->where('status', SupplierBill::STATUS_OPEN)
+            ->orderByDesc('total_rupiah')
+            ->first();
+
+        if ($bill === null) {
+            return;
+        }
+
+        app(SupplierCreditNoteIssuer::class)->draft(
+            supplier: $supplier,
+            tanggal: now()->subDays(2),
+            accountCode: AccountCode::SELISIH_HARGA_PEMBELIAN,
+            dasarRupiah: 1_200_000,
+            alasan: 'Harga per pcs dikoreksi sesuai kesepakatan awal',
+            actor: $finance,
+            bill: $bill,
+            ppnRupiah: 132_000,
+            nomorNotaSupplier: 'CN-AS-2026-0117',
         );
     }
 

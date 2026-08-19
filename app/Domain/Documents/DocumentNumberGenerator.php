@@ -50,6 +50,8 @@ class DocumentNumberGenerator
 
     public const SCOPE_FIXED_ASSET = 'fixed_asset';
 
+    public const SCOPE_SUPPLIER_CREDIT_NOTE = 'supplier_credit_note';
+
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
@@ -173,6 +175,18 @@ class DocumentNumberGenerator
     public function nextExpenseNumber(?DateTimeInterface $date = null): string
     {
         return $this->next(self::SCOPE_EXPENSE, 'BB', $date);
+    }
+
+    /**
+     * Nota Kredit Pemasok: NKP-202608-0001.
+     *
+     * Ours, for filing — the supplier's own number goes in
+     * `nomor_nota_supplier`. Unlike a nota retur, this document was issued by
+     * them, so our number is a reference rather than the identity of the paper.
+     */
+    public function nextSupplierCreditNoteNumber(?DateTimeInterface $date = null): string
+    {
+        return $this->next(self::SCOPE_SUPPLIER_CREDIT_NOTE, 'NKP', $date);
     }
 
     /** Aktiva Tetap: AT-202608-0001. */

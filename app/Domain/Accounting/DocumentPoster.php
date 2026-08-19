@@ -21,6 +21,7 @@ use App\Models\PurchaseReturn;
 use App\Models\StockMovement;
 use App\Models\StockOpname;
 use App\Models\SupplierBill;
+use App\Models\SupplierCreditNote;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
 use DateTimeInterface;
@@ -43,7 +44,8 @@ use DateTimeInterface;
  *
  *   Piutang Usaha           = invoices, less payments, less credit notes
  *   Utang Usaha             = supplier bills, less payments, less purchase
- *                             returns of goods those bills covered
+ *                             returns of goods those bills covered, less
+ *                             credit notes the supplier issued for a price
  *   Persediaan              = total value in product_costs. Transfers move
  *                             goods between warehouses and post nothing:
  *                             product_costs is keyed by SKU, so the total is
@@ -570,6 +572,47 @@ class DocumentPoster
         $draft
             ->debit($debit, $amount, $expense->keterangan, supplier: $expense->supplier)
             ->kredit($kredit, $amount, $expense->keterangan, supplier: $expense->supplier);
+
+        return $this->ledger->post($draft, $actor);
+    }
+
+    /**
+     * A supplier's credit note.
+     *
+     *   Dr Utang Usaha        total
+     *     Cr <akun>           the part being unwound
+     *     Cr PPN Masukan      only where a faktur pajak retur exists
+     *
+     * The mirror image of a purchase return, minus the goods — and that
+     * absence is the whole point. A return credits Persediaan because cartons
+     * left the shelf; this touches no stock at all, which is what makes it the
+     * right instrument for a price the supplier agreed was wrong.
+     *
+     * PPN comes off only against a faktur pajak retur — and that needs no
+     * branch here. Without one the amount is nil, and `JournalDraft` drops a
+     * nil line, so the entry is simply two lines instead of three. Guarding it
+     * with an `if` would add a path nothing exercises.
+     *
+     * Why nil is right in that case: input tax on a bill with no faktur was
+     * never credited in the first place. It went straight to expense, so there
+     * is nothing on PPN Masukan to take back.
+     */
+    public function supplierCreditNotePosted(SupplierCreditNote $note, User $actor): JournalEntry
+    {
+        $supplier = $note->supplier;
+
+        $draft = JournalDraft::for(
+            $note,
+            JournalEntry::JENIS_NOTA_KREDIT_PEMASOK,
+            "Nota kredit pemasok {$note->nomor} — {$note->alasan}",
+            $note->tanggal,
+        )
+            ->debit(AccountCode::UTANG_USAHA, (int) $note->total_rupiah, $supplier?->nama, supplier: $supplier)
+            ->kredit($note->account->kode, (int) $note->dasar_rupiah, $note->alasan, supplier: $supplier)
+            // No branch on whether there is a faktur retur: JournalDraft drops
+            // a nil line, so a note without one simply posts two lines. The
+            // branch would be an untested path guarding against nothing.
+            ->kredit(AccountCode::PPN_MASUKAN, (int) $note->ppn_rupiah, 'PPN masukan diretur', supplier: $supplier);
 
         return $this->ledger->post($draft, $actor);
     }

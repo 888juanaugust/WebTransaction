@@ -83,6 +83,9 @@ class JournalEntry extends Model
      */
     public const JENIS_BEBAN = 'beban';
 
+    /** A supplier's credit note: the payable falls, no goods move. */
+    public const JENIS_NOTA_KREDIT_PEMASOK = 'nota_kredit_pemasok';
+
     /** Buying something the business uses rather than sells. */
     public const JENIS_AKTIVA_TETAP = 'aktiva_tetap';
 

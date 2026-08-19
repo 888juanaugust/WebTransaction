@@ -158,6 +158,7 @@ class Jurnal extends Page implements HasTable
             JournalEntry::JENIS_NOTA_KREDIT => 'Nota kredit',
             JournalEntry::JENIS_HPP_RETUR => 'Harga pokok retur',
             JournalEntry::JENIS_RETUR_PEMBELIAN => 'Retur pembelian',
+            JournalEntry::JENIS_NOTA_KREDIT_PEMASOK => 'Nota kredit pemasok',
             JournalEntry::JENIS_BEBAN => 'Beban',
             JournalEntry::JENIS_AKTIVA_TETAP => 'Aktiva tetap',
             JournalEntry::JENIS_PENYUSUTAN => 'Penyusutan',
