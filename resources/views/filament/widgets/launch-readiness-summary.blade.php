@@ -1,6 +1,11 @@
 {{--
     Shown only until the list is clear. See the widget class for why there is
     no finished state to render.
+
+    The <x-filament-widgets::widget> wrapper is not decoration: it is the only
+    thing that applies $columnSpan to the dashboard grid. A view whose root is
+    its own div gets `grid-column: auto` and lands beside its neighbour at half
+    width, however emphatically the class declares 'full'.
 --}}
 @php
     use App\Domain\Launch\LaunchCheckKind;
@@ -11,6 +16,7 @@
     $more = $this->moreCount();
 @endphp
 
+<x-filament-widgets::widget>
 <div class="rounded-xl border border-warning-300 bg-warning-50 p-4
             dark:border-warning-500/30 dark:bg-warning-500/10">
     <div class="flex items-start gap-3">
@@ -76,3 +82,4 @@
         </div>
     </div>
 </div>
+</x-filament-widgets::widget>

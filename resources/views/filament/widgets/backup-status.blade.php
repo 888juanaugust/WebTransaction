@@ -1,6 +1,10 @@
 {{--
     Shown only when something is wrong. See the widget class for why there is
     no healthy state to render.
+
+    The <x-filament-widgets::widget> wrapper is what applies $columnSpan to the
+    dashboard grid. Without it this rendered at `grid-column: auto` — half
+    width, beside its neighbour — while the class declared 'full'.
 --}}
 @php
     use App\Domain\Backup\BackupHealth;
@@ -9,6 +13,8 @@
     $state = $health->state();
     $danger = in_array($state, [BackupHealth::NEVER, BackupHealth::FAILING], true);
 @endphp
+
+<x-filament-widgets::widget>
 
 <div @class([
     'rounded-xl border p-4',
@@ -53,3 +59,4 @@
         </div>
     </div>
 </div>
+</x-filament-widgets::widget>
