@@ -52,15 +52,55 @@ class LaunchReadiness
 
     private const PLACEHOLDER_PARTNER_PREFIX = 'Nama Mitra';
 
+    /** @var list<LaunchCheck>|null */
+    private ?array $memo = null;
+
     public function __construct(private readonly LedgerReconciliation $ledger) {}
 
-    /** @return list<LaunchCheck> */
+    /**
+     * @return list<LaunchCheck>
+     *
+     * Computed once per request. The dashboard widget asks whether to show
+     * itself and then asks again for what to show, and the page asks three
+     * more times from its own template — while the password check runs bcrypt
+     * once per staff account, which is deliberately slow. Bound `scoped` in
+     * AppServiceProvider so a queue worker does not answer next week's
+     * question from a figure it read on Monday.
+     */
     public function checks(): array
     {
-        return [
+        return $this->memo ??= [
             ...$this->automatic(),
             ...$this->attested(),
         ];
+    }
+
+    /** Drop the cache — for tests, and for anything that changes an answer. */
+    public function forget(): void
+    {
+        $this->memo = null;
+    }
+
+    /**
+     * What is still in the way, worst first.
+     *
+     * Failing checks before unattested ones: a check that fails is a fact
+     * about the system right now, where an unattested item may only mean
+     * nobody has recorded a thing that was done months ago.
+     *
+     * @return list<LaunchCheck>
+     */
+    public function outstandingChecks(): array
+    {
+        $failing = array_values(array_filter($this->checks(), fn (LaunchCheck $c) => ! $c->lulus));
+
+        usort($failing, fn (LaunchCheck $a, LaunchCheck $b) => match (true) {
+            $a->jenis === $b->jenis => 0,
+            $a->jenis === LaunchCheckKind::Otomatis => -1,
+            default => 1,
+        });
+
+        return $failing;
     }
 
     /** How many are still outstanding. The number the screen leads with. */

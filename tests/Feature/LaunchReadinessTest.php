@@ -433,9 +433,17 @@ class LaunchReadinessTest extends TestCase
         }
     }
 
+    /**
+     * The list is memoised per request, and a test changes the world between
+     * two looks at it in a way a real request never does — config is settled
+     * at boot. So each look starts fresh.
+     */
     private function check(string $kunci): LaunchCheck
     {
-        foreach (app(LaunchReadiness::class)->checks() as $check) {
+        $readiness = app(LaunchReadiness::class);
+        $readiness->forget();
+
+        foreach ($readiness->checks() as $check) {
             if ($check->kunci === $kunci) {
                 return $check;
             }

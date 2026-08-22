@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Domain\Backup\BackupCipher;
 use App\Domain\Backup\DatabaseDumper;
 use App\Domain\Backup\FileArchiver;
+use App\Domain\Launch\LaunchReadiness;
 use App\Domain\Payments\LocalVirtualAccountGateway;
 use App\Domain\Payments\VirtualAccountGateway;
 use App\Domain\Payments\XenditVirtualAccountGateway;
@@ -68,6 +69,17 @@ class AppServiceProvider extends ServiceProvider
          * of pricing next week's orders from a version it read on Monday.
          */
         $this->app->scoped(PriceResolver::class);
+
+        /*
+         * One launch checklist per request, for the same reason.
+         *
+         * The dashboard widget asks whether to show itself and then asks again
+         * for what to show; the page asks three more times from its template.
+         * Each pass runs bcrypt once per staff account, which is deliberately
+         * slow. `scoped` rather than `singleton` so a queue worker does not
+         * hold Monday's answer all week.
+         */
+        $this->app->scoped(LaunchReadiness::class);
 
         /*
          * VA provisioning talks to Xendit only when there is a key to talk

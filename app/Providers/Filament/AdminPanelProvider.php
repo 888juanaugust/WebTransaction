@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use App\Filament\Widgets\AccountsAwaitingApproval;
 use App\Filament\Widgets\BackupStatus;
 use App\Filament\Widgets\GiroDue;
+use App\Filament\Widgets\LaunchReadinessSummary;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
@@ -61,7 +62,13 @@ class AdminPanelProvider extends PanelProvider
              * no prices, the finance queues show no picking work.
              */
             ->widgets([
-                // Above the work queues, and silent unless something is wrong.
+                /*
+                 * Above the work queues, and silent unless something is wrong.
+                 * The launch checklist goes first and goes away for good once
+                 * the list is clear — before launch it is the only thing on
+                 * this page that matters.
+                 */
+                LaunchReadinessSummary::class,
                 BackupStatus::class,
                 OrdersAwaitingApproval::class,
                 AccountsAwaitingApproval::class,

@@ -105,6 +105,14 @@ do not see it at all. Warehouse see none of the five.
 | `OverdueInvoices` | Who is late, by age bucket |
 | `GiroDue` | **Silent when nothing is due.** Giro to bank today, and giro of ours that must be funded |
 | `BackupStatus` | **Owner only, and silent when healthy.** Appears above the queues when backups are stale, failing, or still on this machine |
+| `LaunchReadinessSummary` | **Owner only, and gone for good once the list is clear.** The count and the first four items, above everything else — before launch there is nothing on this page that matters more |
+
+Two of the widgets are silent by design, and it is the same reasoning both
+times: a panel that is always there stops being read within a week, and then it
+is decoration on the one morning it turns red. `LaunchReadinessSummary` takes
+that furthest — it is not a launch ceremony but a statement about the system's
+state now, so it comes back if a backup stops running or somebody rotates a key
+to a development one.
 
 ### Buyer portal — customers, `customer` guard against `customer_users`
 

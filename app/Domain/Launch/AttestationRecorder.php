@@ -36,6 +36,13 @@ class AttestationRecorder
             ['attested_by' => $actor->id, 'attested_at' => now(), 'catatan' => $catatan],
         );
 
+        /*
+         * The checklist is memoised per request, and this very request is
+         * about to re-render it. Without this the owner attests an item and
+         * watches it stay red.
+         */
+        app(LaunchReadiness::class)->forget();
+
         $this->audit->log(
             action: 'launch_item_attested',
             subject: $attestation,
@@ -75,6 +82,8 @@ class AttestationRecorder
         );
 
         $attestation->delete();
+
+        app(LaunchReadiness::class)->forget();
     }
 
     /**
