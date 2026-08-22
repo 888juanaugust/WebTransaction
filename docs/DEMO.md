@@ -294,6 +294,42 @@ and it says the month was already done rather than charging it twice.
 On **Neraca saldo**, Akumulasi Penyusutan sits under the assets with a negative
 balance, and both new control accounts tie to the register.
 
+### The parts about to run out — 2 min
+
+**Gudang → Titik pesan ulang.** Two rows, both under PT Anugerah Sparepart: the
+alternator and the starter motor, 8 on the shelf and 2 already promised.
+
+> "Eight in stock sounds fine. Six is the real number — two are on a confirmed
+> order and they are leaving. This is the column that stops 'but we have eight
+> of them'."
+
+Point at the **Titik** column and the words under it.
+
+> "The reorder point is normally calculated: how fast it actually sells, times
+> how long that supplier actually takes to deliver, plus a fortnight of buffer.
+> Both measured, neither typed. But this business has traded a fortnight, so
+> there is nothing to measure yet — every part looks like it sells almost
+> nothing. So for these two, somebody typed what they know. In six months the
+> manual figures come off and the measured ones take over."
+
+Then **Saran pesan**: 4 dus, 16 PCS.
+
+> "Whole cartons, because that is how the supplier sells. Suggesting 14 pieces
+> of something that comes four to a box is a suggestion nobody can place."
+
+**Buat draf PO** → pick the warehouse → it lands you inside the draft.
+
+> "Both lines, in dus, priced from what we last actually paid. Still a draft —
+> nobody has committed to anything, and the buyer checks the prices before it
+> goes."
+
+Go back to **Titik pesan ulang**. It is empty.
+
+> "That is the important bit. A draft counts as stock on order, so those parts
+> came straight off the list. Without that, two people on the same morning
+> raise two orders for one shortage — and you have twice the warehouse and
+> twice the money in it."
+
 ### The customer who paid first — 1 min
 
 **Penjualan → Uang muka.** Two: Rp 5 juta cash from Bengkel Jaya Motor, and

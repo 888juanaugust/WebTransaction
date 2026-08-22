@@ -52,6 +52,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/nota-kredit-pemasok` | Nota kredit pemasok | Finance, Owner | A supplier knocking money off with **no goods moving**. Badge counts drafts nobody has posted |
 | `/admin/giro` | Bilyet giro | Finance, Owner | Postdated cheques both ways. Badge counts giro that can be banked today |
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
+| `/admin/titik-pesan-ulang` | Titik pesan ulang | Finance, Owner | What is running out, grouped by supplier, ending in a draft PO |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
 | `/admin/uang-muka` | Uang muka | Finance, Owner | Money in before anything is owed. Badge counts deposits no invoice has claimed |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
@@ -838,6 +839,81 @@ exists to prevent.
 two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
+
+### Titik pesan ulang — what is running out
+
+| Function | Decides |
+|---|---|
+| `ReorderAdvisor::suggestions` | Everything at or below its point, worst first |
+| `ReorderAdvisor::measuredLeadTimes` | How long each supplier actually takes, from real receipts |
+| `ReorderSuggestion::isHabis` / `isUncovered` | Whether a row is urgent this morning or merely short |
+| `SuggestedPurchaseOrder::draftFor` | One supplier's shortfall as a draft PO, in cartons |
+
+The opposite question to the ageing report. That one asks what is sitting
+there; this asks what is about to run out — the mistake that costs more in a
+spare parts business, because a bengkel who cannot get a part today buys it
+from somebody else today, and often keeps buying it from them.
+
+```
+laju harian        base units shipped over the last year ÷ 365
+lead time          days from sending a PO to the goods arriving, per supplier
+titik pesan ulang  laju harian × (lead time + 14 hari aman)
+posisi             on hand − reserved + on order
+```
+
+Both inputs are **measured, not configured**. A year for the sales rate so a
+seasonal part is not condemned on one quiet quarter — the same window and the
+same reasoning as the ageing report. Lead time from `sent_at` to
+`tanggal_terima`, because a PO that sat in draft for a week is our delay, not
+theirs. Where a supplier has never delivered against a PO the row says its lead
+time is an assumption rather than quietly presenting 21 days as a measurement.
+
+Both sides of that subtraction are **cast to a date first**. `sent_at` is a
+timestamp and `tanggal_terima` is a date, so subtracting them raw gives six days
+and fifteen hours for a Thursday-to-Thursday delivery, which truncates to six.
+The error is always downward — shorter lead times, lower reorder points, a
+system biased toward stocking out. That is the one direction this must not be
+wrong in.
+
+**Three things that are easy to get wrong, and all cost money:**
+
+- **Stock already on order counts.** Otherwise: below the line Monday, somebody
+  orders, still below the line Tuesday because nothing has arrived, somebody
+  orders again. Drafts count too — a draft raised from this screen is a
+  decision already made, so raising one takes those rows straight off the list.
+  That is what stops two people ordering the same shortage before lunch.
+- **Reserved stock is not stock.** Goods fenced for a confirmed order are going
+  to leave, and counting them is how a part is "in stock" right up to the
+  morning somebody goes to pick it.
+- **The order is in whole cartons.** Suppliers sell by the dus, so 37 pieces of
+  a part that comes 12 to a carton is a suggestion nobody can place — and
+  whoever places it rounds in whichever direction they feel like.
+
+It orders **up to a target**, not up to the point: filling exactly to the line
+puts the part back on this list the following week.
+
+A part that has **never sold** gets no point rather than one of zero. There is
+no rate to derive one from, and a zero point would put every dead SKU on the
+list at "0 of 0" and bury the real rows.
+
+**Two per-SKU overrides**, on `products`, for the two cases history cannot see:
+`titik_pesan_ulang_manual` wins outright when set (not blended — "the higher of
+the two" is a number nobody typed and nobody measured), and
+`jangan_pesan_ulang` keeps a discontinued line off the list without
+deactivating it, since it still sells down its remaining stock.
+
+Grouped by the supplier we last **received** the part from. Products carry no
+supplier, and giving them one would be a second place for the answer to live;
+the last receipt is a fact rather than a setting, and it answers the question
+actually being asked — who do I ring about this part. Parts nobody has ever
+supplied sit in their own group at the bottom with no button, because nothing
+here can pick a supplier for them.
+
+Draft PO lines are priced from the last delivery, **per base unit × qty_per_ctn**
+rather than from a stored per-carton price: a supplier repacking from 12s to
+10s would otherwise turn a correct price into one 20% out. A part with no price
+on record gets zero and a line note saying so, because a silent zero is a line
+somebody sends without noticing.
 
 ### Rekening koran pelanggan — the statement that settles an argument
 

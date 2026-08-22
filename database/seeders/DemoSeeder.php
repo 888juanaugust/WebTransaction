@@ -104,6 +104,7 @@ class DemoSeeder extends Seeder
         $this->girosInTheDrawer($companies, $supplier, $staff['finance']);
         $this->supplierPriceCorrection($supplier, $staff['finance']);
         $this->customerDeposits($companies, $staff['finance']);
+        $this->reorderPoints();
         $this->fixedAssets($staff['finance']);
         $this->monthlyOverheads($staff['finance']);
         $this->bankStatements($companies, $staff['finance']);
@@ -602,6 +603,38 @@ class DemoSeeder extends Seeder
             actor: $finance,
             tanggal: now()->subDays(3),
         );
+    }
+
+    /**
+     * Reorder points typed by hand, because two weeks of trading cannot
+     * produce one.
+     *
+     * This is not a shortcut around the arithmetic — it is the arithmetic's
+     * own answer for a business this young, and it is the state the real one
+     * will be in at launch. The reorder point is derived from a year of
+     * shipments; with a fortnight of them, every part looks like it sells
+     * almost nothing and every point comes out at two or three. The screen
+     * says so honestly: nothing to order.
+     *
+     * So the buyer types what they know for the two parts they care about —
+     * the alternator and the starter motor, both expensive, both slow, both
+     * the sort of thing a bengkel will not wait a week for. In six months the
+     * manual figures come off and the measured ones take over.
+     */
+    private function reorderPoints(): void
+    {
+        foreach ([
+            ['ST-4002', 20],   // Alternator 70A — 8 on the shelf, 2 already promised
+            ['AS-7001', 20],   // Starter motor — same shape
+        ] as [$kode, $titik]) {
+            Product::query()->where('kode', $kode)->update([
+                'titik_pesan_ulang_manual' => $titik,
+            ]);
+        }
+
+        // And one line being run down rather than restocked, so the demo can
+        // show the flag that keeps a part off the list without deactivating it.
+        Product::query()->where('kode', 'SX-6001')->update(['jangan_pesan_ulang' => true]);
     }
 
     /**

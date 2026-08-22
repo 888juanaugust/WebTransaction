@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable([
     'kode', 'merk', 'kategori', 'tipe_produk', 'mobil', 'part_number',
     'description', 'qty_per_ctn', 'satuan_dasar', 'aktif', 'catatan',
+    'titik_pesan_ulang_manual', 'jangan_pesan_ulang',
 ])]
 class Product extends Model
 {
@@ -33,6 +34,8 @@ class Product extends Model
         return [
             'qty_per_ctn' => 'integer',
             'aktif' => 'boolean',
+            'titik_pesan_ulang_manual' => 'integer',
+            'jangan_pesan_ulang' => 'boolean',
         ];
     }
 
