@@ -455,11 +455,21 @@ Everything below is a launch blocker, and only the first two are code.
 
 - [ ] `php artisan xendit:verify` — every stage green
 - [ ] `php artisan backup:restore --into=scratch` — actually restored, not just written
-- [ ] Real company details replacing the placeholders in `config/company.php`
+- [ ] Real company details replacing the placeholders in `config/perusahaan.php`
+      — the profile text, and above all the **partners**, which are invented
+- [ ] `PERUSAHAAN_NPWP`, `PERUSAHAAN_NIB`, `PAJAK_PENJUAL_NPWP` and
+      `PAJAK_PENJUAL_NAMA` set in `.env`. Every one is empty by default, and
+      the faktur pajak export needs the last two before a single filing
+- [ ] A real price list imported and published — `php artisan migrate --seed`
+      deliberately ships no prices, because a seeded price is a price nobody
+      approved
 - [ ] PSE Lingkup Privat registration via OSS → PB-UMKU
 - [ ] A lawyer's reading of the two legal pages — they are drafted, not reviewed
 - [ ] The two commercial values marked `>>> PUTUSKAN` in `config/legal.php`:
-      the late-payment rate and the claim window
+      the late-payment rate (default 2%/month) and the claim window (default 3
+      days). Both are defaults nobody has agreed to yet
+- [ ] `PAJAK_FORMAT_EKSPOR` confirmed with the accountant — CSV or Coretax XML.
+      Only the serialisation is in doubt, but it is in doubt
 - [ ] Staff passwords changed from the seeded `password`
 - [ ] One real order taken end to end by staff, on the real system, before any
       buyer has a login — that is what build order phase 1 is for
