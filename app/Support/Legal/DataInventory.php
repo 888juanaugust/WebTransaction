@@ -122,6 +122,17 @@ final class DataInventory
             ],
 
             /*
+             * Staff statements that a launch step outside this system was done.
+             * `catatan` is where the evidence goes, and evidence names people —
+             * the lawyer who read the terms, the officer who issued a PB-UMKU.
+             */
+            'launch_attestations' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['attested_by', 'catatan'],
+                'bukan' => ['kunci', 'attested_at'],
+            ],
+
+            /*
              * Tax identity, snapshotted onto the invoice at issue. Kept for as
              * long as tax law requires the books to be kept, which is longer
              * than the customer relationship and is not deletable on request.

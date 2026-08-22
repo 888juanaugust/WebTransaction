@@ -451,6 +451,15 @@ ones people skip on a VPS:
 
 ## 9. Before the first customer logs in
 
+**Most of this list is on a screen.** `/admin/kesiapan-peluncuran`, Owner only,
+checks nine of these items against the live system every time it is opened —
+the config values, the price list, the seeded passwords, the backup, the
+control accounts — and there is no way to tick those by hand. The rest are
+recorded there as a statement with a name and a date against them.
+
+The list stays here because the server steps below have no screen, and because
+a runbook somebody can read before touching the machine is worth having.
+
 Everything below is a launch blocker, and only the first two are code.
 
 - [ ] `php artisan xendit:verify` — every stage green

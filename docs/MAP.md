@@ -61,6 +61,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
+| `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
@@ -839,6 +840,43 @@ exists to prevent.
 two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
+
+### Kesiapan peluncuran — the launch checklist that checks itself
+
+| Function | Decides |
+|---|---|
+| `LaunchReadiness::checks` | Every item, and whether it passes |
+| `LaunchCheck::checked` / `::attested` | Which of the two kinds an item is |
+| `AttestationRecorder::attest` | Records somebody's word, with evidence |
+
+The same list as `docs/DEPLOY.md`, with the difference that makes it worth
+having as a screen: **most of it checks itself.** A checklist of tickboxes is a
+worse version of the file, because a box nobody can verify gets ticked on a
+Friday and stays ticked long after it stopped being true.
+
+Nine items are **computed every time the page loads** and no button can mark
+them done: company identity and contact details (placeholder values count as
+missing — an address of "Jl. Contoh No. 1" on a PSE-registered site is worse
+than a blank one), invented partner names, the tax NPWP the faktur export
+needs, a published price list, Xendit keys (a `xnd_development_` key fails even
+though it is set — it looks fine until the first invoice is never paid), staff
+still on the seeded password, a verified off-box backup, one completed order,
+and every control account tying to its subledger.
+
+Six are **attested**, because nothing in here can see them: the PSE
+registration, the KBLI check, a lawyer's reading, the two `PUTUSKAN` commercial
+values, the faktur format, and whether the restore was practised rather than
+merely written. Those record who said it, when, and what evidence they gave —
+the note is required, because a bare tick lets somebody clear six items in four
+seconds and leaves nothing to ask about later.
+
+The two are structurally separate: `assertAttestable()` refuses to attest a
+key the system checks for itself. Without it somebody could mark the tax NPWP
+done while it is empty, and the checklist would go green over a system that
+cannot issue a faktur.
+
+Owner only, on the same permission as the audit log. Deciding the business is
+cleared to trade is not a clerical act.
 
 ### Titik pesan ulang — what is running out
 
