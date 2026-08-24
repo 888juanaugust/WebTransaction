@@ -62,6 +62,8 @@ otherwise every surface falls back to the wordmark.
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
+| `/admin/log-audit` | Log audit | **Owner only** | Who did what, and what it used to be. Read-only, with no resource behind it |
+| `/admin/profile` | Profil | all staff | Name, email, and the only way to change your own password |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
@@ -848,6 +850,38 @@ exists to prevent.
 two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
+
+### Log audit — who did what, and what it used to be
+
+| Function | Decides |
+|---|---|
+| `LogAudit::changeSummary` | Old → new, naming only the keys that actually moved |
+| `LogAudit::sensitiveActions` | Which rows an auditor came for |
+| `AuditLogger::log` | The one way anything gets written here |
+
+The convention has always been that every money-affecting action writes to
+`audit_logs` — price overrides, credit-limit overrides, payment reversals, a
+month reopened after it was closed. All of it was being written for an audience
+with no way to read it: the role matrix promises the owner an audit log and
+there was no screen anywhere. A log nobody can open is a log nobody checks,
+which is the same as not keeping one, except slower.
+
+**Read-only, structurally.** No create, edit or delete action, and no resource
+behind it — an audit trail somebody can tidy is evidence of nothing.
+
+The change summary names **only the keys that moved**. Printing both payloads
+side by side makes the one field somebody altered impossible to find, which is
+the only reason anybody opened the row. A first value reads as a value rather
+than as a change, because most rows record something happening rather than
+something being altered.
+
+`Alasan` says *"— tidak disebutkan"* rather than sitting blank. An override
+with no stated reason is exactly what an auditor asks about, so the absence is
+the finding.
+
+Owner only. This screen carries the before and after of everything anybody
+overrode, prices and credit limits included, so it is the one place that leaks
+every kind of data the role separation elsewhere exists to keep apart.
 
 ### Kesiapan peluncuran — the launch checklist that checks itself
 

@@ -44,6 +44,14 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn () => Branding::logoUrl())
             ->brandLogoHeight('1.75rem')
             ->login()
+            /*
+             * A profile page, which is the only way a staff member can change
+             * their own password. Without it the launch checklist tells people
+             * to visit a page that does not exist, the seeded `password` stays
+             * on every account including the owner's, and that check can never
+             * go green.
+             */
+            ->profile(isSimple: false)
             // Clean white surfaces, company blue, company red. See BrandColors
             // for why the ramps are declared rather than generated from hex.
             ->colors(BrandColors::panel())
