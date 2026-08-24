@@ -41,6 +41,14 @@ return [
      |
      | SVG for preference: the mark is flat colour and it has to stay crisp on
      | a phone, in the panel sidebar, and on a printed surat jalan.
+     |
+     | >>> Use the mark on its own, without the company name under it.
+     |
+     | When this is set, Filament renders the image *instead of* the wordmark —
+     | there is no text beside it to be redundant with. The panel draws it at
+     | 1.75rem tall (28px), so a full lockup with "PT JAVA INDO INTERMECHANIKA"
+     | beneath the mark reduces that name to about four pixels of grey mush.
+     | Keep the lockup for letterheads; the panel wants the mark alone.
      */
     'logo' => env('PERUSAHAAN_LOGO'),
 

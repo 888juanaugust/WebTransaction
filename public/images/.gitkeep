@@ -1,0 +1,6 @@
+Drop the company mark here and point PERUSAHAAN_LOGO at it, e.g.
+
+    PERUSAHAAN_LOGO=images/logo.svg
+
+The mark on its own, without the company name underneath — the panel draws
+it 28px tall and renders no wordmark beside it. See config/perusahaan.php.
