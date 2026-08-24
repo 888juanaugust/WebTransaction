@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="450 330 705 735" role="img" aria-labelledby="markTitle">
+  <title id="markTitle">PT Java Indo Intermechanika</title>
+  <!--
+    The mark alone, without the company name beneath it.
+
+    The panel draws this at 1.75rem — twenty-eight pixels — and renders no
+    wordmark beside it, so the name in the full lockup would be about four
+    pixels of grey mush. The lockup belongs on a letterhead.
+
+    Filled #073185, the company blue the whole panel is built from: every
+    button and every active nav item below this mark is that value, and a
+    sidebar logo a shade off from them reads as wrong without anybody being
+    able to say why.
+
+    No `width` or `height` attribute on purpose. Every surface sets its own
+    height and lets the viewBox scale it, and a fixed intrinsic size is what
+    makes an SVG logo turn up the wrong size in the one place nobody checked.
+  -->
+  <g fill="#073185">
+    <path d="M470 1045 L865 1045 L865 515 C790 760, 690 960, 470 1045 Z"/>
+    <path d="M880 490 L1000 425 L1000 1045 L880 1045 Z"/>
+    <path d="M1015 415 L1135 350 L1135 1045 L1015 1045 Z"/>
+  </g>
+</svg>
