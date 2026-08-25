@@ -86,6 +86,7 @@ class RoleMatrixTest extends TestCase
                 'canExportFaktur' => false,
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
+                'canManageStaff' => false,
             ]],
             'warehouse' => [Role::Warehouse, [
                 'canSeePrices' => false,
@@ -117,6 +118,7 @@ class RoleMatrixTest extends TestCase
                 // Every report is money, and this role never sees money.
                 'canSeeReports' => false,
                 'canViewAuditLog' => false,
+                'canManageStaff' => false,
             ]],
             'finance' => [Role::Finance, [
                 'canSeePrices' => true,
@@ -156,6 +158,12 @@ class RoleMatrixTest extends TestCase
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
+                // The false that carries the most weight in this table. Every
+                // other line above separates a pair of duties; managing staff
+                // is the one place a person could grant themselves the other
+                // half. Finance holding it would undo the payment/price rule
+                // in the time it takes to load one page.
+                'canManageStaff' => false,
             ]],
             'owner' => [Role::Owner, [
                 'canSeePrices' => true,
@@ -182,6 +190,7 @@ class RoleMatrixTest extends TestCase
                 'canExportFaktur' => true,
                 'canSeeReports' => true,
                 'canViewAuditLog' => true,
+                'canManageStaff' => true,
             ]],
         ];
     }

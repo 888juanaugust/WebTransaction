@@ -429,6 +429,42 @@ tied up in it, with months of cover beside each part. Nine parts here have
 never sold at all, and they are at the top of the list because that is where
 the cash is stuck. Finance and the owner only: it is a cost report.
 
+### Hiring somebody, and letting them go — 2 min
+
+Open **Pengaturan → Staf**. Four accounts, each with its role and whether it can
+still log in.
+
+Add one. Name, email, a starting password, a role — and the helper text under
+the role select spells out what each one can and cannot do, because the role
+matrix is not open on the screen at the moment somebody is choosing from a
+dropdown.
+
+> "Before this existed, hiring meant a developer with SSH access typing into a
+> console on the live server. So did letting anyone back in who forgot their
+> password."
+
+Now open their row and look at what is on offer: **Setel sandi** and
+**Nonaktifkan**. No delete — anywhere. Deactivating asks for a reason and keeps
+the account, because the audit log points at these rows: remove the person and
+you remove the answer to who did what.
+
+Then open your own row. **Nonaktifkan is not there, and the role select is
+greyed out.** Both on purpose, and for two different reasons — you cannot lock
+yourself out by accident, and you cannot hand yourself the other half of a pair
+of duties the rest of the system keeps apart. The registrar refuses both
+underneath as well; the greyed-out select is the polite version of a rule that
+holds regardless.
+
+The last thing worth showing is the one people ask about. Deactivate somebody
+who is currently logged in, and their next page load lands on the login screen —
+not their next login. The session rows go with the account.
+
+Finish in **Log audit**: `Staf ditambahkan`, `Peran staf diubah`,
+`Staf dinonaktifkan`, each with the reason and the actor. These are the only
+entries in that log that are not about money, and they are there because the
+role matrix is this system's internal control and this is the only place an
+assignment under it moves.
+
 ---
 
 ## 4. Questions you will be asked

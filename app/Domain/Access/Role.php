@@ -314,4 +314,21 @@ enum Role: string
     {
         return $this === self::Owner;
     }
+
+    /**
+     * Create staff accounts, change what they can do, and shut them off.
+     *
+     * Owner only, and it is the widest permission in this enum by some margin
+     * — not because the screen shows anything sensitive, but because it is the
+     * one place where every other line above can be granted to somebody. A
+     * Finance clerk who can hand themselves the Sales role has just undone the
+     * rule that keeps whoever confirms a payment away from the invoice amount,
+     * and they can do it in the time it takes to load one page.
+     *
+     * So the separations elsewhere are only worth what this line is worth.
+     */
+    public function canManageStaff(): bool
+    {
+        return $this === self::Owner;
+    }
 }

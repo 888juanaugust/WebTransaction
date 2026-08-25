@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Domain\Access\Role;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Giro\GiroStatus;
 use App\Filament\Pages\LogAudit;
 use App\Models\AuditLog;
 use App\Models\Company;
@@ -168,6 +169,69 @@ class AuditLogScreenTest extends TestCase
         $options = LogAudit::actionOptions();
 
         $this->assertSame(['invoice_issued' => 'Faktur terbit'], $options);
+    }
+
+    public function test_every_action_the_code_writes_has_an_indonesian_label(): void
+    {
+        /*
+         * The fallback in actionLabel() is deliberate — a brand new action
+         * shows as its own key rather than vanishing — but it is a safety net,
+         * not a destination. Left alone it puts raw English underscores on an
+         * otherwise Indonesian screen, which is how "staff deactivated" came
+         * to be sitting between "Pembayaran dikonfirmasi" and "Beban dicatat".
+         *
+         * So the keys are read out of the source rather than listed here: a
+         * list would need updating by the same person who forgot the label.
+         */
+        $source = [];
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(app_path(), \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($files as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            /*
+             * The trailing comma matters: it excludes `action: 'giro_'.$x`,
+             * where the quoted part is a prefix rather than a whole key. Those
+             * dynamic sites are covered by their own assertion below.
+             */
+            preg_match_all(
+                "/action:\s*'([a-z0-9_]+)'\s*,/",
+                (string) file_get_contents($file->getPathname()),
+                $matches,
+            );
+
+            $source = [...$source, ...$matches[1]];
+        }
+
+        $source = array_unique($source);
+        $this->assertNotEmpty($source, 'no audit actions found in the source at all');
+
+        $unlabelled = array_values(array_filter(
+            $source,
+            fn (string $action) => LogAudit::actionLabel($action) === str_replace('_', ' ', $action),
+        ));
+
+        $this->assertSame([], $unlabelled, 'audit actions with no Indonesian label: '.implode(', ', $unlabelled));
+    }
+
+    public function test_every_giro_outcome_has_a_label_too(): void
+    {
+        /*
+         * The one place an action key is assembled rather than written out:
+         * GiroRegister::release() logs 'giro_'.$status->value. The scan above
+         * cannot see those, so a new GiroStatus case would otherwise land on
+         * the audit screen as a raw key.
+         */
+        $unlabelled = array_values(array_filter(
+            GiroStatus::cases(),
+            fn (GiroStatus $s) => LogAudit::actionLabel('giro_'.$s->value) === 'giro '.$s->value,
+        ));
+
+        $this->assertSame([], array_map(fn (GiroStatus $s) => $s->value, $unlabelled));
     }
 
     public function test_a_system_action_with_no_actor_still_lists(): void

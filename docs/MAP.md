@@ -62,6 +62,7 @@ otherwise every surface falls back to the wordmark.
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
+| `/admin/staf` | Staf | **Owner only** | Hire, change a role, set a password, switch a leaver off. Nothing here deletes |
 | `/admin/log-audit` | Log audit | **Owner only** | Who did what, and what it used to be. Read-only, with no resource behind it |
 | `/admin/profile` | Profil | all staff | Name, email, and the only way to change your own password |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
@@ -850,6 +851,46 @@ exists to prevent.
 two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
+
+### Staf — the screen that grants every other permission
+
+| Function | Decides |
+|---|---|
+| `Role::canManageStaff` | Owner only, and the widest line in the enum |
+| `StaffRegistrar::create` | Hiring. The only path that writes `staff_created` |
+| `StaffRegistrar::changeRole` | Moving somebody across a control boundary, logged old → new |
+| `StaffRegistrar::setPassword` | An administrative reset, and the remember-me token that goes with it |
+| `StaffRegistrar::deactivate` | A leaver. Switches off, ends live sessions, never deletes |
+| `StaffRegistrar::refuseLastOwner` | There must always be somebody who can work this screen |
+| `StaffRegistrar::refuseSelf` | Changes to your own authority are somebody else's to make |
+
+Staff accounts had no screen at all until now: hiring meant a `tinker` session on the
+production box, and anybody locked out stayed locked out until a developer was free.
+
+Three properties hold the whole thing up.
+
+**It is Owner only, and that gate is worth as much as every other role separation put
+together.** Everywhere else the system splits a pair of duties — whoever confirms a
+payment cannot move an invoice amount, whoever counts stock cannot approve the variance.
+This is the one page where a person can be handed the other half of any of those pairs.
+
+**Nobody can widen their own authority.** The role select is disabled on your own row and
+`refuseSelf` refuses it underneath, so the cheapest route around every separation —
+granting yourself the other half — is closed. The same guard blocks deactivating
+yourself, which is the one accident with no way back from inside the app.
+
+**Nothing deletes.** `audit_logs.actor_id` references `users` with ON DELETE NO ACTION, so
+removing anybody who ever did anything would either fail at the database or take the
+record of what they did with it. A leaver is switched off; deactivation clears their
+session rows so an open browser dies on its next page load rather than at its next login.
+
+Buyer logins are not here. They live behind a different guard and are created from the
+company they belong to, because a buyer account scoped to no company is scoped to nothing.
+
+Administrative password setting is a worse mechanism than a reset link, and it is here
+because the better one needs working mail this deployment does not have. Its weakness is
+named on the modal: for a moment the owner knows a colleague's password, and the profile
+page exists so that moment ends.
 
 ### Log audit — who did what, and what it used to be
 

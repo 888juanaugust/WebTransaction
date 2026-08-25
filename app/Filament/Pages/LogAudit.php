@@ -269,8 +269,35 @@ class LogAudit extends Page implements HasTable
             'company_status_changed' => 'Status pelanggan diubah',
             'customer_portal_access_granted' => 'Akses portal diberikan',
             'virtual_account_provisioned' => 'Virtual account dibuat',
+            /*
+             * Giro. `giro_cair`, `giro_ditolak` and `giro_dibatalkan` are
+             * written as 'giro_'.$status->value from the shared release path,
+             * so a new GiroStatus case needs a line here too — GiroStatus
+             * itself is the list to check against.
+             */
+            'giro_deposited' => 'Giro disetor',
+            'giro_cleared' => 'Giro cair',
+            'giro_cair' => 'Giro cair',
+            'giro_ditolak' => 'Giro ditolak',
+            'giro_dibatalkan' => 'Giro dikembalikan',
+            'giro_beredar' => 'Giro beredar',
+
             'launch_item_attested' => 'Item peluncuran dinyatakan',
             'launch_item_retracted' => 'Pernyataan peluncuran dicabut',
+
+            /*
+             * Staff accounts. Not money, and the only entries here that are
+             * not — they are in the log because the role matrix is this
+             * system's internal control, and these five are the only way an
+             * assignment under it moves. "Who gave Keuangan the Sales role"
+             * is the question a log answers or fails to.
+             */
+            'staff_created' => 'Staf ditambahkan',
+            'staff_renamed' => 'Nama staf diubah',
+            'staff_role_changed' => 'Peran staf diubah',
+            'staff_password_reset' => 'Sandi staf disetel ulang',
+            'staff_deactivated' => 'Staf dinonaktifkan',
+            'staff_reactivated' => 'Staf diaktifkan lagi',
         ];
     }
 
