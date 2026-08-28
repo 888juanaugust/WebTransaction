@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Portal\Widgets\GrafikBelanja;
+use App\Filament\Portal\Widgets\GrafikUmurTagihan;
 use App\Filament\Portal\Widgets\KreditTersedia;
 use App\Filament\Portal\Widgets\OrderTerakhir;
 use App\Filament\Portal\Widgets\TagihanTerbuka;
@@ -59,6 +61,10 @@ class PortalPanelProvider extends PanelProvider
                 KreditTersedia::class,
                 OrderTerakhir::class,
                 TagihanTerbuka::class,
+                // The buyer's graphs: spend by month, and debt by age with
+                // the 150-day cliff visible before it bites.
+                GrafikBelanja::class,
+                GrafikUmurTagihan::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Widgets\AccountsAwaitingApproval;
+use App\Filament\Widgets\ArusStok;
 use App\Filament\Widgets\BackupStatus;
 use App\Filament\Widgets\DebtRemovalsAwaitingVerification;
 use App\Filament\Widgets\ExpenseClaimsAwaitingVerification;
 use App\Filament\Widgets\GiroDue;
 use App\Filament\Widgets\LaunchReadinessSummary;
+use App\Filament\Widgets\NilaiStokKategori;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
+use App\Filament\Widgets\PendapatanVsBeban;
+use App\Filament\Widgets\PenjualanBulanan;
+use App\Filament\Widgets\PiutangPerPelanggan;
 use App\Filament\Widgets\ReturnsAwaitingVerification;
 use App\Filament\Widgets\UnmatchedPayments;
 use App\Http\Middleware\BindRegionContext;
@@ -104,6 +109,17 @@ class AdminPanelProvider extends PanelProvider
                 OverdueInvoices::class,
                 // Silent unless a giro is dated today or earlier.
                 GiroDue::class,
+                /*
+                 * The graphs, below the queues on purpose: the queues are
+                 * today's work, the charts are how the month is going. Each
+                 * one scopes itself to the viewer's seat like everything
+                 * above it.
+                 */
+                PenjualanBulanan::class,
+                PiutangPerPelanggan::class,
+                ArusStok::class,
+                NilaiStokKategori::class,
+                PendapatanVsBeban::class,
             ])
             ->middleware([
                 EncryptCookies::class,

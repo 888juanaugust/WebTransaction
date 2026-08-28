@@ -988,6 +988,24 @@ buys them; and items they bought and stopped (90 days). The page
 (`WawasanPelanggan`) offers a sales their own customers, a marketing theirs,
 the Owner all.
 
+### Grafik — the dashboards' charts, one tested query each
+
+`ChartStats` holds the arithmetic behind every chart, because a wrong bar
+just shapes a decision where a wrong table gets challenged. Each widget is a
+thin Chart.js shell over one method, role-gated like the queues above it:
+
+| Widget | Who | Reads |
+|---|---|---|
+| `GrafikBelanja` (portal) | The buyer | Their committed orders, monthly, 12 months |
+| `GrafikUmurTagihan` (portal) | The buyer | Open invoices bucketed ≤30 / 31–120 / 121–150 / >150 (terkunci) — the freeze cliff made visible |
+| `PenjualanBulanan` | Sales (own orders), Marketing (their customers), Owner (all) | Committed orders by month, filtered by the seat |
+| `PiutangPerPelanggan` | Marketing (their seats), Finance, Owner | Largest outstanding balances per customer |
+| `ArusStok` | Inventori, Owner | Stock in vs out per day, 30 days |
+| `NilaiStokKategori` | Cost-seeing roles | Shelf value by category at moving-average — agrees with the valuation |
+| `PendapatanVsBeban` | Finance, Owner | Monthly revenue vs expenses **from the journal**, so it cannot disagree with the laba rugi |
+
+"Committed" everywhere means confirmed and beyond — a draft is not a sale.
+
 ### Wilayah — one company, several sets of books
 
 | Piece | Decides |

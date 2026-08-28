@@ -77,7 +77,10 @@ invoice yet, an order the warehouse can pack today, and an invoice 22 days
 overdue.
 
 **The point:** the software says what needs doing, rather than asking you to
-remember.
+remember. Scroll past the queues and each role has its graphs — sales see
+their own monthly sales, marketing their customers' debt, Inventori the
+stock flow and shelf value, finance revenue against cost straight from the
+journal.
 
 ### Approve an order — 2 min
 
@@ -162,6 +165,8 @@ Open `/portal` as `distributor@pembeli.example`.
 
 Their remaining credit at the top. Last orders with **Pesan ulang** beside each
 one — click it, and last month's quantities come up filled in and editable.
+Scroll down: their spend by month and their open invoices by age, with the
+150-day lock-out named on the chart — the customer can see the cliff coming.
 
 > "A workshop reorders the same fifteen parts forever. They restock; they don't
 > shop. So the first thing on the screen is last order, one click."
@@ -537,7 +542,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1686 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1718 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
