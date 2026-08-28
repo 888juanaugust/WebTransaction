@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Actions;
 
+use App\Domain\Access\Role;
 use App\Domain\Money;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
@@ -31,6 +32,24 @@ use Filament\Notifications\Notification;
 class OrderTransitionActions
 {
     /**
+     * Mirrors OrderStateMachine::assertMayApprove — the button only shows
+     * when the click would succeed. The machine still enforces it, so the
+     * two cannot drift apart in a way that matters; they can only drift in
+     * a way that shows a button which then refuses politely.
+     */
+    private static function holdsApprovalSeat(Order $record): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->role()->canApproveOrders()) {
+            return false;
+        }
+
+        return $user->role() !== Role::Marketing
+            || (int) $record->company->marketing_user_id === (int) $user->getKey();
+    }
+
+    /**
      * Approve. Prices snapshot, credit is checked, stock is reserved — one
      * transaction, and any of the three can refuse the whole thing.
      */
@@ -47,7 +66,7 @@ class OrderTransitionActions
             ->modalDescription(fn (Order $record) => 'Menyetujui akan mengunci harga dan memesan stok untuk '
                 .$record->company->nama.'.')
             ->visible(fn (Order $record) => $record->status === OrderStatus::Submitted
-                && (auth()->user()?->role()->canCreateOrders() ?? false))
+                && static::holdsApprovalSeat($record))
             ->action(function (Order $record) {
                 try {
                     app(OrderStateMachine::class)->confirm($record, auth()->user());
@@ -95,7 +114,7 @@ class OrderTransitionActions
                     ->maxLength(500),
             ])
             ->visible(fn (Order $record) => $record->status->canTransitionTo(OrderStatus::Rejected)
-                && (auth()->user()?->role()->canCreateOrders() ?? false))
+                && static::holdsApprovalSeat($record))
             ->action(function (Order $record, array $data) {
                 try {
                     app(OrderStateMachine::class)->reject($record, auth()->user(), $data['alasan']);
@@ -170,7 +189,12 @@ class OrderTransitionActions
             ->requiresConfirmation()
             ->modalHeading('Tandai sudah dikirim')
             ->modalDescription('Stok akan dikurangi dari gudang. Tindakan ini tercatat di kartu stok.')
-            ->visible(fn (Order $record) => $record->status === OrderStatus::Paid
+            /*
+             * Awaiting payment is the credit-sales path and the normal one
+             * now: the goods leave on the marketing's approval, and the
+             * invoice stands as debt until the money arrives on terms.
+             */
+            ->visible(fn (Order $record) => in_array($record->status, [OrderStatus::Paid, OrderStatus::AwaitingPayment], true)
                 && (auth()->user()?->role()->canPickAndShip() ?? false))
             ->action(function (Order $record) {
                 try {

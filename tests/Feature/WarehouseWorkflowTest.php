@@ -82,7 +82,7 @@ class WarehouseWorkflowTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($this->order->refresh(), $sales);
-        $machine->confirm($this->order->refresh(), $sales);
+        $machine->confirm($this->order->refresh(), $this->approver());
 
         $this->order->refresh();
     }

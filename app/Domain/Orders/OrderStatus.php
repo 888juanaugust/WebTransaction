@@ -43,7 +43,14 @@ enum OrderStatus: string
             self::Draft => [self::Submitted],
             self::Submitted => [self::Confirmed, self::Rejected],
             self::Confirmed => [self::AwaitingPayment, self::Rejected],
-            self::AwaitingPayment => [self::Paid, self::Expired],
+            /*
+             * Shipped from awaiting_payment is the credit-sales path, and
+             * under the reorganisation it is the normal one: the goods leave,
+             * the invoice stands as the customer's debt, and the money
+             * arrives on terms. Paid-then-shipped survives for customers who
+             * pay up front.
+             */
+            self::AwaitingPayment => [self::Paid, self::Shipped, self::Expired],
             self::Paid => [self::Shipped],
             self::Shipped => [self::Completed],
             self::Completed, self::Rejected, self::Expired => [],

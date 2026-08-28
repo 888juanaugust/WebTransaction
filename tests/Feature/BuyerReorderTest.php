@@ -17,7 +17,6 @@ use App\Models\OrderLine;
 use App\Models\PriceListItem;
 use App\Models\PriceListVersion;
 use App\Models\Product;
-use App\Models\User;
 use App\Models\Warehouse;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -200,7 +199,7 @@ class BuyerReorderTest extends TestCase
     {
         $new = $this->placer()->repeat($this->buyer, $this->previous, []);
 
-        app(OrderStateMachine::class)->confirm($new, User::factory()->sales()->create());
+        app(OrderStateMachine::class)->confirm($new, $this->approver());
 
         $new->refresh();
 

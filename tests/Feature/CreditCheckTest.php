@@ -170,8 +170,14 @@ class CreditCheckTest extends TestCase
         $this->assertTrue($status->passes());
     }
 
-    public function test_an_overdue_invoice_blocks_new_credit_orders(): void
+    public function test_a_merely_overdue_invoice_no_longer_blocks_ordering(): void
     {
+        /*
+         * The credit-sales reorganisation changed this on purpose. Buying on
+         * account means invoices routinely run past their due date while the
+         * customer keeps trading; the brake moved from "any overdue" to the
+         * four-month freeze below. The limit still caps total exposure.
+         */
         $company = Company::factory()->creditLimit(100_000_000)->create();
 
         Invoice::factory()->overdue()->totalling(1_000_000)->create(['company_id' => $company->id]);
@@ -181,12 +187,55 @@ class CreditCheckTest extends TestCase
             ->totalling(1_000_000)
             ->create(['company_id' => $company->id]);
 
+        $this->assertTrue($this->checker()->check($order)->passes());
+    }
+
+    public function test_a_debt_past_four_months_and_a_day_freezes_the_customer(): void
+    {
+        $company = Company::factory()->creditLimit(100_000_000)->create();
+
+        Invoice::factory()->totalling(1_000_000)->create([
+            'company_id' => $company->id,
+            'issued_on' => today()->subMonths(4)->subDay(),
+            'due_date' => today()->subMonths(3),
+        ]);
+
+        $order = Order::factory()
+            ->status(OrderStatus::Submitted)
+            ->totalling(1_000_000)
+            ->create(['company_id' => $company->id]);
+
         $status = $this->checker()->check($order);
 
-        // Plenty of headroom, but the customer is not paying their bills.
+        // Plenty of headroom — the age of the debt is the blocker, and the
+        // message names the invoice, because "you are blocked" without "by
+        // what" is an angry phone call.
         $this->assertGreaterThan(0, $status->availableAfter());
         $this->assertFalse($status->passes());
-        $this->assertStringContainsString('jatuh tempo', implode(' ', $status->blockers));
+        $this->assertStringContainsString('jatuh tempo keras', implode(' ', $status->blockers));
+    }
+
+    public function test_a_debt_of_exactly_four_months_does_not_freeze_yet(): void
+    {
+        /*
+         * "Empat bulan plus satu hari" — the boundary is the day after, so an
+         * off-by-one here would lock customers a day early, on the owner's
+         * stated terms rather than the code's.
+         */
+        $company = Company::factory()->creditLimit(100_000_000)->create();
+
+        Invoice::factory()->totalling(1_000_000)->create([
+            'company_id' => $company->id,
+            'issued_on' => today()->subMonths(4),
+            'due_date' => today()->subMonths(3),
+        ]);
+
+        $order = Order::factory()
+            ->status(OrderStatus::Submitted)
+            ->totalling(1_000_000)
+            ->create(['company_id' => $company->id]);
+
+        $this->assertTrue($this->checker()->check($order)->passes());
     }
 
     public function test_a_customer_pending_approval_cannot_order_on_credit(): void

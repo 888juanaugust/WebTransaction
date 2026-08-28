@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Cart;
 
+use App\Domain\Credit\DebtAging;
 use App\Domain\Orders\BuyerOrderPlacer;
 use App\Domain\Uom\Unit;
 use App\Models\Cart;
@@ -31,6 +32,7 @@ class CartService
 {
     public function __construct(
         private readonly BuyerOrderPlacer $placer,
+        private readonly DebtAging $aging,
     ) {}
 
     /**
@@ -152,6 +154,25 @@ class CartService
         ?string $catatan = null,
     ): Order {
         $cart = $this->forBuyer($buyer);
+
+        /*
+         * The four-month freeze, applied at the door rather than at the
+         * marketing's desk. A frozen customer's order would only be rejected
+         * downstream — letting them build and submit it first is a promise
+         * the system already knows it will break. The message names the
+         * remedy, because "you are blocked" without "pay this" is a support
+         * call that starts angry.
+         */
+        $jatuhTempo = $this->aging->fallDueInvoices($buyer->company);
+
+        if ($jatuhTempo->isNotEmpty()) {
+            throw new DomainException(sprintf(
+                'Transaksi baru terkunci: faktur %s belum dibayar lebih dari %d bulan. '
+                .'Silakan selesaikan pembayaran itu dulu — hubungi tim kami bila sudah membayar.',
+                $jatuhTempo->first()->nomor,
+                (int) config('penjualan.debt_freeze_months'),
+            ));
+        }
 
         return DB::transaction(function () use ($cart, $buyer, $poPelanggan, $catatan) {
             // Serialise concurrent checkouts of the same basket.

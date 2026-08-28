@@ -301,7 +301,7 @@ class FakturPajakScreenTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($order->refresh(), $this->sales);
-        $machine->confirm($order->refresh(), $this->sales);
+        $machine->confirm($order->refresh(), $this->approver());
         $machine->awaitPayment($order->refresh(), $this->sales);
 
         return $order->refresh()->invoice;

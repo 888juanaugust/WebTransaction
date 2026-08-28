@@ -50,8 +50,9 @@ Every password is `password`.
 |---|---|---|
 | Pemilik (sees everything) | `/admin` | `owner@example.test` |
 | Sales | `/admin` | `sales@example.test` |
+| Marketing (the approval seat) | `/admin` | `marketing@example.test` |
 | Keuangan | `/admin` | `finance@example.test` |
-| Gudang | `/admin` | `warehouse@example.test` |
+| Inventori | `/admin` | `warehouse@example.test` |
 | **Buyer — CV Sinar Distribusi** | `/portal` | `distributor@pembeli.example` |
 | Buyer — Toko Sparepart Makmur | `/portal` | `toko@pembeli.example` |
 
@@ -79,6 +80,11 @@ overdue.
 remember.
 
 ### Approve an order — 2 min
+
+Log in as `marketing@example.test` — approving is the marketing seat's call.
+Every demo customer is in this marketing's charge, so their queue is full; a
+different marketing would see only their own customers' orders, and the sales
+who submitted it sees the queue with no buttons at all.
 
 On **Order menunggu persetujuan**, look at the row before clicking: it shows
 the customer's remaining credit and whether stock is sufficient, inline.
@@ -502,7 +508,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1299 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1630 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

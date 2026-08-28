@@ -116,7 +116,7 @@ class OrderToInvoiceChainTest extends TestCase
         $machine->submit($order->refresh(), $this->sales);
         $this->assertSame(OrderStatus::Submitted, $order->refresh()->status);
 
-        $machine->confirm($order, $this->sales);
+        $machine->confirm($order, $this->approver());
         $order->refresh();
         $this->assertSame(OrderStatus::Confirmed, $order->status);
 
@@ -169,7 +169,7 @@ class OrderToInvoiceChainTest extends TestCase
         OrderLine::factory()->qty(10)->create(['order_id' => $order->id, 'sku' => 'YH-1001']);
 
         $this->machine()->submit($order->refresh(), $this->sales);
-        $this->machine()->confirm($order, $this->sales);
+        $this->machine()->confirm($order, $this->approver());
 
         return $order->refresh();
     }

@@ -54,7 +54,7 @@ class StockReservationConcurrencyTest extends TestCase
         parent::setUp();
 
         $this->warehouse = Warehouse::factory()->create();
-        $this->sales = User::factory()->sales()->create();
+        $this->sales = User::factory()->owner()->create();
         $this->company = Company::factory()->creditLimit(9_000_000_000)->create();
 
         $version = PriceListVersion::factory()->published()->create([

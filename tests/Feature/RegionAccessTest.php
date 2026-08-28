@@ -9,11 +9,13 @@ use App\Domain\Access\StaffRegistrar;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Regions\RegionContext;
 use App\Filament\Resources\Regions\RegionResource;
+use App\Http\Middleware\BindRegionContext;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -98,6 +100,31 @@ class RegionAccessTest extends TestCase
 
         $this->assertTrue(app(RegionContext::class)->isOpenToAll());
         $this->assertSame(2, Company::query()->count());
+    }
+
+    public function test_the_region_binding_survives_livewire_update_requests(): void
+    {
+        /*
+         * Filament runs non-persistent panel middleware only on full page
+         * loads. Table searches, widget refreshes, and every action button
+         * arrive as POST /livewire/update — and with the region unbound
+         * there, the read scope falls open to every region and creates
+         * throw. Found in the browser: a marketing approving an order from
+         * the dashboard queue got a 500 out of the stock reservation.
+         *
+         * Filament registers the panel's persistent middleware with Livewire
+         * when the panel boots, which a real request does; being listed
+         * there is what makes it run on /livewire/update.
+         */
+        $klerk = User::factory()->finance()->create(['region_id' => $this->surabaya->id]);
+
+        $this->actingAs($klerk)->get('/admin')->assertOk();
+
+        $this->assertContains(
+            BindRegionContext::class,
+            Livewire::getPersistentMiddleware(),
+            'BindRegionContext must be persistent, or Livewire updates run unscoped.',
+        );
     }
 
     public function test_a_pinned_clerk_cannot_switch_by_crafted_post(): void

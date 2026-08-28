@@ -4,6 +4,7 @@ namespace Tests;
 
 use App\Domain\Regions\RegionContext;
 use App\Models\Region;
+use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -51,5 +52,23 @@ abstract class TestCase extends BaseTestCase
     {
         return app(RegionContext::class)->region()
             ?? throw new \RuntimeException('No region is bound in this test.');
+    }
+
+    private ?User $penyetuju = null;
+
+    /**
+     * Somebody who may approve any order: an Owner.
+     *
+     * Approval became a seat with the credit-sales reorganisation — the
+     * customer's assigned marketing, or the Owner as the escape hatch — and
+     * three hundred existing tests confirm orders as incidental setup on the
+     * way to testing something else. They use this rather than each seating a
+     * marketing on each customer, because for them approval is scaffolding;
+     * the tests where the seat itself is the subject build their own
+     * marketing and assign them properly.
+     */
+    protected function approver(): User
+    {
+        return $this->penyetuju ??= User::factory()->owner()->create();
     }
 }

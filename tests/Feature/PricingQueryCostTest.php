@@ -227,7 +227,7 @@ class PricingQueryCostTest extends TestCase
 
         DB::flushQueryLog();
         DB::enableQueryLog();
-        $machine->confirm($order->refresh(), $sales);
+        $machine->confirm($order->refresh(), $this->approver());
         $log = DB::getQueryLog();
         DB::disableQueryLog();
 

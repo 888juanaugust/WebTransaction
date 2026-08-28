@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Domain\Access\Role;
 use App\Models\PriceTier;
+use App\Models\Region;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
@@ -22,6 +23,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        /*
+         * Ordinary staff are pinned to the default region the migration
+         * created; the Owner's blank is the grant of every region. Left
+         * unpinned, a seeded salesperson could not be seated on any team —
+         * TeamAssigner rightly refuses an assignee the region scope hides
+         * from the customer.
+         */
+        $wilayahUtama = Region::query()->orderBy('id')->value('id');
+
         foreach (Role::cases() as $role) {
             User::query()->firstOrCreate(
                 ['email' => "{$role->value}@example.test"],
@@ -31,6 +41,7 @@ class DatabaseSeeder extends Seeder
                     'role' => $role,
                     'is_active' => true,
                     'email_verified_at' => now(),
+                    'region_id' => $role === Role::Owner ? null : $wilayahUtama,
                 ],
             );
         }

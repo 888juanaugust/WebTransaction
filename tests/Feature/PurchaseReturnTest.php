@@ -876,7 +876,7 @@ class PurchaseReturnTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($order->refresh(), $sales);
-        $machine->confirm($order->refresh(), $sales);
+        $machine->confirm($order->refresh(), $this->approver());
 
         return $order->refresh();
     }

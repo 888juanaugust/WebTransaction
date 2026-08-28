@@ -326,7 +326,7 @@ class AccountingScreensTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($order->refresh(), $sales);
-        $machine->confirm($order->refresh(), $sales);
+        $machine->confirm($order->refresh(), $this->approver());
         $machine->awaitPayment($order->refresh(), $sales);
 
         // Ship it too, so there is a cost entry as well as a revenue one.

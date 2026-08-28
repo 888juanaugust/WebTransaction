@@ -102,7 +102,7 @@ class FakturDocumentTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($this->order->refresh(), $this->sales);
-        $machine->confirm($this->order->refresh(), $this->sales);
+        $machine->confirm($this->order->refresh(), $this->approver());
         // awaitPayment is what issues the invoice and provisions the VA.
         $machine->awaitPayment($this->order->refresh(), $this->sales);
 

@@ -54,6 +54,12 @@ class AdminPanelProvider extends PanelProvider
              * go green.
              */
             ->profile(isSimple: false)
+            /*
+             * The bell. Debt-aging reminders land here for the team in
+             * charge of the customer — a queue emptied by paying attention,
+             * which is the point of a reminder.
+             */
+            ->databaseNotifications()
             // Clean white surfaces, company blue, company red. See BrandColors
             // for why the ramps are declared rather than generated from hex.
             ->colors(BrandColors::panel())
@@ -119,8 +125,14 @@ class AdminPanelProvider extends PanelProvider
                  * decide which region everything below can see. In authMiddleware
                  * rather than middleware so it never runs on the login page,
                  * where there is nobody to bind it from.
+                 *
+                 * Persistent, because Filament runs non-persistent panel
+                 * middleware only on full page loads. A table search, a widget
+                 * refresh, and every button on a Livewire component arrive as
+                 * /livewire/update — without the region bound there, reads fall
+                 * open to every region and writes throw.
                  */
                 BindRegionContext::class,
-            ]);
+            ], isPersistent: true);
     }
 }

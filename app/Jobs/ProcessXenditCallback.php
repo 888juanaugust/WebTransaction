@@ -183,6 +183,14 @@ class ProcessXenditCallback implements ShouldQueue
             return;
         }
 
+        /*
+         * Refreshed: full settlement inside recordGatewayPayment already
+         * advanced the order (settleInvoiceIfCovered → markPaid, with this
+         * callback's reference in the event meta). Acting on the stale
+         * in-memory status here would write a second paid event.
+         */
+        $order->refresh();
+
         if ($order->status !== OrderStatus::AwaitingPayment) {
             Log::info('Xendit payment posted against an order not awaiting payment', [
                 'order_id' => $order->id,

@@ -285,15 +285,32 @@ draft → submitted → confirmed → awaiting_payment → paid → shipped → 
 |---|---|
 | `OrderStateMachine::submit` | Staff propose |
 | `OrderStateMachine::submitAsBuyer` | Buyer proposes — recorded as a buyer, not a staff user |
-| `OrderStateMachine::confirm` | **Prices snapshot, credit checked, stock reserved — one transaction** |
+| `OrderStateMachine::submitAndMaybeApprove` | One call from the panel: submits, and confirms in the same breath when the submitter holds the approval seat |
+| `OrderStateMachine::confirm` | **Prices snapshot, credit checked, stock reserved — one transaction.** Only the customer's assigned marketing (or the Owner) may call it |
 | `OrderStateMachine::awaitPayment` | Invoice issued + VA provisioned |
-| `OrderStateMachine::markPaid` | **Webhook only** |
-| `OrderStateMachine::ship` | Reservations become ledger decrements |
-| `OrderStateMachine::reject` / `expire` | Releases held stock |
+| `OrderStateMachine::markPaid` | Settlement in the payment ledger — webhook or a finance-recorded payment, never a screen action |
+| `OrderStateMachine::ship` | Reservations become ledger decrements. **Allowed from `awaiting_payment` too** — goods leave on credit |
+| `OrderStateMachine::complete` | Settlement calls it with a null actor: *finished means paid*, not "somebody clicked done" |
+| `OrderStateMachine::reject` / `expire` | Releases held stock; rejecting takes the same approval seat as confirming |
 | `BuyerOrderPlacer::place` / `repeat` | Builds a buyer's draft and submits it |
 
 Buyers stop at `submitted`. Confirmation is where credit and stock are decided,
 and neither is a customer's call.
+
+**The approval seat** (`assertMayApprove`): a marketing may only confirm or
+reject orders of customers whose `marketing_user_id` is them; a customer with
+no marketing waits for the Owner. Sales can never approve — they are paid on
+the sale. A marketing placing an order for their own customer skips nothing:
+`submitAndMaybeApprove` logs both the submit and the confirm as separate
+events, so the trail still shows who proposed and who approved, even when it
+is the same person with the right to do both.
+
+**Ship on credit** is the normal path now: `confirmed → awaiting_payment`
+issues the invoice, goods ship against it, and the customer's debt is the
+outstanding balance. When the payment ledger settles the invoice it advances
+the order itself — `awaiting_payment → paid`, or `shipped → completed` — which
+is why `complete` takes a nullable actor. The prepay path (pay first, then
+ship) still works unchanged.
 
 ### Stock — append-only ledger
 
@@ -879,6 +896,25 @@ who cannot see it. Both seats are audited with the name, because "who
 approved this customer's credit" traces back through "who was their marketing
 at the time".
 
+### Piutang menua — the three-month notice and the four-month freeze
+
+| Piece | Decides |
+|---|---|
+| `DebtAging::noticeCutoff` | Three months from `issued_on` — the reminder line |
+| `DebtAging::freezeCutoff` | Four months **and a day**: exactly four months still buys |
+| `DebtAging::isFrozen` | Derived on every ask, **never stored** — paying the invoice unfreezes with no state to reset |
+| `SweepDebtAging` | Nightly (00:30): claims each invoice once via a conditional UPDATE on `debt_notified_at`, bells the customer's sales and marketing |
+| `CreditChecker` | The freeze is the credit blocker; *merely overdue* no longer blocks — buying on account means invoices run late |
+| `CartService::checkout` | Refuses a frozen customer's checkout, naming the invoice |
+| `PeringatanTunggakan` | Portal banner, computed live: warning at three months, danger + locked at the freeze |
+
+The customer's own warning is never "sent" — the portal computes it on every
+visit, which cannot go stale and cannot be missed. Only the team's reminder is
+a notification, because a bell you saw yesterday is exactly how a debt gets to
+five months; the sweep tells the truth when it meets an invoice already past
+the freeze (a backdated faktur, a team seated late) instead of promising a
+month that is gone.
+
 ### Wilayah — one company, several sets of books
 
 | Piece | Decides |
@@ -886,7 +922,7 @@ at the time".
 | `RegionContext` | Which region this request works in: pinned, open-to-all, or unbound |
 | `HasRegion` | The global scope on 30 models, and the creating-stamp |
 | `whereBoundRegion()` | The same filter for raw `DB::table()` reports and line-table joins |
-| `BindRegionContext` | Middleware: account pins staff, session moves the Owner, company pins a buyer |
+| `BindRegionContext` | Middleware: account pins staff, session moves the Owner, company pins a buyer. **Registered persistent** — Filament skips non-persistent panel middleware on `/livewire/update`, and unbound there means reads fall open to every region |
 | `StaffRegistrar::assignRegion` | Only the Owner moves people, audited both sides, session ended |
 | `DocumentNumberGenerator` | Numbers carry the region and count per region: `INV-PST-202608-0001` |
 

@@ -835,7 +835,7 @@ class LandedCostTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($order->refresh(), $sales);
-        $machine->confirm($order->refresh(), $sales);
+        $machine->confirm($order->refresh(), $this->approver());
         $machine->awaitPayment($order->refresh(), $sales);
         $machine->markPaid($order->refresh(), ['sumber' => 'test']);
         $machine->ship($order->refresh(), $warehouseStaff);

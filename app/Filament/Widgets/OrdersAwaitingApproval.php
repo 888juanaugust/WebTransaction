@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Domain\Access\Role;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Money;
 use App\Domain\Orders\OrderStatus;
@@ -27,9 +28,17 @@ class OrdersAwaitingApproval extends TableWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    /**
+     * The approval queue belongs to whoever can empty it. Sales still see it
+     * — their submitted orders wait here and "has marketing looked at mine"
+     * is a question they ask hourly — but the buttons inside only render for
+     * the approval seat.
+     */
     public static function canView(): bool
     {
-        return auth()->user()?->role()->canSeePrices() ?? false;
+        $role = auth()->user()?->role();
+
+        return ($role?->canApproveOrders() || $role?->canCreateOrders()) ?? false;
     }
 
     public function table(Table $table): Table
@@ -41,6 +50,21 @@ class OrdersAwaitingApproval extends TableWidget
                 Order::query()
                     ->where('status', OrderStatus::Submitted)
                     ->with(['company', 'lines', 'warehouse'])
+                    /*
+                     * A marketing sees their own customers' queue, because
+                     * theirs is the only queue they can act on — an order for
+                     * a colleague's customer is noise they cannot resolve.
+                     * Everyone else — the Owner clearing a backlog, a
+                     * salesperson checking on their submission — sees the
+                     * region's whole list.
+                     */
+                    ->when(
+                        auth()->user()?->role() === Role::Marketing,
+                        fn ($q) => $q->whereHas(
+                            'company',
+                            fn ($c) => $c->where('marketing_user_id', auth()->id()),
+                        ),
+                    )
                     ->orderBy('submitted_at')
             )
             ->columns([

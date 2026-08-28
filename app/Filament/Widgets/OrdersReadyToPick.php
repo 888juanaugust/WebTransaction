@@ -35,7 +35,7 @@ class OrdersReadyToPick extends TableWidget
             ->emptyStateHeading('Tidak ada order siap dipicking')
             ->query(
                 Order::query()
-                    ->where('status', OrderStatus::Paid)
+                    ->whereIn('status', [OrderStatus::Paid, OrderStatus::AwaitingPayment])
                     ->with(['company', 'warehouse', 'lines'])
                     ->orderBy('paid_at')
             )

@@ -31,10 +31,23 @@ class EditOrder extends EditRecord
                     $this->save(shouldRedirect: false);
 
                     try {
-                        app(OrderStateMachine::class)->submit($this->record->refresh(), auth()->user());
+                        /*
+                         * Submit — and when the submitter holds the approval
+                         * seat (the customer's own marketing, or the owner),
+                         * approve in the same breath. Asking marketing to
+                         * click approve on their own submission a second
+                         * later would be ceremony, not control.
+                         */
+                        $order = app(OrderStateMachine::class)
+                            ->submitAndMaybeApprove($this->record->refresh(), auth()->user());
 
                         Notification::make()
-                            ->title("Order {$this->record->nomor} diajukan")
+                            ->title($order->status === OrderStatus::Confirmed
+                                ? "Order {$order->nomor} diajukan dan langsung disetujui"
+                                : "Order {$order->nomor} diajukan")
+                            ->body($order->status === OrderStatus::Confirmed
+                                ? 'Harga terkunci dan stok dipesan.'
+                                : 'Menunggu persetujuan marketing penanggung jawab.')
                             ->success()
                             ->send();
 

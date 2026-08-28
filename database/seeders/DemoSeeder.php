@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Domain\Access\Role;
+use App\Domain\Access\TeamAssigner;
 use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Assets\DepreciationGroup;
@@ -94,6 +95,7 @@ class DemoSeeder extends Seeder
 
         $supplier = $this->supplier();
         $companies = $this->customers();
+        $this->teams($companies, $staff);
 
         // Stock has to exist before anything can be sold, and it has to arrive
         // through a receipt so the average cost is real rather than invented.
@@ -320,6 +322,8 @@ class DemoSeeder extends Seeder
     {
         $machine = app(OrderStateMachine::class);
         $sales = $staff[Role::Sales->value];
+        // Approvals belong to the marketing in charge of the customer now.
+        $marketing = $staff[Role::Marketing->value];
         $finance = $staff[Role::Finance->value];
         $gudang = $staff[Role::Warehouse->value];
 
@@ -332,20 +336,20 @@ class DemoSeeder extends Seeder
         $confirmed = $this->order($companies['toko'], $warehouse, $sales, [
             ['OS-2002', Unit::Ctn, 2], ['BD-3001', Unit::Pcs, 18],
         ], 'PO-TSM-4410');
-        $machine->confirm($confirmed->refresh(), $sales);
+        $machine->confirm($confirmed->refresh(), $marketing);
 
         // 3. Awaiting payment: invoice issued, VA provisioned, unpaid.
         $billed = $this->order($companies['distributor'], $warehouse, $sales, [
             ['YH-1001', Unit::Ctn, 6], ['SV-5001', Unit::Pcs, 40],
         ], 'PO-CSD-1907');
-        $machine->confirm($billed->refresh(), $sales);
+        $machine->confirm($billed->refresh(), $marketing);
         $machine->awaitPayment($billed->refresh(), $finance);
 
         // 4. Paid — sits in "ready to pick" for the warehouse.
         $paid = $this->order($companies['bengkel'], $warehouse, $sales, [
             ['BD-3002', Unit::Pcs, 18], ['ST-4002', Unit::Pcs, 2],
         ], 'PO-BJM-8790');
-        $machine->confirm($paid->refresh(), $sales);
+        $machine->confirm($paid->refresh(), $marketing);
         $machine->awaitPayment($paid->refresh(), $finance);
         $this->settle($paid->refresh(), $finance);
 
@@ -354,7 +358,7 @@ class DemoSeeder extends Seeder
         $done = $this->order($companies['toko'], $warehouse, $sales, [
             ['YH-1002', Unit::Pcs, 24], ['OS-2001', Unit::Ctn, 1], ['SX-6001', Unit::Pcs, 8],
         ], 'PO-TSM-4180');
-        $machine->confirm($done->refresh(), $sales);
+        $machine->confirm($done->refresh(), $marketing);
         $machine->awaitPayment($done->refresh(), $finance);
         $this->settle($done->refresh(), $finance);
         $machine->ship($done->refresh(), $gudang);
@@ -366,7 +370,7 @@ class DemoSeeder extends Seeder
         $overdue = $this->order($companies['distributor'], $warehouse, $sales, [
             ['AS-7001', Unit::Pcs, 2],
         ], 'PO-CSD-1755');
-        $machine->confirm($overdue->refresh(), $sales);
+        $machine->confirm($overdue->refresh(), $marketing);
         $machine->awaitPayment($overdue->refresh(), $finance);
 
         $overdue->refresh()->invoice?->forceFill([
@@ -389,6 +393,31 @@ class DemoSeeder extends Seeder
             catatan: 'Transfer masuk tanpa nomor faktur (data demo).',
             paidAt: now()->subDays(2),
         );
+    }
+
+    /**
+     * Every active customer gets its team: the demo sales and the demo
+     * marketing. Through TeamAssigner like the real screen, so the audit log
+     * has the assignments and the marketing's approval queue is genuinely
+     * theirs — the walkthrough shows the reorganisation, not a shortcut
+     * around it.
+     *
+     * @param  array<string, Company>  $companies
+     * @param  array<string, User>  $staff
+     */
+    private function teams(array $companies, array $staff): void
+    {
+        $assigner = app(TeamAssigner::class);
+        $owner = $staff[Role::Owner->value];
+
+        foreach ($companies as $company) {
+            if ($company->status !== Company::STATUS_ACTIVE) {
+                continue;
+            }
+
+            $assigner->assignSales($company, $staff[Role::Sales->value], $owner);
+            $assigner->assignMarketing($company, $staff[Role::Marketing->value], $owner);
+        }
     }
 
     /**

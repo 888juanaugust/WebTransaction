@@ -553,7 +553,7 @@ class DocumentPostingTest extends TestCase
 
         $machine = app(OrderStateMachine::class);
         $machine->submit($order->refresh(), $this->sales);
-        $machine->confirm($order->refresh(), $this->sales);
+        $machine->confirm($order->refresh(), $this->approver());
 
         if ($target !== OrderStatus::Confirmed) {
             $machine->awaitPayment($order->refresh(), $this->sales);

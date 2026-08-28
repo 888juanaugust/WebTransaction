@@ -17,6 +17,7 @@ use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
 use App\Jobs\ReleaseStaleReservations;
+use App\Jobs\SweepDebtAging;
 use App\Jobs\SweepStuckWebhookEvents;
 use App\Models\Company;
 use App\Observers\CompanyObserver;
@@ -142,6 +143,14 @@ class AppServiceProvider extends ServiceProvider
         // Recovers money stranded by a worker that died mid-callback. Nothing
         // else will: the gateway already got its 200 and will not redeliver.
         Schedule::job(new SweepStuckWebhookEvents)->everyFiveMinutes();
+
+        /*
+         * Aging debt, checked once a day after midnight — debt ages by the
+         * calendar, so running it more often finds nothing new. The freeze
+         * at four months needs no job at all: it is derived arithmetic,
+         * recomputed by every credit check.
+         */
+        Schedule::job(new SweepDebtAging)->dailyAt('00:30');
 
         /*
          * Nightly backup, at an hour when nobody is ordering.

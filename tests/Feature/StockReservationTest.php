@@ -135,7 +135,7 @@ class StockReservationTest extends TestCase
         $this->stockUp(100);
         $order = $this->orderFor(30);
 
-        app(OrderStateMachine::class)->confirm($order, $this->sales);
+        app(OrderStateMachine::class)->confirm($order, $this->approver());
 
         $level = $this->product->stockLevels()->first();
 
@@ -151,12 +151,12 @@ class StockReservationTest extends TestCase
     {
         $this->stockUp(100);
 
-        app(OrderStateMachine::class)->confirm($this->orderFor(80), $this->sales);
+        app(OrderStateMachine::class)->confirm($this->orderFor(80), $this->approver());
 
         $second = $this->orderFor(30);
 
         $this->expectException(InsufficientStockException::class);
-        app(OrderStateMachine::class)->confirm($second, $this->sales);
+        app(OrderStateMachine::class)->confirm($second, $this->approver());
     }
 
     public function test_a_failed_reservation_leaves_the_order_unconfirmed(): void
@@ -165,7 +165,7 @@ class StockReservationTest extends TestCase
         $order = $this->orderFor(30);
 
         try {
-            app(OrderStateMachine::class)->confirm($order, $this->sales);
+            app(OrderStateMachine::class)->confirm($order, $this->approver());
             $this->fail('Expected the reservation to fail.');
         } catch (InsufficientStockException $e) {
             $this->assertSame(30, $e->requested);
@@ -182,7 +182,7 @@ class StockReservationTest extends TestCase
         $this->stockUp(50);
         $order = $this->orderFor(50);
 
-        app(OrderStateMachine::class)->confirm($order, $this->sales);
+        app(OrderStateMachine::class)->confirm($order, $this->approver());
 
         $this->assertSame(0, $this->ledger()->available($this->product->kode, $this->warehouse->id));
     }
@@ -195,8 +195,8 @@ class StockReservationTest extends TestCase
         $order = $this->orderFor(40);
 
         $machine = app(OrderStateMachine::class);
-        $machine->confirm($order, $this->sales);
-        $machine->reject($order, $this->sales, 'Pelanggan membatalkan.');
+        $machine->confirm($order, $this->approver());
+        $machine->reject($order, $this->approver(), 'Pelanggan membatalkan.');
 
         $level = $this->product->stockLevels()->first();
 
@@ -213,7 +213,7 @@ class StockReservationTest extends TestCase
         $this->stockUp(100);
         $order = $this->orderFor(40);
 
-        app(OrderStateMachine::class)->confirm($order, $this->sales);
+        app(OrderStateMachine::class)->confirm($order, $this->approver());
 
         $this->ledger()->releaseForOrder($order, 'expired');
         $this->ledger()->releaseForOrder($order, 'expired');
@@ -228,7 +228,7 @@ class StockReservationTest extends TestCase
         $order = $this->orderFor(40);
 
         $machine = app(OrderStateMachine::class);
-        $machine->confirm($order, $this->sales);
+        $machine->confirm($order, $this->approver());
         $machine->awaitPayment($order, $this->sales);
         $machine->expire($order);
 
@@ -244,7 +244,7 @@ class StockReservationTest extends TestCase
         $order = $this->orderFor(40);
 
         $machine = app(OrderStateMachine::class);
-        $machine->confirm($order, $this->sales);
+        $machine->confirm($order, $this->approver());
         $machine->awaitPayment($order, $this->sales);
         $machine->markPaid($order, meta: ['test' => true]);
         $machine->ship($order, User::factory()->warehouse()->create());
@@ -284,7 +284,7 @@ class StockReservationTest extends TestCase
             'sku' => $this->product->kode,
         ]);
 
-        app(OrderStateMachine::class)->confirm($order->refresh(), $this->sales);
+        app(OrderStateMachine::class)->confirm($order->refresh(), $this->approver());
 
         $this->assertSame(36, $this->product->stockLevels()->first()->qty_reserved);
         $this->assertSame(64, $this->ledger()->available($this->product->kode, $this->warehouse->id));

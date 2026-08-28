@@ -19,7 +19,10 @@ use App\Models\Order;
  */
 class CreditChecker
 {
-    public function __construct(private readonly OutstandingReceivables $receivables) {}
+    public function __construct(
+        private readonly OutstandingReceivables $receivables,
+        private readonly DebtAging $aging,
+    ) {}
 
     /**
      * Check whether an order fits inside the customer's remaining credit.
@@ -76,10 +79,25 @@ class CreditChecker
         }
 
         if ($overdueCheck) {
-            $overdue = $this->overdueCount($company);
+            /*
+             * The freeze, not the due date. Under the credit-sales rules a
+             * customer keeps buying with invoices merely overdue — that is
+             * what buying on account means here — and is stopped only when a
+             * debt passes four months and a day. The blocker names the
+             * oldest such invoice, because "you are blocked" without "by
+             * what" is a phone call to marketing that starts angry.
+             */
+            $jatuhTempo = $this->aging->fallDueInvoices($company);
 
-            if ($overdue > 0) {
-                $blockers[] = "Ada {$overdue} faktur jatuh tempo yang belum dibayar.";
+            if ($jatuhTempo->isNotEmpty()) {
+                $tertua = $jatuhTempo->first();
+                $blockers[] = sprintf(
+                    'Pelanggan jatuh tempo keras: faktur %s (sisa %s) berumur lebih dari %d bulan. '
+                    .'Transaksi baru terkunci sampai faktur itu lunas.',
+                    $tertua->nomor,
+                    number_format($tertua->amountOutstanding(), 0, ',', '.'),
+                    (int) config('penjualan.debt_freeze_months'),
+                );
             }
         }
 
@@ -124,13 +142,5 @@ class CreditChecker
             ->whereDoesntHave('invoice')
             ->when($excludeOrderId !== null, fn ($q) => $q->where('id', '!=', $excludeOrderId))
             ->sum('total_rupiah');
-    }
-
-    private function overdueCount(Company $company): int
-    {
-        return Invoice::query()
-            ->where('company_id', $company->id)
-            ->overdue()
-            ->count();
     }
 }

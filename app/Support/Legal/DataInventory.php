@@ -156,6 +156,7 @@ final class DataInventory
                     'nomor', 'order_id', 'company_id', 'subtotal_rupiah', 'discount_rupiah',
                     'dpp_rupiah', 'ppn_rupiah', 'total_rupiah', 'issued_on', 'due_date',
                     'status', 'kode_transaksi', 'nsfp', 'faktur_exported_at',
+                    'debt_notified_at',
                 ],
             ],
 
@@ -612,6 +613,14 @@ final class DataInventory
              * branch's, not a person's.
              */
             'regions',
+
+            /*
+             * Panel notifications — reminders to staff about aging debt.
+             * notifiable_id points at a staff account and the payload names a
+             * customer, but both are already declared on their own tables;
+             * this table is a delivery mechanism with a read receipt.
+             */
+            'notifications',
 
             // Catalogue and commercial reference data.
             'products', 'warehouses', 'price_tiers', 'price_tier_items',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Access\Role;
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Billing\InvoiceIssuer;
@@ -101,6 +102,7 @@ class OrderStateMachine
     public function confirm(Order $order, User $actor, ?string $catatan = null): Order
     {
         $this->assertCan($order, OrderStatus::Confirmed);
+        $this->assertMayApprove($order, $actor);
 
         return DB::transaction(function () use ($order, $actor, $catatan) {
             $this->snapshotPrices($order, $actor);
@@ -220,7 +222,13 @@ class OrderStateMachine
         });
     }
 
-    public function complete(Order $order, User $actor, ?string $catatan = null): Order
+    /**
+     * A null actor means the system completed it — settlement does, when the
+     * last rupiah lands on a shipped order's invoice. "Finished" in the
+     * organisation's words means paid, and nobody should have to click a
+     * button to say so after the money already has.
+     */
+    public function complete(Order $order, ?User $actor, ?string $catatan = null): Order
     {
         return $this->transition($order, OrderStatus::Completed, $actor, $catatan, function (Order $order) {
             $order->completed_at = now();
@@ -236,6 +244,13 @@ class OrderStateMachine
     public function reject(Order $order, ?User $actor, string $alasan): Order
     {
         $this->assertCan($order, OrderStatus::Rejected);
+
+        // The sweep rejects with no actor; a person rejecting sits in the
+        // same seat as a person approving — it is the same credit decision
+        // with the other answer.
+        if ($actor !== null) {
+            $this->assertMayApprove($order, $actor);
+        }
 
         return DB::transaction(function () use ($order, $actor, $alasan) {
             $released = $order->status->holdsReservation()
@@ -256,6 +271,76 @@ class OrderStateMachine
      * Expire an unpaid order. Called by the scheduled sweep, so there is no
      * human actor.
      */
+    /**
+     * Approval is a seat, not a permission alone.
+     *
+     * The reorganisation's rule: every order waits for the marketing in
+     * charge of that customer. Their approval is the credit decision — the
+     * moment goods are promised and the total becomes the customer's debt —
+     * so it belongs to the person who answers for that customer's balance,
+     * not to whichever colleague happened to open the queue.
+     *
+     * Owner passes both checks: they are the escape hatch for a customer
+     * whose marketing is on leave, or has not been assigned yet.
+     */
+    private function assertMayApprove(Order $order, User $actor): void
+    {
+        if (! $actor->role()->canApproveOrders()) {
+            throw new \DomainException(
+                'Menyetujui order adalah keputusan kredit — hanya marketing '
+                .'penanggung jawab pelanggan (atau pemilik) yang bisa.'
+            );
+        }
+
+        if ($actor->role() !== Role::Marketing) {
+            return;
+        }
+
+        $marketingId = $order->company->marketing_user_id;
+
+        if ($marketingId === null) {
+            throw new \DomainException(
+                "Pelanggan {$order->company->nama} belum punya marketing penanggung jawab. "
+                .'Minta pemilik menugaskan tim dulu di halaman pelanggan.'
+            );
+        }
+
+        if ((int) $marketingId !== (int) $actor->getKey()) {
+            throw new \DomainException(
+                'Order ini milik pelanggan yang diurus marketing lain — bukan Anda. '
+                .'Yang menyetujui harus marketing penanggung jawabnya.'
+            );
+        }
+    }
+
+    /**
+     * Submit and, when the submitter holds the approval seat, approve in the
+     * same breath.
+     *
+     * The organisation's asymmetry, made explicit: a salesperson's order
+     * waits in pending exactly like the customer's own, but the marketing in
+     * charge placing an order *is* the approval — asking them to click
+     * approve on their own submission a second later would be ceremony, not
+     * control. Two logged events still land, submit then confirm, so the
+     * history reads the same either way.
+     *
+     * Falls back to plain submission for everyone else.
+     */
+    public function submitAndMaybeApprove(Order $order, User $actor, ?string $catatan = null): Order
+    {
+        $order = $this->submit($order, $actor, $catatan);
+
+        $mayApprove = $actor->role()->canApproveOrders()
+            && ($actor->role() !== Role::Marketing
+                || (int) $order->company->marketing_user_id === (int) $actor->getKey());
+
+        if ($mayApprove) {
+            $order = $this->confirm($order, $actor, $catatan);
+        }
+
+        return $order;
+    }
+
     public function expire(Order $order, ?string $alasan = null): Order
     {
         $this->assertCan($order, OrderStatus::Expired);

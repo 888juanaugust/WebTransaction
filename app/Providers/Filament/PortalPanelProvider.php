@@ -79,8 +79,13 @@ class PortalPanelProvider extends PanelProvider
                  * trait keeps one customer out of another's rows, this keeps a
                  * whole region's data out of a request that has no business
                  * touching it.
+                 *
+                 * Persistent for the same reason as the admin panel: Livewire
+                 * update requests — the cart buttons, every table search —
+                 * bypass non-persistent panel middleware, and the region must
+                 * be bound on those too.
                  */
                 BindRegionContext::class,
-            ]);
+            ], isPersistent: true);
     }
 }

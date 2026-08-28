@@ -6,6 +6,8 @@ namespace App\Domain\Payments;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Orders\OrderStateMachine;
+use App\Domain\Orders\OrderStatus;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -72,7 +74,7 @@ class PaymentLedger
                 'paid_at' => $paidAt ?? now(),
             ]);
 
-            $this->settleInvoiceIfCovered($invoice);
+            $this->settleInvoiceIfCovered($invoice, ['gateway_event_id' => $gatewayReference]);
 
             // Dr Bank / Cr Piutang Usaha.
             $this->poster->customerPaymentReceived($entry);
@@ -225,7 +227,8 @@ class PaymentLedger
         return (int) PaymentEntry::query()->where('order_id', $order->id)->sum('amount_rupiah');
     }
 
-    private function settleInvoiceIfCovered(?Invoice $invoice): void
+    /** @param  array<string, mixed>  $meta  carried onto the order's transition event */
+    private function settleInvoiceIfCovered(?Invoice $invoice, array $meta = []): void
     {
         if ($invoice === null) {
             return;
@@ -235,6 +238,44 @@ class PaymentLedger
 
         if ($invoice->status === Invoice::STATUS_OPEN && $invoice->amountOutstanding() <= 0) {
             $invoice->forceFill(['status' => Invoice::STATUS_PAID])->save();
+
+            $this->advanceOrder($invoice, $meta);
+        }
+    }
+
+    /**
+     * Settlement moves the order, because "finished" means paid.
+     *
+     * Two credit-sales positions land here. An order still awaiting payment
+     * becomes `paid` — the prepay path. An order already shipped becomes
+     * `completed` — the ordinary credit path, where the goods left months
+     * before the money arrived and the last rupiah is what closes the file.
+     * The transitions are logged like any other, with no actor: the money is
+     * the actor.
+     *
+     * Resolved lazily rather than constructor-injected: the state machine
+     * posts through this ledger's own collaborators, and a constructor cycle
+     * is a worse smell than one container call in a private method.
+     */
+    /** @param  array<string, mixed>  $meta */
+    private function advanceOrder(Invoice $invoice, array $meta = []): void
+    {
+        $order = $invoice->order;
+
+        if ($order === null) {
+            return;
+        }
+
+        $machine = app(OrderStateMachine::class);
+
+        if ($order->status === OrderStatus::AwaitingPayment) {
+            $machine->markPaid($order, meta: $meta + ['invoice_id' => $invoice->id, 'settled' => true]);
+
+            return;
+        }
+
+        if ($order->status === OrderStatus::Shipped) {
+            $machine->complete($order, null, 'Faktur lunas — transaksi selesai.');
         }
     }
 }
