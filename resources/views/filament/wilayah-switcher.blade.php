@@ -40,7 +40,9 @@
         @else
             <span class="fi-badge rounded-md px-2 py-1 text-xs font-medium"
                   style="background: rgb(7 49 133 / .08); color: #073185">
-                {{ $context->region()?->label() ?? 'Wilayah' }}
+                {{-- Marketing reads open-to-all with no switcher: their badge
+                     names that state instead of a single region. --}}
+                {{ $semua ? 'Semua wilayah' : ($context->region()?->label() ?? 'Wilayah') }}
             </span>
         @endif
     </div>

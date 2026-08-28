@@ -41,7 +41,9 @@ class DatabaseSeeder extends Seeder
                     'role' => $role,
                     'is_active' => true,
                     'email_verified_at' => now(),
-                    'region_id' => $role === Role::Owner ? null : $wilayahUtama,
+                    // Marketing is global like the Owner — no region of
+                    // their own, they answer for customers everywhere.
+                    'region_id' => in_array($role, [Role::Owner, Role::Marketing], true) ? null : $wilayahUtama,
                 ],
             );
         }

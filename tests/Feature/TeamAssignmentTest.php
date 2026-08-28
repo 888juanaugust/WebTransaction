@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\TeamAssigner;
+use App\Domain\Regions\RegionContext;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Region;
@@ -115,6 +116,26 @@ class TeamAssignmentTest extends TestCase
         $this->assigner->assignSales($this->pelanggan, $salesSby, $this->owner);
 
         $this->assertNull($this->pelanggan->fresh()->sales_user_id);
+    }
+
+    public function test_a_marketing_may_hold_any_regions_customer(): void
+    {
+        /*
+         * The region rule above is about visibility, and marketing sees
+         * everything — global since 2026-08. So the seat crosses regions
+         * freely: one marketing, customers everywhere.
+         */
+        $sby = Region::factory()->create(['kode' => 'SB2']);
+        $pelangganSby = app(RegionContext::class)->within(
+            $sby,
+            fn () => Company::factory()->create(),
+        );
+
+        $marketing = User::factory()->marketing()->create(['region_id' => null]);
+
+        $this->assigner->assignMarketing($pelangganSby, $marketing, $this->owner);
+
+        $this->assertSame($marketing->id, (int) $pelangganSby->fresh()->marketing_user_id);
     }
 
     public function test_a_deactivated_account_cannot_be_assigned(): void

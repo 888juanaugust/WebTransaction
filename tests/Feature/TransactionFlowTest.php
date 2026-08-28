@@ -10,6 +10,7 @@ use App\Domain\Credit\DebtAging;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Payments\PaymentLedger;
+use App\Domain\Regions\RegionContext;
 use App\Domain\Uom\Unit;
 use App\Jobs\SweepDebtAging;
 use App\Models\Company;
@@ -35,7 +36,7 @@ use Tests\TestCase;
  * Pending waits for the marketing in charge; acceptance is the credit
  * decision; the goods ship before the money arrives; and "finished" means
  * paid. Each of those is a rule somebody could quietly widen, so each is
- * pinned here — including the boundaries of the four-month freeze, where an
+ * pinned here — including the boundaries of the 150-day freeze, where an
  * off-by-one locks a customer a day early on the owner's own stated terms.
  */
 class TransactionFlowTest extends TestCase
@@ -254,14 +255,41 @@ class TransactionFlowTest extends TestCase
         $this->assertSame(OrderStatus::Shipped, $order->refresh()->status);
     }
 
+    public function test_a_global_marketing_approves_across_regions_and_the_writes_land_in_the_customers_books(): void
+    {
+        /*
+         * Marketing carries no region. They read open-to-all — the state
+         * that refuses creates — so the state machine must pin itself to
+         * the order's region for the reservation and the events to have
+         * books to land in. This is the write path the middleware change
+         * depends on.
+         */
+        $order = $this->draftOrder();
+        $this->machine()->submit($order, $this->sales);
+
+        app(RegionContext::class)->openToAll();
+
+        try {
+            $this->machine()->confirm($order->refresh(), $this->marketing);
+        } finally {
+            $this->pinToDefaultRegion();
+        }
+
+        $this->assertSame(OrderStatus::Confirmed, $order->refresh()->status);
+
+        $reservation = DB::table('stock_reservations')->where('order_id', $order->id)->first();
+        $this->assertNotNull($reservation);
+        $this->assertSame($order->region_id, $reservation->region_id);
+    }
+
     // ---------------------------------------------------------------- aging
 
     public function test_the_sweep_notifies_the_team_once_per_invoice(): void
     {
         Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
-            'issued_on' => today()->subMonths(3),
-            'due_date' => today()->subMonths(2),
+            'issued_on' => today()->subDays(120),
+            'due_date' => today()->subDays(90),
         ]);
 
         (new SweepDebtAging)->handle(app(DebtAging::class));
@@ -284,12 +312,12 @@ class TransactionFlowTest extends TestCase
          * a team is assigned late, or after a backdated faktur, meets an
          * invoice already past four — the warning must say the lock is
          * already on, not promise a month that is gone. Found in the
-         * browser: a five-month invoice produced "satu bulan lagi".
+         * browser: an already-frozen invoice produced "satu bulan lagi".
          */
         Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
-            'issued_on' => today()->subMonths(5),
-            'due_date' => today()->subMonths(4),
+            'issued_on' => today()->subDays(160),
+            'due_date' => today()->subDays(130),
         ]);
 
         (new SweepDebtAging)->handle(app(DebtAging::class));
@@ -299,15 +327,15 @@ class TransactionFlowTest extends TestCase
             ->value('data');
 
         $this->assertStringContainsString('sudah terkunci', $badan);
-        $this->assertStringNotContainsString('Satu bulan lagi', $badan);
+        $this->assertStringNotContainsString('hari lagi pelanggan', $badan);
     }
 
-    public function test_a_debt_one_day_short_of_three_months_is_not_flagged(): void
+    public function test_a_debt_one_day_short_of_120_days_is_not_flagged(): void
     {
         Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
-            'issued_on' => today()->subMonths(3)->addDay(),
-            'due_date' => today()->subMonths(2),
+            'issued_on' => today()->subDays(119),
+            'due_date' => today()->subDays(89),
         ]);
 
         (new SweepDebtAging)->handle(app(DebtAging::class));
@@ -320,8 +348,8 @@ class TransactionFlowTest extends TestCase
         Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
             'status' => Invoice::STATUS_PAID,
-            'issued_on' => today()->subMonths(6),
-            'due_date' => today()->subMonths(5),
+            'issued_on' => today()->subDays(200),
+            'due_date' => today()->subDays(170),
         ]);
 
         $this->assertFalse(app(DebtAging::class)->isFrozen($this->pelanggan));
@@ -334,8 +362,8 @@ class TransactionFlowTest extends TestCase
     {
         Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
-            'issued_on' => today()->subMonths(4)->subDay(),
-            'due_date' => today()->subMonths(3),
+            'issued_on' => today()->subDays(151),
+            'due_date' => today()->subDays(121),
         ]);
 
         $pembeli = CustomerUser::factory()->create(['company_id' => $this->pelanggan->id]);
@@ -366,8 +394,8 @@ class TransactionFlowTest extends TestCase
          */
         $faktur = Invoice::factory()->totalling(2_000_000)->create([
             'company_id' => $this->pelanggan->id,
-            'issued_on' => today()->subMonths(5),
-            'due_date' => today()->subMonths(4),
+            'issued_on' => today()->subDays(160),
+            'due_date' => today()->subDays(130),
         ]);
 
         $aging = app(DebtAging::class);

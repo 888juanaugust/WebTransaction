@@ -127,6 +127,24 @@ class RegionAccessTest extends TestCase
         );
     }
 
+    public function test_marketing_reads_every_region_with_no_switcher(): void
+    {
+        /*
+         * Marketing is global — one marketing answers for customers in every
+         * region, so their screens read across all books, always. A leftover
+         * region_id on the account changes nothing: the role decides.
+         */
+        Company::factory()->create(['nama' => 'Bengkel Jakarta']);
+        app(RegionContext::class)->within($this->surabaya, fn () => Company::factory()->create(['nama' => 'Bengkel Surabaya']));
+
+        $marketing = User::factory()->marketing()->create(['region_id' => $this->jakarta->id]);
+
+        $this->actingAs($marketing)->get('/admin')->assertOk();
+
+        $this->assertTrue(app(RegionContext::class)->isOpenToAll());
+        $this->assertSame(2, Company::query()->count());
+    }
+
     public function test_a_pinned_clerk_cannot_switch_by_crafted_post(): void
     {
         /*

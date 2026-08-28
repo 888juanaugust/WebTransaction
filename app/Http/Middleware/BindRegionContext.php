@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Domain\Access\Role;
 use App\Domain\Regions\RegionContext;
 use App\Models\Region;
 use Closure;
@@ -76,6 +77,20 @@ class BindRegionContext
 
     private function bindForStaff(Request $request, mixed $staf): void
     {
+        /*
+         * Marketing is global — the 2026-08 rule. One marketing answers for
+         * customers in every region, so their screens read across all books,
+         * always, with no switcher. Checked before the pin so a leftover
+         * region_id on a marketing account changes nothing. Their writes
+         * still land in one region: every mutation they can make goes
+         * through a domain class that pins itself to the subject's region.
+         */
+        if ($staf->role() === Role::Marketing) {
+            $this->context->openToAll();
+
+            return;
+        }
+
         // Pinned by their account. Not negotiable, and not in the session.
         if ($staf->region_id !== null) {
             $this->context->pinTo((int) $staf->region_id);

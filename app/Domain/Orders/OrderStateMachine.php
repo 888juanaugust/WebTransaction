@@ -11,6 +11,7 @@ use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Payments\VirtualAccountProvisioner;
 use App\Domain\Pricing\PriceResolver;
+use App\Domain\Regions\RegionContext;
 use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Tax\TaxCalculator;
@@ -104,7 +105,7 @@ class OrderStateMachine
         $this->assertCan($order, OrderStatus::Confirmed);
         $this->assertMayApprove($order, $actor);
 
-        return DB::transaction(function () use ($order, $actor, $catatan) {
+        return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $actor, $catatan) {
             $this->snapshotPrices($order, $actor);
 
             // Re-read the totals written by the snapshot before checking credit.
@@ -131,7 +132,7 @@ class OrderStateMachine
                 },
                 meta: ['credit' => $credit->toArray()],
             );
-        });
+        }));
     }
 
     /**
@@ -152,7 +153,7 @@ class OrderStateMachine
     {
         $this->assertCan($order, OrderStatus::AwaitingPayment);
 
-        return DB::transaction(function () use ($order, $actor, $catatan) {
+        return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $actor, $catatan) {
             $invoice = $this->invoices->issueFor($order, $actor);
             $va = $this->virtualAccounts->ensureFor($order->company);
 
@@ -169,7 +170,7 @@ class OrderStateMachine
                     'virtual_account' => $va->account_number,
                 ],
             );
-        });
+        }));
     }
 
     /**
@@ -198,7 +199,7 @@ class OrderStateMachine
     {
         $this->assertCan($order, OrderStatus::Shipped);
 
-        return DB::transaction(function () use ($order, $actor, $catatan) {
+        return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $actor, $catatan) {
             $movements = $this->stock->shipOrder($order, $actor);
 
             /*
@@ -219,7 +220,7 @@ class OrderStateMachine
                 fn (Order $order) => $order->shipped_at = now(),
                 meta: ['stock_movement_ids' => array_map(fn ($m) => $m->id, $movements)],
             );
-        });
+        }));
     }
 
     /**
@@ -462,6 +463,25 @@ class OrderStateMachine
      * @param  (callable(Order): void)|null  $mutate
      * @param  array<string, mixed>  $meta
      */
+    /**
+     * Run a mutation pinned to the order's own region.
+     *
+     * Marketing works open-to-all — they have no region — so a request of
+     * theirs arrives here unpinned, and the scoped rows a transition creates
+     * would have nowhere to file themselves. The order knows its region;
+     * every write about the order belongs in that region's books, whoever
+     * clicked. Harmless when already pinned: within() nests and restores.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $work
+     * @return T
+     */
+    private function inRegion(Order $order, callable $work): mixed
+    {
+        return app(RegionContext::class)->within((int) $order->region_id, $work);
+    }
+
     private function transition(
         Order $order,
         OrderStatus $to,
@@ -475,7 +495,7 @@ class OrderStateMachine
 
         $this->assertCan($order, $to);
 
-        return DB::transaction(function () use ($order, $from, $to, $actor, $alasan, $mutate, $meta, $customerActor) {
+        return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $from, $to, $actor, $alasan, $mutate, $meta, $customerActor) {
             $order->status = $to;
 
             if ($mutate !== null) {
@@ -511,7 +531,7 @@ class OrderStateMachine
             );
 
             return $order;
-        });
+        }));
     }
 
     private function assertCan(Order $order, OrderStatus $to): void

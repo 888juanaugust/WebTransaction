@@ -34,7 +34,7 @@ use Tests\TestCase;
  * The claims pinned here: only the marketing in charge may say "the customer
  * paid me"; only finance may say "the money is real"; the two are never one
  * person; and the approval is an ordinary ledger payment, so everything a
- * payment settles — the invoice, the order, the four-month freeze — settles
+ * payment settles — the invoice, the order, the 150-day freeze — settles
  * exactly the same way when the cash came through a house visit.
  */
 class DebtRemovalTest extends TestCase
@@ -86,12 +86,37 @@ class DebtRemovalTest extends TestCase
 
     // ------------------------------------------------------------ initiating
 
-    public function test_the_salesperson_cannot_claim_a_debt_was_paid(): void
+    public function test_the_customers_own_sales_can_claim_a_cash_payment(): void
+    {
+        /*
+         * The 2026-08 change: the sales who visits the store is as likely as
+         * the marketing to be handed the cash, so either seat may file the
+         * claim. Finance still holds the second key either way.
+         */
+        $invoice = $this->openInvoice();
+
+        $removal = $this->remover()->initiate($invoice, $this->sales, 5_000_000, 'Tunai di toko saat kunjungan.');
+
+        $this->assertSame(DebtRemovalStatus::Diajukan, $removal->status);
+        $this->assertSame($this->sales->id, $removal->initiated_by);
+    }
+
+    public function test_a_sales_not_in_charge_cannot_claim(): void
+    {
+        $lain = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageMatches('/bukan tanggung jawab Anda/');
+
+        $this->remover()->initiate($this->openInvoice(), $lain, 5_000_000, 'Dibayar tunai di toko.');
+    }
+
+    public function test_finance_cannot_file_the_claim_they_would_verify(): void
     {
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessageMatches('/marketing penanggung jawab/');
+        $this->expectExceptionMessageMatches('/tim penanggung jawab/');
 
-        $this->remover()->initiate($this->openInvoice(), $this->sales, 5_000_000, 'Dibayar tunai di toko.');
+        $this->remover()->initiate($this->openInvoice(), $this->finance, 5_000_000, 'Tunai.');
     }
 
     public function test_a_marketing_not_in_charge_cannot_claim_it_either(): void
@@ -252,7 +277,7 @@ class DebtRemovalTest extends TestCase
          * The whole point of routing approval through the payment ledger:
          * a debt paid in cash at the customer's counter settles everything
          * a bank transfer settles. The shipped order completes (null actor —
-         * finished means paid) and the four-month freeze lifts with nothing
+         * finished means paid) and the 150-day freeze lifts with nothing
          * to reset.
          */
         $gudang = Warehouse::factory()->create();
@@ -279,7 +304,7 @@ class DebtRemovalTest extends TestCase
         $machine->ship($order->refresh(), User::factory()->warehouse()->create());
 
         $invoice = $order->refresh()->invoice;
-        $invoice->forceFill(['issued_on' => today()->subMonths(5)])->save();
+        $invoice->forceFill(['issued_on' => today()->subDays(160)])->save();
         $this->assertTrue(app(DebtAging::class)->isFrozen($this->pelanggan));
 
         $removal = $this->remover()->initiate(

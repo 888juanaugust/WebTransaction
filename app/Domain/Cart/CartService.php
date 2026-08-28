@@ -156,7 +156,7 @@ class CartService
         $cart = $this->forBuyer($buyer);
 
         /*
-         * The four-month freeze, applied at the door rather than at the
+         * The 150-day freeze, applied at the door rather than at the
          * marketing's desk. A frozen customer's order would only be rejected
          * downstream — letting them build and submit it first is a promise
          * the system already knows it will break. The message names the
@@ -167,10 +167,10 @@ class CartService
 
         if ($jatuhTempo->isNotEmpty()) {
             throw new DomainException(sprintf(
-                'Transaksi baru terkunci: faktur %s belum dibayar lebih dari %d bulan. '
+                'Transaksi baru terkunci: faktur %s belum dibayar lebih dari %d hari. '
                 .'Silakan selesaikan pembayaran itu dulu — hubungi tim kami bila sudah membayar.',
                 $jatuhTempo->first()->nomor,
-                (int) config('penjualan.debt_freeze_months'),
+                (int) config('penjualan.debt_freeze_days'),
             ));
         }
 

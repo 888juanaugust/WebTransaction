@@ -41,7 +41,7 @@ class DebtRemovalActions
             // Green is reserved for settled money — which is exactly what
             // this click makes.
             ->color('success')
-            ->modalHeading('Setujui penghapusan piutang')
+            ->modalHeading('Setujui pelunasan piutang')
             ->modalDescription(fn (DebtRemoval $record) => 'Menyetujui akan mencatat pembayaran '
                 .Money::format($record->amount_rupiah)
                 ." untuk faktur {$record->invoice->nomor} — sama seperti pembayaran biasa, masuk buku dan tidak bisa diedit.")
@@ -57,7 +57,7 @@ class DebtRemovalActions
                     app(DebtRemover::class)->approve($record, auth()->user(), $data['catatan'] ?? null);
 
                     Notification::make()
-                        ->title("Penghapusan piutang faktur {$record->invoice->nomor} disetujui")
+                        ->title("Pelunasan piutang faktur {$record->invoice->nomor} disetujui")
                         ->body('Pembayaran tercatat di buku.')
                         ->success()
                         ->send();
@@ -77,7 +77,7 @@ class DebtRemovalActions
             ->label('Tolak')
             ->icon('heroicon-o-x-circle')
             ->color('danger')
-            ->modalHeading('Tolak penghapusan piutang')
+            ->modalHeading('Tolak pelunasan piutang')
             ->schema([
                 Textarea::make('catatan')
                     ->label('Kenapa ditolak')

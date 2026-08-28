@@ -83,20 +83,20 @@ class CreditChecker
              * The freeze, not the due date. Under the credit-sales rules a
              * customer keeps buying with invoices merely overdue — that is
              * what buying on account means here — and is stopped only when a
-             * debt passes four months and a day. The blocker names the
-             * oldest such invoice, because "you are blocked" without "by
-             * what" is a phone call to marketing that starts angry.
+             * debt passes 150 days. The blocker names the oldest such
+             * invoice, because "you are blocked" without "by what" is a
+             * phone call to marketing that starts angry.
              */
             $jatuhTempo = $this->aging->fallDueInvoices($company);
 
             if ($jatuhTempo->isNotEmpty()) {
                 $tertua = $jatuhTempo->first();
                 $blockers[] = sprintf(
-                    'Pelanggan jatuh tempo keras: faktur %s (sisa %s) berumur lebih dari %d bulan. '
+                    'Pelanggan jatuh tempo keras: faktur %s (sisa %s) berumur lebih dari %d hari. '
                     .'Transaksi baru terkunci sampai faktur itu lunas.',
                     $tertua->nomor,
                     number_format($tertua->amountOutstanding(), 0, ',', '.'),
-                    (int) config('penjualan.debt_freeze_months'),
+                    (int) config('penjualan.debt_freeze_days'),
                 );
             }
         }

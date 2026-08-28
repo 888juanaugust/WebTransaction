@@ -28,11 +28,11 @@ class DebtRemovalResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHandRaised;
 
-    protected static ?string $navigationLabel = 'Penghapusan piutang';
+    protected static ?string $navigationLabel = 'Pelunasan piutang';
 
-    protected static ?string $modelLabel = 'penghapusan piutang';
+    protected static ?string $modelLabel = 'pelunasan piutang';
 
-    protected static ?string $pluralModelLabel = 'penghapusan piutang';
+    protected static ?string $pluralModelLabel = 'pelunasan piutang';
 
     protected static ?int $navigationSort = 45;
 

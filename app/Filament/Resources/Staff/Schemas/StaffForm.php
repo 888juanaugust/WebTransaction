@@ -106,9 +106,11 @@ class StaffForm
                                 ->get()
                                 ->mapWithKeys(fn (Region $r) => [$r->id => $r->label()])
                                 ->all())
-                            ->required(fn (callable $get) => $get('role') !== Role::Owner->value)
+                            // Marketing is global like the Owner: no region
+                            // field, because there is nothing to choose.
+                            ->required(fn (callable $get) => ! in_array($get('role'), [Role::Owner->value, Role::Marketing->value], true))
                             ->native(false)
-                            ->hidden(fn (callable $get) => $get('role') === Role::Owner->value)
+                            ->hidden(fn (callable $get) => in_array($get('role'), [Role::Owner->value, Role::Marketing->value], true))
                             ->disabled(fn (?User $record) => $record !== null
                                 && $record->getKey() === auth()->id())
                             ->helperText('Akun ini hanya melihat data wilayah tersebut: '
@@ -125,10 +127,10 @@ class StaffForm
      */
     private static function ringkasanPeran(): string
     {
-        return 'Sales: kunjungan dan buat order untuk pelanggan — menunggu persetujuan marketing. '
-            .'Marketing: setujui/tolak transaksi, pantau piutang pelanggannya, ajukan penghapusan utang. '
+        return 'Sales: kunjungan, buat order untuk pelanggan (menunggu persetujuan marketing), ajukan pelunasan tunai. '
+            .'Marketing: global semua wilayah — setujui/tolak transaksi, pantau piutang pelanggannya, ajukan pelunasan. '
             .'Inventori: stok, katalog, dan daftar harga — tidak melihat piutang pelanggan. '
-            .'Keuangan: konfirmasi pembayaran, verifikasi penghapusan utang, pembukuan. '
+            .'Keuangan: konfirmasi pembayaran, verifikasi pelunasan piutang, pembukuan. '
             .'Pemilik: semuanya, termasuk log audit, wilayah, dan pengelolaan staf.';
     }
 }

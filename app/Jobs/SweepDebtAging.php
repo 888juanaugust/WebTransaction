@@ -77,22 +77,23 @@ class SweepDebtAging implements ShouldQueue
         }
 
         /*
-         * Normally the sweep meets an invoice the night it turns three
-         * months old, and "satu bulan lagi" is the truth. But the first
-         * invoice it ever sees may already be past four — a backdated
-         * faktur, a customer assigned a team late — and telling the team
-         * "one month left" about a customer who is already locked would
-         * cost the warning its credibility.
+         * Normally the sweep meets an invoice the night it turns 120 days
+         * old, and "30 hari lagi" is the truth. But the first invoice it
+         * ever sees may already be past 150 — a backdated faktur, a
+         * customer assigned a team late — and telling the team "30 days
+         * left" about a customer who is already locked would cost the
+         * warning its credibility.
          */
         $sudahTerkunci = $invoice->issued_on->lte(app(DebtAging::class)->freezeCutoff());
+        $sisaHari = (int) config('penjualan.debt_freeze_days') - (int) config('penjualan.debt_notice_days');
 
         foreach ($tim as $anggota) {
             $notice = Notification::make()
                 // "Melewati", not "berumur": true on the normal night it
-                // turns three months, and still true for the late-seen
-                // invoice that is already older.
+                // turns 120 days, and still true for the late-seen invoice
+                // that is already older.
                 ->title("Piutang {$company->nama} melewati "
-                    .config('penjualan.debt_notice_months').' bulan')
+                    .config('penjualan.debt_notice_days').' hari')
                 ->body(sprintf(
                     'Faktur %s, sisa %s, terbit %s. %s',
                     $invoice->nomor,
@@ -100,7 +101,7 @@ class SweepDebtAging implements ShouldQueue
                     $invoice->issued_on->format('d/m/Y'),
                     $sudahTerkunci
                         ? 'Pelanggan ini sudah terkunci dari transaksi baru sampai faktur lunas.'
-                        : 'Satu bulan lagi pelanggan ini terkunci dari transaksi baru.',
+                        : "{$sisaHari} hari lagi pelanggan ini terkunci dari transaksi baru.",
                 ));
 
             ($sudahTerkunci ? $notice->danger() : $notice->warning())

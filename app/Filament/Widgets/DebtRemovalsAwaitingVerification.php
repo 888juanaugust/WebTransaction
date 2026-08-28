@@ -35,7 +35,7 @@ class DebtRemovalsAwaitingVerification extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Penghapusan piutang menunggu verifikasi')
+            ->heading('Pelunasan piutang menunggu verifikasi')
             ->emptyStateHeading('Tidak ada pengajuan menunggu')
             ->query(
                 DebtRemoval::query()

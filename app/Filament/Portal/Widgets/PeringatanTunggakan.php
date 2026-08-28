@@ -46,7 +46,7 @@ class PeringatanTunggakan extends Widget
         }
 
         /*
-         * Not yet frozen but past the three-month notice line: the warning
+         * Not yet frozen but past the 120-day notice line: the warning
          * the sweep sent the team, shown to the customer too, with the date
          * their account locks — a deadline with a date on it gets paid.
          */

@@ -98,8 +98,11 @@ class InvoiceIssuer
 
                 'issued_on' => $issuedOn->toDateString(),
                 // Payment terms are the customer's, agreed when their account
-                // was approved. Zero days means due on issue.
-                'due_date' => $issuedOn->copy()->addDays($company->payment_terms_days)->toDateString(),
+                // was approved; the organisation's standard is 30 days, and
+                // an unset term falls back to it rather than to due-on-issue.
+                'due_date' => $issuedOn->copy()
+                    ->addDays($company->payment_terms_days > 0 ? $company->payment_terms_days : 30)
+                    ->toDateString(),
 
                 'kode_transaksi' => $this->tax->kodeTransaksi(),
             ]);

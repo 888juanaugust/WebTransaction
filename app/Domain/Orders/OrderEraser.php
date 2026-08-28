@@ -6,6 +6,7 @@ namespace App\Domain\Orders;
 
 use App\Domain\Access\Role;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Regions\RegionContext;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,9 @@ class OrderEraser
 
         $this->assertMayErase($order, $actor);
 
-        DB::transaction(function () use ($order, $actor, $alasan) {
+        // Pinned to the order's region so the audit snapshot files itself in
+        // the books the order lived in — marketing arrives here unpinned.
+        app(RegionContext::class)->within((int) $order->region_id, fn () => DB::transaction(function () use ($order, $actor, $alasan) {
             /*
              * The snapshot is written first and survives the delete —
              * "what was erased" must be answerable without the row.
@@ -60,7 +63,7 @@ class OrderEraser
             // (a deposit, an invoice) makes the database refuse — which is
             // correct, because then it was not unfinished.
             $order->delete();
-        });
+        }));
     }
 
     /**

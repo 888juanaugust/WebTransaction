@@ -7,13 +7,14 @@ namespace App\Domain\Credit;
 use App\Domain\Access\Role;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Payments\PaymentLedger;
+use App\Domain\Regions\RegionContext;
 use App\Models\DebtRemoval;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Penghapusan piutang: settling a debt that was paid outside the system.
+ * Pelunasan piutang: settling a debt that was paid outside the system.
  *
  * A customer hands cash to the marketing who visits them — that is how credit
  * sales work here — and the system finds out after the fact. Two statements
@@ -53,7 +54,7 @@ class DebtRemover
 
         if ($amountRupiah < 1 || $amountRupiah > $sisa) {
             throw new \DomainException(sprintf(
-                'Jumlah penghapusan harus antara 1 dan sisa tagihan %s.',
+                'Jumlah pelunasan harus antara 1 dan sisa tagihan %s.',
                 number_format($sisa, 0, ',', '.'),
             ));
         }
@@ -63,28 +64,34 @@ class DebtRemover
         }
 
         if (DebtRemoval::query()->where('invoice_id', $invoice->id)->where('status', DebtRemovalStatus::Diajukan)->exists()) {
-            throw new \DomainException("Faktur {$invoice->nomor} sudah punya pengajuan penghapusan yang menunggu verifikasi.");
+            throw new \DomainException("Faktur {$invoice->nomor} sudah punya pengajuan pelunasan yang menunggu verifikasi.");
         }
 
-        return DB::transaction(function () use ($invoice, $actor, $amountRupiah, $alasan) {
-            $removal = DebtRemoval::query()->create([
-                'invoice_id' => $invoice->id,
-                'company_id' => $invoice->company_id,
-                'amount_rupiah' => $amountRupiah,
-                'alasan' => $alasan,
-                'initiated_by' => $actor->id,
-            ]);
+        // Pinned to the invoice's region: a global marketing arrives here
+        // reading all regions, and the claim must file itself in the books
+        // the debt lives in.
+        return app(RegionContext::class)->within(
+            (int) $invoice->region_id,
+            fn () => DB::transaction(function () use ($invoice, $actor, $amountRupiah, $alasan) {
+                $removal = DebtRemoval::query()->create([
+                    'invoice_id' => $invoice->id,
+                    'company_id' => $invoice->company_id,
+                    'amount_rupiah' => $amountRupiah,
+                    'alasan' => $alasan,
+                    'initiated_by' => $actor->id,
+                ]);
 
-            $this->audit->log(
-                action: 'debt_removal_initiated',
-                subject: $removal,
-                newValue: ['invoice' => $invoice->nomor, 'amount_rupiah' => $amountRupiah],
-                actor: $actor,
-                alasan: $alasan,
-            );
+                $this->audit->log(
+                    action: 'debt_removal_initiated',
+                    subject: $removal,
+                    newValue: ['invoice' => $invoice->nomor, 'amount_rupiah' => $amountRupiah],
+                    actor: $actor,
+                    alasan: $alasan,
+                );
 
-            return $removal;
-        });
+                return $removal;
+            }),
+        );
     }
 
     /**
@@ -110,37 +117,43 @@ class DebtRemover
             ));
         }
 
-        return DB::transaction(function () use ($removal, $actor, $catatan, $invoice) {
-            $entry = $this->ledger->recordManualPayment(
-                company: $removal->company,
-                amountRupiah: $removal->amount_rupiah,
-                actor: $actor,
-                invoice: $invoice,
-                catatan: "Penghapusan piutang — {$removal->alasan}",
-            );
+        // Pinned to the claim's region: the payment entry and its journal
+        // must land in the books the debt lives in, whoever clicks — an
+        // Owner reading "Semua wilayah" included.
+        return app(RegionContext::class)->within(
+            (int) $removal->region_id,
+            fn () => DB::transaction(function () use ($removal, $actor, $catatan, $invoice) {
+                $entry = $this->ledger->recordManualPayment(
+                    company: $removal->company,
+                    amountRupiah: $removal->amount_rupiah,
+                    actor: $actor,
+                    invoice: $invoice,
+                    catatan: "Pelunasan piutang — {$removal->alasan}",
+                );
 
-            $removal->forceFill([
-                'status' => DebtRemovalStatus::Disetujui,
-                'decided_by' => $actor->id,
-                'decided_at' => now(),
-                'keputusan_catatan' => $catatan,
-                'payment_entry_id' => $entry->id,
-            ])->save();
-
-            $this->audit->log(
-                action: 'debt_removal_approved',
-                subject: $removal,
-                newValue: [
-                    'invoice' => $invoice->nomor,
-                    'amount_rupiah' => $removal->amount_rupiah,
+                $removal->forceFill([
+                    'status' => DebtRemovalStatus::Disetujui,
+                    'decided_by' => $actor->id,
+                    'decided_at' => now(),
+                    'keputusan_catatan' => $catatan,
                     'payment_entry_id' => $entry->id,
-                ],
-                actor: $actor,
-                alasan: $catatan,
-            );
+                ])->save();
 
-            return $removal;
-        });
+                $this->audit->log(
+                    action: 'debt_removal_approved',
+                    subject: $removal,
+                    newValue: [
+                        'invoice' => $invoice->nomor,
+                        'amount_rupiah' => $removal->amount_rupiah,
+                        'payment_entry_id' => $entry->id,
+                    ],
+                    actor: $actor,
+                    alasan: $catatan,
+                );
+
+                return $removal;
+            }),
+        );
     }
 
     /**
@@ -175,8 +188,10 @@ class DebtRemover
     }
 
     /**
-     * Claiming is the seat of the marketing in charge, exactly like approving
-     * the customer's orders — they are the one the customer hands money to.
+     * Claiming is the customer's team's seat — the sales who visits the
+     * store or the marketing who answers for the debt, because either of
+     * them is the one the customer hands cash to. Never anyone else's
+     * customer, and the Owner as the escape hatch.
      */
     private function assertMayInitiate(Invoice $invoice, User $actor): void
     {
@@ -184,14 +199,16 @@ class DebtRemover
             return;
         }
 
-        if ($actor->role() !== Role::Marketing) {
-            throw new \DomainException('Mengajukan penghapusan piutang hanya bisa dilakukan marketing penanggung jawab pelanggan (atau pemilik).');
-        }
+        $seatId = match ($actor->role()) {
+            Role::Marketing => $invoice->company->marketing_user_id,
+            Role::Sales => $invoice->company->sales_user_id,
+            default => throw new \DomainException(
+                'Mengajukan pelunasan piutang hanya bisa dilakukan tim penanggung jawab pelanggan — sales atau marketing yang mengurusnya (atau pemilik).'
+            ),
+        };
 
-        $marketingId = $invoice->company->marketing_user_id;
-
-        if ($marketingId === null || (int) $marketingId !== (int) $actor->getKey()) {
-            throw new \DomainException("Pelanggan {$invoice->company->nama} bukan tanggung jawab Anda — pengajuan penghapusan piutangnya bukan hak Anda.");
+        if ($seatId === null || (int) $seatId !== (int) $actor->getKey()) {
+            throw new \DomainException("Pelanggan {$invoice->company->nama} bukan tanggung jawab Anda — pengajuan pelunasan piutangnya bukan hak Anda.");
         }
     }
 
@@ -206,7 +223,7 @@ class DebtRemover
         }
 
         if (! $actor->role()->canConfirmPayment()) {
-            throw new \DomainException('Memverifikasi penghapusan piutang adalah keputusan finance — peran Anda tidak bisa.');
+            throw new \DomainException('Memverifikasi pelunasan piutang adalah keputusan finance — peran Anda tidak bisa.');
         }
 
         if ((int) $removal->initiated_by === (int) $actor->getKey()) {

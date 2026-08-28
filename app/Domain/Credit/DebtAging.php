@@ -14,18 +14,15 @@ use Illuminate\Support\Collection;
  * How old a debt is, and what its age does to the customer.
  *
  * The organisation's two thresholds, counted from the invoice's issue date
- * because that is when the debt began — the due date is a promise about it,
- * not its birthday:
+ * because that is when the debt began — the due date printed on the faktur
+ * (default 30 days) is a promise about it, not its birthday:
  *
- * - **three months** — the customer is reminded, and so are the sales and
+ * - **120 days** — the customer is reminded, and so are the sales and
  *   marketing in charge of them. Once per invoice, marked on the row.
- * - **four months and one day** — jatuh tempo keras. The customer can make
- *   no new transaction until the aged invoice is settled. Not a status
- *   column: fall-due is calendar arithmetic over open invoices, recomputed
- *   whenever asked, so it can never say frozen about a debt paid an hour ago.
- *
- * Whole calendar months, not day counts: "tiga bulan" is what the owner said
- * and what marketing repeats on the phone, and 90 days is not three months.
+ * - **past 150 days** — jatuh tempo keras. The customer can make no new
+ *   transaction until the aged invoice is settled. Not a status column:
+ *   fall-due is calendar arithmetic over open invoices, recomputed whenever
+ *   asked, so it can never say frozen about a debt paid an hour ago.
  */
 class DebtAging
 {
@@ -66,18 +63,18 @@ class DebtAging
             ->get();
     }
 
-    /** The last issue date old enough to be frozen: strictly older than four months. */
+    /** The last issue date old enough to be frozen: strictly older than 150 days. */
     public function freezeCutoff(): Carbon
     {
         return today()
-            ->subMonths((int) config('penjualan.debt_freeze_months'))
+            ->subDays((int) config('penjualan.debt_freeze_days'))
             ->subDay();
     }
 
     /** The last issue date old enough for the reminder. */
     public function noticeCutoff(): Carbon
     {
-        return today()->subMonths((int) config('penjualan.debt_notice_months'));
+        return today()->subDays((int) config('penjualan.debt_notice_days'));
     }
 
     /** @return Builder<Invoice> */

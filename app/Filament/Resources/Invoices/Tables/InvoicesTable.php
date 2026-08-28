@@ -34,9 +34,12 @@ class InvoicesTable
             return false;
         }
 
-        return $user->role() === Role::Owner
-            || ($user->role() === Role::Marketing
-                && (int) $record->company->marketing_user_id === (int) $user->getKey());
+        return match ($user->role()) {
+            Role::Owner => true,
+            Role::Marketing => (int) $record->company->marketing_user_id === (int) $user->getKey(),
+            Role::Sales => (int) $record->company->sales_user_id === (int) $user->getKey(),
+            default => false,
+        };
     }
 
     public static function configure(Table $table): Table
@@ -145,17 +148,18 @@ class InvoicesTable
                  */
                 /*
                  * The claim that a debt was paid outside the system — cash
-                 * handed over on a store visit. Only the marketing in charge
-                 * of this customer (or the Owner) can file it, and filing
-                 * moves no money: finance verifies before anything posts.
+                 * handed over on a store visit. Only the customer's own team
+                 * (their sales or marketing, or the Owner) can file it, and
+                 * filing moves no money: finance verifies before anything
+                 * posts.
                  */
                 Action::make('ajukan_penghapusan')
-                    ->label('Ajukan penghapusan')
+                    ->label('Ajukan pelunasan')
                     ->icon('heroicon-o-hand-raised')
                     ->color('warning')
                     ->visible(fn (Invoice $record) => $record->status === Invoice::STATUS_OPEN
                         && self::mayInitiateRemoval($record))
-                    ->modalHeading('Ajukan penghapusan piutang')
+                    ->modalHeading('Ajukan pelunasan piutang')
                     ->modalDescription('Pengajuan ini menunggu verifikasi finance — tidak ada yang berubah sebelum mereka menyetujui.')
                     ->schema(fn (Invoice $record) => [
                         TextInput::make('amount_rupiah')

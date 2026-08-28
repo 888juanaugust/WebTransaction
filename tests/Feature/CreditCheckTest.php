@@ -190,14 +190,14 @@ class CreditCheckTest extends TestCase
         $this->assertTrue($this->checker()->check($order)->passes());
     }
 
-    public function test_a_debt_past_four_months_and_a_day_freezes_the_customer(): void
+    public function test_a_debt_past_150_days_freezes_the_customer(): void
     {
         $company = Company::factory()->creditLimit(100_000_000)->create();
 
         Invoice::factory()->totalling(1_000_000)->create([
             'company_id' => $company->id,
-            'issued_on' => today()->subMonths(4)->subDay(),
-            'due_date' => today()->subMonths(3),
+            'issued_on' => today()->subDays(151),
+            'due_date' => today()->subDays(121),
         ]);
 
         $order = Order::factory()
@@ -215,10 +215,10 @@ class CreditCheckTest extends TestCase
         $this->assertStringContainsString('jatuh tempo keras', implode(' ', $status->blockers));
     }
 
-    public function test_a_debt_of_exactly_four_months_does_not_freeze_yet(): void
+    public function test_a_debt_of_exactly_150_days_does_not_freeze_yet(): void
     {
         /*
-         * "Empat bulan plus satu hari" — the boundary is the day after, so an
+         * "Lewat 150 hari" — the boundary is the day after, so an
          * off-by-one here would lock customers a day early, on the owner's
          * stated terms rather than the code's.
          */
@@ -226,8 +226,8 @@ class CreditCheckTest extends TestCase
 
         Invoice::factory()->totalling(1_000_000)->create([
             'company_id' => $company->id,
-            'issued_on' => today()->subMonths(4),
-            'due_date' => today()->subMonths(3),
+            'issued_on' => today()->subDays(150),
+            'due_date' => today()->subDays(120),
         ]);
 
         $order = Order::factory()

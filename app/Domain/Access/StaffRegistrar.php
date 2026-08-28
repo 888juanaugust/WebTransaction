@@ -49,10 +49,12 @@ class StaffRegistrar
             'password' => $password,
             'role' => $role,
             'is_active' => true,
-            // Null means every region — the Owner's posture. Anyone else with
+            // Null means every region — the Owner's posture, and marketing's
+            // too: marketing is global, answers for customers in every
+            // region, and carries no region of its own. Anyone else with
             // null is pinned to the default region by the middleware, so an
             // unassigned clerk sees one region, never all of them.
-            'region_id' => $role === Role::Owner ? null : $regionId,
+            'region_id' => in_array($role, [Role::Owner, Role::Marketing], true) ? null : $regionId,
         ]);
 
         $this->audit->log(
@@ -87,6 +89,12 @@ class StaffRegistrar
         }
 
         $this->refuseSelf($staff, $actor ?? auth()->user(), 'Wilayah sendiri tidak bisa diubah dari layar ini.');
+
+        if ($staff->role() === Role::Marketing && $regionId !== null) {
+            throw new RuntimeException(
+                'Marketing bersifat global — melihat semua wilayah dan tidak bisa dipatok ke satu wilayah.'
+            );
+        }
 
         $staff->forceFill(['region_id' => $regionId])->save();
 

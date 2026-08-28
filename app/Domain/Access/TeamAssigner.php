@@ -90,6 +90,15 @@ class TeamAssigner
         }
 
         /*
+         * Marketing is global and sees every region, so the visibility
+         * argument below never applies to them — any marketing may hold any
+         * customer's seat.
+         */
+        if ($seat === Role::Marketing) {
+            return;
+        }
+
+        /*
          * Same region, or the assignment is a fiction: the scope keeps this
          * customer's rows invisible to them, so every pending order would sit
          * waiting on somebody who cannot see it exists.

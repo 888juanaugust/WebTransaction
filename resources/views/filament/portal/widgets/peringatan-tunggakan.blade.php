@@ -1,6 +1,6 @@
 @php
     use App\Domain\Money;
-    $bulanBeku = (int) config('penjualan.debt_freeze_months');
+    $hariBeku = (int) config('penjualan.debt_freeze_days');
 @endphp
 
 <x-filament-widgets::widget>
@@ -19,11 +19,11 @@
 
             <p class="mt-1 text-sm" style="color:#374151">
                 @if ($beku)
-                    Faktur berikut belum dibayar lebih dari {{ $bulanBeku }} bulan.
+                    Faktur berikut belum dibayar lebih dari {{ $hariBeku }} hari.
                     Pemesanan dibuka lagi begitu faktur ini lunas — hubungi tim kami bila
                     Anda sudah membayar.
                 @else
-                    Bila belum dibayar sampai {{ $bulanBeku }} bulan sejak tanggal faktur,
+                    Bila belum dibayar sampai {{ $hariBeku }} hari sejak tanggal faktur,
                     akun Anda otomatis terkunci dari pemesanan baru.
                 @endif
             </p>
