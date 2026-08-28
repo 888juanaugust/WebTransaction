@@ -278,6 +278,9 @@ class LogAudit extends Page implements HasTable
             'sales_expense_claimed' => 'Biaya ekspedisi diajukan',
             'sales_expense_approved' => 'Biaya ekspedisi disetujui',
             'sales_expense_rejected' => 'Biaya ekspedisi ditolak',
+            'visit_photos_purged' => 'Foto kunjungan kedaluwarsa dihapus',
+            'visits_archived' => 'Kunjungan diarsipkan',
+            'order_split' => 'Order dipecah per gudang',
             'customer_portal_access_granted' => 'Akses portal diberikan',
             'virtual_account_provisioned' => 'Virtual account dibuat',
             /*

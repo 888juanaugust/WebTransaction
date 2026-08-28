@@ -169,6 +169,18 @@ final class DataInventory
                 ],
             ],
 
+            'store_visits' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                /*
+                 * Coordinates and a photo taken at a customer's door are
+                 * personal data twice over — the sales' movements and the
+                 * store's premises — which is why the photo carries a
+                 * 2-month retention and the purge is audited.
+                 */
+                'personal' => ['sales_user_id', 'latitude', 'longitude', 'foto_path', 'catatan'],
+                'bukan' => ['company_id', 'visited_at', 'foto_dihapus_pada'],
+            ],
+
             'sales_expense_claims' => [
                 'kategori' => 'pajak_dan_pembayaran',
                 'personal' => ['sales_user_id', 'decided_by', 'keterangan', 'keputusan_catatan'],

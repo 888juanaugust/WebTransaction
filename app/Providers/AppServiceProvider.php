@@ -16,6 +16,7 @@ use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
+use App\Jobs\PurgeVisitPhotos;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepDebtAging;
 use App\Jobs\SweepStuckWebhookEvents;
@@ -151,6 +152,13 @@ class AppServiceProvider extends ServiceProvider
          * recomputed by every credit check.
          */
         Schedule::job(new SweepDebtAging)->dailyAt('00:30');
+
+        /*
+         * Visit photos past their two-month retention, dropped nightly.
+         * The visits themselves stay; only the files go. Admin and finance
+         * archive a month as a zip before its photos reach this line.
+         */
+        Schedule::job(new PurgeVisitPhotos)->dailyAt('00:45');
 
         /*
          * Nightly backup, at an hour when nobody is ordering.
