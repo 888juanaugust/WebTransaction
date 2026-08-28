@@ -34,7 +34,10 @@ class DebtAging
      */
     public function fallDueInvoices(Company $company): Collection
     {
+        // Across regions: a split order books the debt wherever it shipped
+        // from, and an aged invoice freezes the customer everywhere.
         return $this->openAgedQuery($this->freezeCutoff())
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->orderBy('issued_on')
             ->get();
@@ -43,6 +46,7 @@ class DebtAging
     public function isFrozen(Company $company): bool
     {
         return $this->openAgedQuery($this->freezeCutoff())
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->exists();
     }

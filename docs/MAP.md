@@ -312,6 +312,38 @@ the order itself — `awaiting_payment → paid`, or `shipped → completed` —
 is why `complete` takes a nullable actor. The prepay path (pay first, then
 ship) still works unchanged.
 
+### Pecah gudang — one order, X transactions
+
+| Piece | Decides |
+|---|---|
+| `OrderSplitter::plan` | **Pure planning, writes nothing**: warehouse id → line shares. Drain order: the order's own warehouse, the rest of its home region by kode, then other regions' warehouses by how much they hold — fullest first, so a remainder ships from one place |
+| `OrderSplitter::wouldSplit` | Whether confirming would produce more than the order as it stands |
+| `OrderStateMachine::confirmSplit` | The executor: resize the parent's lines to its own warehouse's share, spawn one sibling per other warehouse, confirm every piece — **one DB transaction, all-or-nothing** |
+| `OrderTransitionActions::setujui` | The approval modal runs the same `plan()` and names the split before the click: which warehouses, which SKUs, how many |
+| `OrdersAwaitingApproval::stockSummary` | The queue's Stok column: red "kurang" only when *no* combination of warehouses covers it; a coverable shortfall shows amber "Tersebar di N gudang" |
+
+When approval finds the goods scattered, the order becomes one transaction per
+shipping warehouse. Each piece books in **its warehouse's region** — sibling
+orders get that region's document number (`SO-SBY-…`), its books, its invoice
+later — and points back through `orders.split_parent_id`, so "what did the
+customer actually ask for" stays one query. Quantities split mid-line in base
+units; the customer's home region is drained first.
+
+Three shapes come out of `confirm`. Everything at the order's own warehouse:
+the old single-order path, untouched. Scattered: the parent keeps its number
+and its home share, siblings carry the rest. Home holds *nothing* and one
+other warehouse covers it all: no sibling — the order is **re-homed** into
+that region (new region, new number, logged as a transition event) because a
+split of one is just a move.
+
+Every piece passes through the same `confirmSingle` — price snapshot, credit
+check (cumulative: piece two is checked with piece one already committed),
+reservation `FOR UPDATE` in its own region. If any piece fails — credit
+exceeded on the last sibling, stock raced away — the whole transaction rolls
+back and the order sits in `submitted` exactly as it was. A customer gets the
+whole order or keeps waiting; OrderSplitTest proves the rollback restores the
+parent's lines.
+
 ### Stock — append-only ledger
 
 | Function | Decides |
@@ -988,6 +1020,23 @@ buys them; and items they bought and stopped (90 days). The page
 (`WawasanPelanggan`) offers a sales their own customers, a marketing theirs,
 the Owner all.
 
+### Kunjungan toko — the visit that proves itself
+
+| Piece | Decides |
+|---|---|
+| `StoreVisits::record` | The write: photo stored on the private disk, coordinates from the phone, `visited_at` **always `now()`** — the moment is recorded, never typed |
+| `StoreVisits::purgeExpiredPhotos` | Photos live **62 days** (`RETENTION_DAYS`); the row stays, `foto_dihapus_pada` stamps what was purged and when |
+| `StoreVisits::archiveMonth` | Owner/Finance pull a month as a zip — photos plus a CSV of every visit — before the purge takes the photos |
+| `PurgeVisitPhotos` | The daily job (00:45) behind the retention promise |
+| `CreateStoreVisit` | The page a sales opens on their phone: `FileUpload` with `capture=environment` (rear camera), Alpine geolocation filling latitude/longitude, "lokasi terekam ✓" |
+
+A sales visits their stores; the record is customer + photo + where + when +
+what they brought home (catatan). The resource is immutable after create and
+seat-scoped — a sales sees their own customers' visits, marketing theirs, the
+Owner all. Coordinates and the photo are personal data under UU PDP: declared
+in `DataInventory`, hence the retention clock instead of keeping shop photos
+forever.
+
 ### Grafik — the dashboards' charts, one tested query each
 
 `ChartStats` holds the arithmetic behind every chart, because a wrong bar
@@ -1017,10 +1066,21 @@ thin Chart.js shell over one method, role-gated like the queues above it:
 | `StaffRegistrar::assignRegion` | Only the Owner moves people, audited both sides, session ended |
 | `DocumentNumberGenerator` | Numbers carry the region and count per region: `INV-PST-202608-0001` |
 
-Each region is a **complete, separate set of books** — its own stock, customers,
-suppliers, journals, document registers and month-ends. Nothing moves between
-them: no inter-region transfers, no shared customers, no due-to/due-from
-accounts. That was the design decision that keeps this tractable.
+Each region is a **complete, separate set of books** — its own stock,
+suppliers, journals, document registers and month-ends. No inter-region
+transfers, no due-to/due-from accounts. That was the design decision that
+keeps this tractable. The one thing that crosses since the gudang split: a
+**customer's documents may book in the shipping warehouse's region** (see
+"Pecah gudang"), so the *customer* is read across every region even though
+each document stays firmly in one. `CreditChecker`, `DebtAging`,
+`OutstandingReceivables`, `CustomerInsight` and the relations a document
+follows to its company all drop the region scope **only when filtered to one
+company** — a customer's exposure, freeze and statement are the sum of every
+region's books, while the region-wide control-account totals stay scoped.
+The buyer portal gets the same treatment structurally: the `HasRegion` scope
+stands aside entirely for the `customer` guard, because a buyer is
+company-scoped, not region-scoped. CrossRegionExposureTest holds the line:
+an aged invoice in *any* region freezes the customer everywhere.
 
 What stays group-wide: the catalogue, the price list (pricing stays one pure
 function), the chart of accounts — balances split by region because every
@@ -1473,9 +1533,9 @@ All idempotent — assume they run twice.
 
 ## 4. Data
 
-59 models, 56 migrations. The ones that carry money or stock:
+67 models, 68 migrations. The ones that carry money or stock:
 
-`orders` · `order_lines` (price snapshots) · `order_events` (every transition)
+`orders` (`split_parent_id` threads a split) · `order_lines` (price snapshots) · `order_events` (every transition)
 `invoices` · `payment_entries` (append-only) · `webhook_events` (UNIQUE gateway event id)
 `stock_movements` (append-only) · `stock_levels` (cache) · `stock_reservations`
 `price_list_versions` · `price_list_items` (never updated, only superseded)

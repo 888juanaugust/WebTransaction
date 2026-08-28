@@ -136,7 +136,9 @@ class CreditChecker
      */
     private function committed(Company $company, ?int $excludeOrderId): int
     {
+        // Across regions: split orders commit credit wherever they book.
         return (int) Order::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->whereIn('status', [OrderStatus::Confirmed, OrderStatus::AwaitingPayment])
             ->whereDoesntHave('invoice')

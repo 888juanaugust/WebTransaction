@@ -53,7 +53,13 @@ class Invoice extends Model
 
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        /*
+         * Region-free: since orders split across warehouses, a document in
+         * one region's books can belong to a customer homed in another.
+         * Reading the customer through a document you can already see is
+         * not a leak — the document's own scope is the gate.
+         */
+        return $this->belongsTo(Company::class)->withoutGlobalScope('region');
     }
 
     public function paymentEntries(): HasMany

@@ -7,10 +7,12 @@ namespace App\Filament\Actions;
 use App\Domain\Access\Role;
 use App\Domain\Money;
 use App\Domain\Orders\OrderEraser;
+use App\Domain\Orders\OrderSplitter;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Stock\InsufficientStockException;
 use App\Models\Order;
+use App\Models\Warehouse;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -64,8 +66,39 @@ class OrderTransitionActions
             ->color('primary')
             ->requiresConfirmation()
             ->modalHeading('Setujui order')
-            ->modalDescription(fn (Order $record) => 'Menyetujui akan mengunci harga dan memesan stok untuk '
-                .$record->company->nama.'.')
+            /*
+             * When the goods are scattered, the approver is told *before*
+             * the click that this will become several transactions and
+             * where each ships from — a split that surprises marketing is
+             * a phone call from a customer holding two fakturs.
+             */
+            ->modalDescription(function (Order $record) {
+                $dasar = 'Menyetujui akan mengunci harga dan memesan stok untuk '
+                    .$record->company->nama.'.';
+
+                try {
+                    $plan = app(OrderSplitter::class)->plan($record);
+                } catch (InsufficientStockException) {
+                    return $dasar.' Perhatian: stok tidak cukup di seluruh gudang — persetujuan akan ditolak.';
+                }
+
+                if (count($plan) <= 1 && array_key_exists((int) $record->warehouse_id, $plan)) {
+                    return $dasar;
+                }
+
+                $gudang = Warehouse::query()
+                    ->withoutGlobalScope('region')
+                    ->findMany(array_keys($plan))
+                    ->keyBy('id');
+
+                $rincian = collect($plan)
+                    ->map(fn (array $shares, int $warehouseId) => $gudang[$warehouseId]->kode
+                        .' ('.collect($shares)->map(fn ($s) => "{$s['sku']}×{$s['qty_base']}")->implode(', ').')')
+                    ->implode('; ');
+
+                return $dasar.' Stok tersebar: order akan dipecah menjadi '
+                    .count($plan).' transaksi per gudang — '.$rincian.'.';
+            })
             ->visible(fn (Order $record) => $record->status === OrderStatus::Submitted
                 && static::holdsApprovalSeat($record))
             ->action(function (Order $record) {

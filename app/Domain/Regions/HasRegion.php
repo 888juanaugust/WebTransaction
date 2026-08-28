@@ -37,6 +37,20 @@ trait HasRegion
     public static function bootHasRegion(): void
     {
         static::addGlobalScope('region', function (Builder $query): void {
+            /*
+             * A buyer is company-scoped, not region-scoped. Since orders
+             * split across warehouses (2026-08), one customer's documents
+             * legitimately live in several regions' books — and their own
+             * portal must show all of them. ScopedToBuyer and the portal's
+             * company_id filters are the buyer's isolation; filtering their
+             * reads by region would hide their own invoices. Their writes
+             * still land in the home region: the context stays pinned, and
+             * the creating-stamp below reads the context, not this branch.
+             */
+            if (auth('customer')->check()) {
+                return;
+            }
+
             $regionId = app(RegionContext::class)->regionId();
 
             if ($regionId === null) {

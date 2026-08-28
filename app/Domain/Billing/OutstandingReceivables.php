@@ -112,7 +112,9 @@ class OutstandingReceivables
     {
         return (int) Invoice::query()
             ->where('status', '!=', Invoice::STATUS_VOID)
-            ->when($companyId !== null, fn ($q) => $q->where('company_id', $companyId))
+            // One company's exposure spans regions since orders split; the
+            // company-less total stays scoped — it proves one region's books.
+            ->when($companyId !== null, fn ($q) => $q->withoutGlobalScope('region')->where('company_id', $companyId))
             ->sum('total_rupiah');
     }
 
@@ -127,7 +129,7 @@ class OutstandingReceivables
     private function paid(?int $companyId): int
     {
         return (int) PaymentEntry::query()
-            ->when($companyId !== null, fn ($q) => $q->where('company_id', $companyId))
+            ->when($companyId !== null, fn ($q) => $q->withoutGlobalScope('region')->where('company_id', $companyId))
             ->sum('amount_rupiah');
     }
 
@@ -135,7 +137,7 @@ class OutstandingReceivables
     {
         return (int) CreditNote::query()
             ->posted()
-            ->when($companyId !== null, fn ($q) => $q->where('company_id', $companyId))
+            ->when($companyId !== null, fn ($q) => $q->withoutGlobalScope('region')->where('company_id', $companyId))
             ->sum('total_rupiah');
     }
 
@@ -162,7 +164,7 @@ class OutstandingReceivables
          */
         return (int) CustomerDeposit::query()
             ->whereRaw('jumlah_rupiah - terpakai_rupiah - dikembalikan_rupiah > 0')
-            ->when($company !== null, fn ($q) => $q->where('company_id', $company->id))
+            ->when($company !== null, fn ($q) => $q->withoutGlobalScope('region')->where('company_id', $company->id))
             ->selectRaw('COALESCE(SUM(jumlah_rupiah - terpakai_rupiah - dikembalikan_rupiah), 0) AS sisa')
             ->value('sisa');
     }
@@ -180,7 +182,7 @@ class OutstandingReceivables
         return (int) Giro::query()
             ->open()
             ->masuk()
-            ->when($companyId !== null, fn ($q) => $q->where('company_id', $companyId))
+            ->when($companyId !== null, fn ($q) => $q->withoutGlobalScope('region')->where('company_id', $companyId))
             ->sum('nilai_rupiah');
     }
 }

@@ -9,6 +9,7 @@ use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Credit\CreditChecker;
+use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Payments\VirtualAccountProvisioner;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
@@ -18,7 +19,10 @@ use App\Domain\Tax\TaxCalculator;
 use App\Models\CustomerUser;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\OrderLine;
 use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -105,6 +109,26 @@ class OrderStateMachine
         $this->assertCan($order, OrderStatus::Confirmed);
         $this->assertMayApprove($order, $actor);
 
+        /*
+         * Where will this actually ship from? The planner drains the home
+         * region first and reaches into other regions only for what home
+         * cannot cover. One warehouse is the common case and takes the
+         * ordinary path; several breaks the order into one transaction per
+         * warehouse, each in that warehouse's region and books — the rule
+         * the 2026-08 multi-warehouse spec set.
+         */
+        $plan = app(OrderSplitter::class)->plan($order);
+
+        if (count($plan) === 1 && array_key_exists((int) $order->warehouse_id, $plan)) {
+            return $this->confirmSingle($order, $actor, $catatan);
+        }
+
+        return $this->confirmSplit($order, $actor, $catatan, $plan);
+    }
+
+    /** The ordinary approval: one warehouse, one transaction. */
+    private function confirmSingle(Order $order, User $actor, ?string $catatan): Order
+    {
         return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $actor, $catatan) {
             $this->snapshotPrices($order, $actor);
 
@@ -133,6 +157,195 @@ class OrderStateMachine
                 meta: ['credit' => $credit->toArray()],
             );
         }));
+    }
+
+    /**
+     * The goods are scattered: break the order into one transaction per
+     * warehouse and confirm each in its own region's books.
+     *
+     * One database transaction around the whole of it — the sibling
+     * creation, the line moves, and every confirm. A customer either gets
+     * all X transactions approved or stays submitted; a split half-approved
+     * would reserve stock for goods the credit check then refuses.
+     *
+     * The original order keeps its number and carries the share of the
+     * first-priority warehouse. When the home warehouse ships nothing at
+     * all, the original is re-homed to the first shipping warehouse —
+     * region, books and a fresh number from that region's counter —
+     * because a transaction books where its goods are, and an order with
+     * no goods is not a transaction.
+     *
+     * @param  array<int, list<array{line_id: int, sku: string, qty_base: int}>>  $plan
+     */
+    private function confirmSplit(Order $order, User $actor, ?string $catatan, array $plan): Order
+    {
+        return DB::transaction(function () use ($order, $actor, $catatan, $plan) {
+            $warehouses = Warehouse::query()
+                ->withoutGlobalScope('region')
+                ->findMany(array_keys($plan))
+                ->keyBy('id');
+
+            // The parent's share: its own warehouse when it ships anything,
+            // otherwise the plan's first warehouse (re-homing the order).
+            $parentWarehouseId = array_key_exists((int) $order->warehouse_id, $plan)
+                ? (int) $order->warehouse_id
+                : (int) array_key_first($plan);
+
+            $lines = $order->lines()->orderBy('urutan')->orderBy('id')->get()->keyBy('id');
+            $orders = [];
+
+            foreach ($plan as $warehouseId => $shares) {
+                $warehouse = $warehouses[$warehouseId];
+
+                if ((int) $warehouseId === $parentWarehouseId) {
+                    $this->rehomeParent($order, $warehouse);
+                    $this->resizeLines($order, $lines, $shares);
+                    $orders[] = $order->refresh();
+
+                    continue;
+                }
+
+                $orders[] = $this->spawnSibling($order, $warehouse, $lines, $shares);
+            }
+
+            $nomors = array_map(fn (Order $o) => $o->nomor, $orders);
+
+            $this->audit->log(
+                action: 'order_split',
+                subject: $order,
+                newValue: ['pecahan' => $nomors, 'gudang' => count($plan)],
+                actor: $actor,
+                alasan: $catatan,
+            );
+
+            $confirmed = [];
+
+            foreach ($orders as $piece) {
+                $confirmed[] = $this->confirmSingle($piece->refresh(), $actor, $catatan);
+            }
+
+            return $confirmed[0];
+        });
+    }
+
+    /**
+     * Point the parent at its shipping warehouse. A no-op when it already
+     * ships from home; a full re-home — region, books, fresh number from
+     * the new region's counter — when home ships nothing.
+     */
+    private function rehomeParent(Order $order, Warehouse $warehouse): void
+    {
+        if ((int) $order->warehouse_id === (int) $warehouse->id) {
+            return;
+        }
+
+        $nomorLama = $order->nomor;
+
+        app(RegionContext::class)->within((int) $warehouse->region_id, function () use ($order, $warehouse) {
+            $order->forceFill([
+                'warehouse_id' => $warehouse->id,
+                'region_id' => $warehouse->region_id,
+                'nomor' => app(DocumentNumberGenerator::class)->nextOrderNumber(),
+            ])->save();
+        });
+
+        $this->audit->log(
+            action: 'order_transition',
+            subject: $order,
+            oldValue: ['nomor' => $nomorLama],
+            newValue: ['nomor' => $order->nomor, 'gudang' => $warehouse->kode],
+            alasan: 'Gudang asal tidak memegang stok — order pindah buku ke wilayah gudang pengirim.',
+        );
+    }
+
+    /**
+     * Shrink the parent's lines to its own share; a line the parent ships
+     * none of moves wholly to the siblings and leaves the parent.
+     *
+     * @param  Collection<int, OrderLine>  $lines
+     * @param  list<array{line_id: int, sku: string, qty_base: int}>  $shares
+     */
+    private function resizeLines(Order $order, $lines, array $shares): void
+    {
+        $shareByLine = collect($shares)->keyBy('line_id');
+
+        foreach ($lines as $line) {
+            $share = $shareByLine->get($line->id);
+
+            if ($share === null) {
+                $line->delete();
+
+                continue;
+            }
+
+            if ((int) $share['qty_base'] !== (int) $line->qty_base) {
+                /*
+                 * A split mid-line ships in base units by definition — six
+                 * of a ten-piece carton is not "0.6 CTN" on any document a
+                 * warehouse can pick.
+                 */
+                $line->forceFill([
+                    'qty_base' => $share['qty_base'],
+                    'ordered_unit' => $line->satuan_dasar_snapshot,
+                    'ordered_qty' => $share['qty_base'],
+                ])->save();
+            }
+        }
+    }
+
+    /**
+     * One sibling order in the shipping warehouse's region, carrying that
+     * warehouse's shares, already submitted — it was submitted as part of
+     * the parent, and its trail says so.
+     *
+     * @param  Collection<int, OrderLine>  $lines
+     * @param  list<array{line_id: int, sku: string, qty_base: int}>  $shares
+     */
+    private function spawnSibling(Order $parent, Warehouse $warehouse, $lines, array $shares): Order
+    {
+        return app(RegionContext::class)->within((int) $warehouse->region_id, function () use ($parent, $warehouse, $lines, $shares) {
+            $sibling = new Order;
+            $sibling->forceFill([
+                'nomor' => app(DocumentNumberGenerator::class)->nextOrderNumber(),
+                'company_id' => $parent->company_id,
+                'warehouse_id' => $warehouse->id,
+                'created_by' => $parent->created_by,
+                'sales_user_id' => $parent->sales_user_id,
+                'placed_by_customer_user_id' => $parent->placed_by_customer_user_id,
+                'po_pelanggan' => $parent->po_pelanggan,
+                'catatan' => $parent->catatan,
+                'split_parent_id' => $parent->id,
+                'status' => OrderStatus::Submitted,
+                'submitted_at' => $parent->submitted_at ?? now(),
+            ])->save();
+
+            foreach ($shares as $urutan => $share) {
+                $asal = $lines[$share['line_id']];
+
+                $baris = new OrderLine;
+                $baris->forceFill([
+                    'order_id' => $sibling->id,
+                    'sku' => $asal->sku,
+                    'urutan' => $urutan + 1,
+                    'ordered_unit' => $asal->satuan_dasar_snapshot,
+                    'ordered_qty' => $share['qty_base'],
+                    'qty_per_ctn_snapshot' => $asal->qty_per_ctn_snapshot,
+                    'satuan_dasar_snapshot' => $asal->satuan_dasar_snapshot,
+                    'qty_base' => $share['qty_base'],
+                ])->save();
+            }
+
+            OrderEvent::create([
+                'order_id' => $sibling->id,
+                'from_status' => OrderStatus::Draft,
+                'to_status' => OrderStatus::Submitted,
+                'actor_id' => null,
+                'alasan' => "Pecahan dari {$parent->nomor} — stok dikirim dari {$warehouse->kode}.",
+                'meta' => ['split_parent' => $parent->nomor],
+            ]);
+
+            return $sibling;
+        });
     }
 
     /**

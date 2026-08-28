@@ -100,6 +100,14 @@ Click **Setujui**.
 
 Open the order and show the event log — who did what, when, with a reason.
 
+If the goods sit in more than one region's warehouse, the Stok column says so
+— amber **"Tersebar di 2 gudang"** instead of red — and the Setujui modal
+names the split before the click: which warehouse ships which SKUs. Confirm,
+and the order becomes one transaction per warehouse, each in that warehouse's
+region and books (the sibling carries that region's number, `SO-SBY-…`), all
+credit-checked and reserved in one all-or-nothing transaction. The customer's
+home region ships first; the pieces thread back through the original order.
+
 ### Show the money is locked — 1 min
 
 Open the order's lines. Every line carries its own price, discount, DPP and PPN
@@ -192,6 +200,17 @@ were received at, and one still short by two cartons.
 Also from that menu: **Cetak PO** — the document the supplier receives, which
 asks them to quote our PO number on their surat jalan and faktur. That
 reference is what makes the matching possible in the first place.
+
+### The visit that proves itself — 1 min
+
+Log in as `sales@example.test` on a phone (or a narrow browser window) and
+open **Kunjungan toko → Buat**. The photo field opens the rear camera, the
+coordinates fill themselves from the phone's GPS ("lokasi terekam ✓"), and
+the timestamp is taken by the server — none of the three can be typed.
+
+> "A visit record you can backdate or file from home isn't a visit record.
+> Photos are personal data under UU PDP, so they live 62 days and can be
+> archived as a monthly zip before the purge."
 
 ### Sending a delivery back — 2 min
 
@@ -542,7 +561,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1718 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1744 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

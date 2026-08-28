@@ -39,7 +39,10 @@ class CustomerInsight
      */
     public function history(Company $company, int $limit = 25): Collection
     {
+        // Across regions: split orders live in the shipping region's books,
+        // and the customer's story is the whole of them.
         return Order::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->with('lines')
             ->orderByDesc('created_at')

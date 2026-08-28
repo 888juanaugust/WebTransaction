@@ -87,6 +87,19 @@ Every transition is an explicit logged event with actor and timestamp — never 
 flag flipped in place. Transitions live in a dedicated state machine class, not scattered
 across controllers.
 
+**Multi-warehouse split (2026-08):** stock lives per warehouse per region. When
+approval finds an order's goods scattered, it splits into one transaction per
+shipping warehouse — home region drained first, remainder from the fullest
+foreign warehouse — each piece booked in **its warehouse's region** with that
+region's document number, linked via `orders.split_parent_id`. `OrderSplitter`
+plans (pure, also drives the approval preview); `confirmSplit` executes
+all-or-nothing in one DB transaction: every piece is price-snapshotted,
+credit-checked (cumulatively) and reserved, or none is. A customer whose home
+warehouse holds nothing is re-homed, not split. Because a customer's documents
+can now book in other regions, credit exposure, aging/freeze and portal reads
+aggregate across regions when filtered to one company; region-wide totals stay
+scoped.
+
 ---
 
 ## Roles

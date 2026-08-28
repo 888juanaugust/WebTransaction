@@ -112,7 +112,7 @@ final class DataInventory
                     'subtotal_rupiah', 'discount_rupiah', 'dpp_rupiah', 'ppn_rupiah',
                     'total_rupiah', 'price_list_version_id', 'submitted_at',
                     'confirmed_at', 'paid_at', 'shipped_at', 'completed_at',
-                    'reservation_expires_at',
+                    'reservation_expires_at', 'split_parent_id',
                 ],
             ],
 

@@ -7,10 +7,13 @@ namespace App\Filament\Widgets;
 use App\Domain\Access\Role;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Money;
+use App\Domain\Orders\OrderSplitter;
 use App\Domain\Orders\OrderStatus;
+use App\Domain\Stock\InsufficientStockException;
 use App\Domain\Stock\StockLedger;
 use App\Filament\Actions\OrderTransitionActions;
 use App\Models\Order;
+use App\Models\Warehouse;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -99,9 +102,11 @@ class OrdersAwaitingApproval extends TableWidget
                 TextColumn::make('stok')
                     ->label('Stok')
                     ->state(fn (Order $record) => $this->stockSummary($record))
-                    ->color(fn (Order $record) => str_contains($this->stockSummary($record), 'kurang')
-                        ? 'danger'
-                        : 'primary')
+                    ->color(fn (Order $record) => match (true) {
+                        str_contains($this->stockSummary($record), 'kurang') => 'danger',
+                        str_contains($this->stockSummary($record), 'Tersebar') => 'warning',
+                        default => 'primary',
+                    })
                     ->wrap(),
             ])
             ->recordActions([
@@ -117,7 +122,7 @@ class OrdersAwaitingApproval extends TableWidget
             ]);
     }
 
-    /** "Cukup" or a list of the SKUs that are short. */
+    /** "Cukup", the warehouses a split would draw from, or what is short. */
     private function stockSummary(Order $order): string
     {
         $ledger = app(StockLedger::class);
@@ -131,6 +136,25 @@ class OrdersAwaitingApproval extends TableWidget
             }
         }
 
-        return $short === [] ? 'Cukup' : 'Stok kurang: '.implode(', ', $short);
+        if ($short === []) {
+            return 'Cukup';
+        }
+
+        // The home warehouse alone is short — but other warehouses may
+        // cover it, and then approval splits rather than fails. Say which,
+        // so red only ever means "this cannot be approved".
+        try {
+            $plan = app(OrderSplitter::class)->plan($order);
+
+            $gudang = Warehouse::query()
+                ->withoutGlobalScope('region')
+                ->whereIn('id', array_keys($plan))
+                ->pluck('kode', 'id');
+
+            return 'Tersebar di '.count($plan).' gudang: '
+                .collect($plan)->keys()->map(fn ($id) => $gudang[$id] ?? $id)->implode(', ');
+        } catch (InsufficientStockException) {
+            return 'Stok kurang: '.implode(', ', $short);
+        }
     }
 }
