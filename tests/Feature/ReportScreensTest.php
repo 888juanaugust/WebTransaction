@@ -133,7 +133,12 @@ class ReportScreensTest extends TestCase
             'keuangan' => [Role::Finance, true],
             'pemilik' => [Role::Owner, true],
             'sales' => [Role::Sales, false],
-            'gudang' => [Role::Warehouse, false],
+            /*
+             * Inventori joined with the reorganisation: dead stock ranked by
+             * the money tied up in it is their report now. Sales stay out —
+             * cost next to the prices they negotiate is margin.
+             */
+            'gudang' => [Role::Warehouse, true],
         ];
     }
 

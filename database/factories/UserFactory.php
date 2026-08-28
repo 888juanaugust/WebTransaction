@@ -46,6 +46,12 @@ class UserFactory extends Factory
         return $this->role(Role::Sales);
     }
 
+    public function marketing(): static
+    {
+        return $this->role(Role::Marketing);
+    }
+
+    /** Inventori, in the panel's own words — the enum case keeps its old name. */
     public function warehouse(): static
     {
         return $this->role(Role::Warehouse);

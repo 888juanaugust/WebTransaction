@@ -95,6 +95,8 @@ final class DataInventory
                 'bukan' => [
                     'kode', 'jenis_usaha', 'price_tier_id', 'credit_limit_rupiah',
                     'payment_terms_days', 'status', 'approved_at', 'approved_by',
+                    // The team in charge — staff references, like approved_by.
+                    'sales_user_id', 'marketing_user_id',
                 ],
             ],
 

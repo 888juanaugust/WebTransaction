@@ -32,6 +32,18 @@ class CompaniesTable
 
                 TextColumn::make('kota')->label('Kota')->searchable(),
 
+                /*
+                 * The team in charge, sales over marketing. "belum ada tim"
+                 * rather than a blank: an unassigned customer is a customer
+                 * whose orders nobody will approve, which is a problem to
+                 * see, not an empty cell to skim past.
+                 */
+                TextColumn::make('salesRep.name')
+                    ->label('Tim')
+                    ->description(fn ($record) => $record->marketingRep?->name)
+                    ->placeholder('belum ada tim')
+                    ->toggleable(),
+
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()

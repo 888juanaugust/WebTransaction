@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Companies\Schemas;
 
+use App\Domain\Access\Role;
+use App\Domain\Regions\RegionContext;
 use App\Models\Company;
 use App\Models\PriceTier;
+use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -14,6 +17,26 @@ use Filament\Schemas\Schema;
 
 class CompanyForm
 {
+    /**
+     * Who may fill a team seat: active, the right role, and the customer's
+     * region — a person the scope hides from this customer would be an
+     * approver to whom every pending order is invisible.
+     *
+     * @return array<int, string>
+     */
+    public static function kandidat(Role $seat, ?Company $record = null): array
+    {
+        $regionId = $record?->region_id ?? app(RegionContext::class)->regionId();
+
+        return User::query()
+            ->where('role', $seat->value)
+            ->where('is_active', true)
+            ->when($regionId !== null, fn ($q) => $q->where('region_id', $regionId))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -60,6 +83,34 @@ class CompanyForm
                     ->schema([
                         Textarea::make('alamat_kirim')->label('Alamat kirim')->columnSpanFull(),
                         TextInput::make('kota')->label('Kota'),
+                    ]),
+
+                Section::make('Tim penanggung jawab')
+                    ->description('Satu sales dan satu marketing mengurus pelanggan ini. Sales '
+                        .'menjual dan berkunjung; marketing menyetujui transaksi dan memantau '
+                        .'piutangnya. Hanya pemilik yang bisa mengubah penugasan.')
+                    ->columns(2)
+                    ->schema([
+                        /*
+                         * The pair is saved through TeamAssigner from the
+                         * page classes — audited, seat and region checked —
+                         * never by the form writing the columns directly:
+                         * both keys are stripped from the payload before the
+                         * record saves, and the columns are not fillable.
+                         */
+                        Select::make('sales_user_id')
+                            ->label('Sales')
+                            ->options(fn (?Company $record) => static::kandidat(Role::Sales, $record))
+                            ->placeholder('— belum ada —')
+                            ->native(false)
+                            ->disabled(fn () => ! (auth()->user()?->role()->canManageStaff() ?? false)),
+
+                        Select::make('marketing_user_id')
+                            ->label('Marketing')
+                            ->options(fn (?Company $record) => static::kandidat(Role::Marketing, $record))
+                            ->placeholder('— belum ada —')
+                            ->native(false)
+                            ->disabled(fn () => ! (auth()->user()?->role()->canManageStaff() ?? false)),
                     ]),
 
                 Section::make('Kredit dan harga')

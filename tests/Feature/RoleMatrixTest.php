@@ -19,19 +19,25 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * The role matrix from CLAUDE.md, asserted rather than assumed.
+ * The role matrix, asserted rather than assumed.
  *
- * | Role      | Can                              | Cannot                          |
- * |-----------|----------------------------------|---------------------------------|
- * | Sales     | Create orders, see prices        | Override credit, confirm payment|
- * | Warehouse | Pick, ship, print surat jalan    | See prices or credit data       |
- * | Finance   | Confirm payments, manage credit  | Edit order line prices          |
- * | Owner     | Everything + audit log           | —                               |
+ * | Role      | Can                                   | Cannot                          |
+ * |-----------|---------------------------------------|---------------------------------|
+ * | Sales     | Order for customers, see prices       | Approve credit, confirm payment |
+ * | Marketing | Approve/reject orders, watch debts    | Set prices, confirm payment     |
+ * | Inventori | Stock work, catalogue, price list     | See customer credit data        |
+ * | Finance   | Confirm payments, manage credit, book | Edit prices, approve own orders |
+ * | Owner     | Everything + audit log                | —                               |
  *
- * Until now this lived in the Role enum and in my own browser checks. A
- * refactor could have quietly widened any of it with the whole suite green,
- * and the failure would be a warehouse hand reading customer credit or a
- * finance clerk moving an invoice amount.
+ * The load-bearing separations after the reorganisation: whoever confirms a
+ * payment cannot move what a customer owes (Finance vs prices/credit notes),
+ * whoever is paid on the sale cannot approve its credit (Sales vs Marketing),
+ * and whoever sets the price neither approves credit nor confirms money
+ * (Inventori vs everything financial).
+ *
+ * A refactor could quietly widen any of this with the whole suite green, and
+ * the failure would be a clerk reading data or moving money outside their
+ * seat — so the matrix is written out cell by cell.
  */
 class RoleMatrixTest extends TestCase
 {
@@ -57,6 +63,8 @@ class RoleMatrixTest extends TestCase
                 'canClosePeriod' => false,
                 'canReopenPeriod' => false,
                 'canCreateOrders' => true,
+                'canApproveOrders' => false,
+                'canManagePriceList' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => true,
                 // A credit note reduces what a customer owes, which is editing
@@ -88,16 +96,28 @@ class RoleMatrixTest extends TestCase
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
             ]],
+            /*
+             * Inventori — the reorganisation's widened warehouse role. Stock
+             * work as before, plus the catalogue's pricing; still blind to
+             * customers' credit, which is now the boundary that matters.
+             */
             'warehouse' => [Role::Warehouse, [
-                'canSeePrices' => false,
+                'canSeePrices' => true,
                 'canSeeCreditData' => false,
-                'canSeeCost' => false,
+                // Stock statistics are cost figures: dead stock ranked by the
+                // money tied up in it ranks nothing with the money blanked.
+                'canSeeCost' => true,
                 'canRecordPurchases' => false,
                 'canPostJournals' => false,
                 'canSeeBooks' => false,
                 'canClosePeriod' => false,
                 'canReopenPeriod' => false,
                 'canCreateOrders' => false,
+                'canApproveOrders' => false,
+                // Pricing moved out of Sales' hands and into the
+                // catalogue-keeper's. The person who sets the price still
+                // neither approves credit nor confirms money.
+                'canManagePriceList' => true,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,
                 'canIssueCreditNote' => false,
@@ -120,6 +140,43 @@ class RoleMatrixTest extends TestCase
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
             ]],
+            /*
+             * Marketing — the approval seat. Every pending transaction waits
+             * for them; their customers' debt is their problem; and the only
+             * money power they hold is saying yes or no to credit. They see
+             * prices and debts, never cost, never the books.
+             */
+            'marketing' => [Role::Marketing, [
+                'canSeePrices' => true,
+                'canSeeCreditData' => true,
+                'canSeeCost' => false,
+                'canRecordPurchases' => false,
+                'canPostJournals' => false,
+                'canSeeBooks' => false,
+                'canClosePeriod' => false,
+                'canReopenPeriod' => false,
+                // They order for a customer too; the difference from Sales is
+                // that placing the order and approving it are the same seat.
+                'canCreateOrders' => true,
+                'canApproveOrders' => true,
+                'canManagePriceList' => false,
+                'canConfirmPayment' => false,
+                'canEditOrderPrices' => false,
+                'canIssueCreditNote' => false,
+                'canOverrideCreditLimit' => false,
+                'canPickAndShip' => false,
+                'canTransferStock' => false,
+                'canCountStock' => false,
+                'canApproveStockCount' => false,
+                'canAllocateLandedCost' => false,
+                'canReturnToSupplier' => false,
+                'canHandleGiro' => false,
+                'canReconcileBank' => false,
+                'canExportFaktur' => false,
+                'canSeeReports' => true,
+                'canViewAuditLog' => false,
+                'canManageStaff' => false,
+            ]],
             'finance' => [Role::Finance, [
                 'canSeePrices' => true,
                 'canSeeCreditData' => true,
@@ -131,6 +188,8 @@ class RoleMatrixTest extends TestCase
                 'canClosePeriod' => true,
                 'canReopenPeriod' => false,
                 'canCreateOrders' => false,
+                'canApproveOrders' => false,
+                'canManagePriceList' => false,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => false,
                 // Finance confirm payments, so they must not be able to write
@@ -175,6 +234,8 @@ class RoleMatrixTest extends TestCase
                 'canClosePeriod' => true,
                 'canReopenPeriod' => true,
                 'canCreateOrders' => true,
+                'canApproveOrders' => true,
+                'canManagePriceList' => true,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => true,
                 'canIssueCreditNote' => true,
@@ -312,8 +373,11 @@ class RoleMatrixTest extends TestCase
     {
         //            role,             companies, invoices, price imports
         return [
-            'sales' => [Role::Sales, true, true, true],
-            'warehouse' => [Role::Warehouse, false, false, false],
+            // Price imports moved to Inventori with the reorganisation:
+            // Sales sell from the list, the catalogue-keeper publishes it.
+            'sales' => [Role::Sales, true, true, false],
+            'warehouse' => [Role::Warehouse, false, false, true],
+            'marketing' => [Role::Marketing, true, true, false],
             'finance' => [Role::Finance, true, true, false],
             'owner' => [Role::Owner, true, true, true],
         ];
@@ -356,6 +420,13 @@ class RoleMatrixTest extends TestCase
              * quantity is what they counted.
              */
             'StockOpnameResource',
+            /*
+             * Deliberately opened by the reorganisation: the price list is
+             * Inventori's to maintain now. The boundary that survives is
+             * credit — this role still reaches nothing that shows what a
+             * customer owes.
+             */
+            'PriceListImportResource',
         ];
 
         $this->actingAs(User::factory()->role(Role::Warehouse)->create());
@@ -375,8 +446,8 @@ class RoleMatrixTest extends TestCase
 
         $this->assertSame($allowed, $reachable, sprintf(
             "Warehouse can reach: %s.\nAnything not on the allowlist in this test is a screen that "
-            .'was added without deciding whether the warehouse may see it. Warehouse must never see '
-            .'prices, costs, or customer credit data.',
+            .'was added without deciding whether Inventori may see it. Inventori must never see '
+            .'customer credit data.',
             implode(', ', $reachable),
         ));
     }

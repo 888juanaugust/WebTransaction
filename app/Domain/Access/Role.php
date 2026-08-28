@@ -7,10 +7,25 @@ namespace App\Domain\Access;
 /**
  * Staff roles. The hard rule this encodes: whoever confirms a payment must not
  * be able to edit the invoice amount.
+ *
+ * REORGANISED for the credit-sales operation the owner described. Five staff
+ * roles now:
+ *
+ * - **Sales** — visits customers, sells, orders on a customer's behalf. Their
+ *   orders wait for marketing's approval like the customer's own.
+ * - **Marketing** — approves or rejects pending transactions, watches their
+ *   customers' debt, initiates debt removals for cash taken outside the
+ *   system. One marketing + one sales form the team in charge of a customer.
+ * - **Inventori** — the artist formerly known as Gudang, widened: stock work
+ *   as before, plus the catalogue's pricing. The enum case stays `Warehouse`
+ *   so no stored role value has to migrate; the label is what people see.
+ * - **Keuangan** — confirms money in, verifies debt removals, keeps the books.
+ * - **Pemilik** — admin. Everything, and the only role that assigns the rest.
  */
 enum Role: string
 {
     case Sales = 'sales';
+    case Marketing = 'marketing';
     case Warehouse = 'warehouse';
     case Finance = 'finance';
     case Owner = 'owner';
@@ -19,37 +34,53 @@ enum Role: string
     {
         return match ($this) {
             self::Sales => 'Sales',
-            self::Warehouse => 'Gudang',
+            self::Marketing => 'Marketing',
+            self::Warehouse => 'Inventori',
             self::Finance => 'Keuangan',
             self::Owner => 'Pemilik',
         };
     }
 
-    /** Sales quote prices; warehouse must never see them. */
+    /**
+     * Everyone, now — and the method survives on purpose.
+     *
+     * The old organisation kept warehouse staff blind to prices; the new one
+     * hands them the price list to maintain, which ends the blindness. The
+     * screens still ask this question, and keeping the question means the next
+     * role that *should* be blind is one line here rather than an archaeology
+     * project across every table that once checked.
+     */
     public function canSeePrices(): bool
     {
-        return $this !== self::Warehouse;
+        return true;
     }
 
-    /** Warehouse is deliberately blind to credit and AR data. */
+    /**
+     * Inventori is deliberately blind to credit and AR data — their job gained
+     * pricing but not customers' debts. Marketing gained exactly that: the
+     * overdue reminders land on them, so the figures behind the reminders
+     * must be theirs to read.
+     */
     public function canSeeCreditData(): bool
     {
-        return in_array($this, [self::Sales, self::Finance, self::Owner], true);
+        return in_array($this, [self::Sales, self::Marketing, self::Finance, self::Owner], true);
     }
 
     /**
      * Purchase cost, average cost, inventory value, and therefore margin.
      *
-     * Tighter than canSeeCreditData() by one role, and the missing role is
-     * Sales. What a customer pays is a salesperson's job; what we paid is not.
-     * Cost plus selling price is margin, and margin in the hands of whoever
+     * The missing roles are the two that negotiate with customers: Sales and
+     * Marketing. What a customer pays is their job; what we paid is not. Cost
+     * plus selling price is margin, and margin in the hands of whoever
      * negotiates the discount changes how the discount gets negotiated.
      *
-     * Warehouse is excluded for the same reason it is excluded everywhere else.
+     * Inventori joined: the stock statistics the new organisation gives them
+     * — value on the shelf, dead stock ranked by money tied up — are cost
+     * figures, and a stock report with the money blanked out ranks nothing.
      */
     public function canSeeCost(): bool
     {
-        return in_array($this, [self::Finance, self::Owner], true);
+        return in_array($this, [self::Warehouse, self::Finance, self::Owner], true);
     }
 
     /**
@@ -114,9 +145,46 @@ enum Role: string
         return $this === self::Owner;
     }
 
+    /**
+     * Sales and Marketing both order on a customer's behalf; what differs is
+     * what happens next. A sales order waits in pending for the customer's
+     * marketing to approve, exactly like the customer's own. A marketing
+     * order is approved by the act of placing it — see canApproveOrders().
+     */
     public function canCreateOrders(): bool
     {
-        return in_array($this, [self::Sales, self::Owner], true);
+        return in_array($this, [self::Sales, self::Marketing, self::Owner], true);
+    }
+
+    /**
+     * Move a pending transaction forward, or reject it.
+     *
+     * Marketing's defining capability. Every order — the customer's own from
+     * the portal, or one a salesperson entered for them — waits in pending
+     * until the marketing in charge of that customer accepts it. Acceptance is
+     * the credit decision: it is the moment the goods are promised and the
+     * total becomes the customer's debt, so it belongs to the role that
+     * answers for that customer's balance.
+     *
+     * Sales are excluded although they sell: the person paid on the order
+     * should not be the person who decides the credit behind it.
+     */
+    public function canApproveOrders(): bool
+    {
+        return in_array($this, [self::Marketing, self::Owner], true);
+    }
+
+    /**
+     * Maintain the price list: imports, publishes, corrections.
+     *
+     * Inventori's, under the new organisation — pricing moved out of Sales'
+     * hands and into the catalogue-keeper's. Deliberately disjoint from
+     * canApproveOrders() and canConfirmPayment(): the person who sets the
+     * price does not approve the credit and does not confirm the money.
+     */
+    public function canManagePriceList(): bool
+    {
+        return in_array($this, [self::Warehouse, self::Owner], true);
     }
 
     /** Finance confirms money in. Sales never does. */
@@ -199,7 +267,13 @@ enum Role: string
      */
     public function canSeeReports(): bool
     {
-        return in_array($this, [self::Sales, self::Finance, self::Owner], true);
+        /*
+         * Marketing joined: approving credit blind would mean saying yes to a
+         * customer whose ordering history they cannot read. Inventori still
+         * excluded — the reports here are sales and receivables, and their
+         * stock statistics arrive with the dashboard work, gated on cost.
+         */
+        return in_array($this, [self::Sales, self::Marketing, self::Finance, self::Owner], true);
     }
 
     /**

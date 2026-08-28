@@ -59,6 +59,7 @@ class StaffTable
                         Role::Finance => 'warning',
                         Role::Warehouse => 'gray',
                         Role::Sales => 'info',
+                        Role::Marketing => 'success',
                     })
                     ->sortable(),
 

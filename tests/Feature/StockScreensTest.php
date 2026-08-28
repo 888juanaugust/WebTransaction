@@ -94,12 +94,13 @@ class StockScreensTest extends TestCase
         ];
     }
 
-    public function test_the_transfer_list_shows_no_money_to_the_warehouse(): void
+    public function test_the_transfer_list_shows_stock_value_to_inventori_now(): void
     {
         /*
-         * The value column exists for whoever may see cost. Warehouse may not,
-         * and a transfer is value-neutral anyway — there is nothing they need
-         * it for.
+         * The value column exists for whoever may see cost — and since the
+         * reorganisation that includes Inventori: stock value is their own
+         * statistic. The role that stays blind here is nobody; the boundary
+         * that survives for this role is customer credit, tested elsewhere.
          */
         $this->stockUp($this->pusat, 100, 60_000);
         $transfer = $this->postedTransfer(30);
@@ -111,7 +112,7 @@ class StockScreensTest extends TestCase
             ->assertOk()
             ->assertSee($transfer->nomor)
             ->assertSee('Gudang Cabang')
-            ->assertDontSee('Rp 1.800.000');
+            ->assertSee('Rp 1.800.000');
 
         Livewire::actingAs($this->owner)
             ->test(ListStockTransfers::class)
@@ -191,8 +192,13 @@ class StockScreensTest extends TestCase
             ->assertSee('Buat lembar opname');
     }
 
-    public function test_the_opname_list_shows_no_money_to_the_warehouse(): void
+    public function test_the_opname_list_shows_the_variance_value_to_inventori_now(): void
     {
+        /*
+         * Since the reorganisation Inventori sees cost, so the rupiah variance
+         * is on their screen too. The control that matters is unchanged and
+         * tested elsewhere: they still cannot *approve* what they counted.
+         */
         $this->stockUp($this->pusat, 100, 60_000);
         $opname = $this->postedOpname(94);
 
@@ -201,9 +207,8 @@ class StockScreensTest extends TestCase
         Livewire::actingAs($this->gudang)
             ->test(StockOpnameResource::getPages()['index']->getPage())
             ->assertOk()
-            // The quantity variance is theirs — it is what they counted.
             ->assertSee('-6')
-            ->assertDontSee('360.000');
+            ->assertSee('360.000');
 
         Livewire::actingAs($this->finance)
             ->test(StockOpnameResource::getPages()['index']->getPage())

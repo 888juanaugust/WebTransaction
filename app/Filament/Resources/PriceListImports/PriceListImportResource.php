@@ -36,15 +36,20 @@ class PriceListImportResource extends Resource
 
     protected static ?int $navigationSort = 50;
 
-    /** Publishing prices is a pricing action, not a warehouse one. */
+    /**
+     * The price list is Inventori's under the new organisation — the
+     * catalogue-keeper maintains what things cost to buy, and the one screen
+     * that changes selling prices moved with the catalogue. Sales sell from
+     * the list; they no longer publish it.
+     */
     public static function canViewAny(): bool
     {
-        return auth()->user()?->role()->canEditOrderPrices() ?? false;
+        return auth()->user()?->role()->canManagePriceList() ?? false;
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->role()->canEditOrderPrices() ?? false;
+        return auth()->user()?->role()->canManagePriceList() ?? false;
     }
 
     public static function form(Schema $schema): Schema

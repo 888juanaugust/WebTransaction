@@ -224,7 +224,15 @@ class DemoSeeder extends Seeder
             $company = Company::query()->create([
                 'kode' => $kode,
                 'nama' => $nama,
-                'jenis_usaha' => $tier === 'DIST' ? 'Distributor' : ($tier === 'TOKO' ? 'Toko sparepart' : 'Bengkel'),
+                /*
+                 * The stored value is the option key the form saves, not the
+                 * label it shows. Seeding the label looked identical in every
+                 * table (the column renders as-is) and then broke the edit
+                 * form: the required select could not match 'Bengkel' to
+                 * 'bengkel', rendered empty, and refused every save of a
+                 * seeded customer.
+                 */
+                'jenis_usaha' => $tier === 'DIST' ? 'distributor' : ($tier === 'TOKO' ? 'toko_sparepart' : 'bengkel'),
                 'npwp' => '0'.random_int(1, 9).'.'.random_int(100, 999).'.'.random_int(100, 999).'.'
                     .random_int(1, 9).'-'.random_int(100, 999).'.000',
                 'nama_wajib_pajak' => strtoupper($nama),

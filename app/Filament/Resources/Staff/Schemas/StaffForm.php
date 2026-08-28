@@ -125,9 +125,10 @@ class StaffForm
      */
     private static function ringkasanPeran(): string
     {
-        return 'Sales: buat order, lihat harga. '
-            .'Gudang: pick, kirim, cetak surat jalan — tidak melihat harga atau data kredit. '
-            .'Keuangan: konfirmasi pembayaran, kelola kredit dan piutang — tidak mengubah harga order. '
-            .'Pemilik: semuanya, termasuk log audit dan pengelolaan staf.';
+        return 'Sales: kunjungan dan buat order untuk pelanggan — menunggu persetujuan marketing. '
+            .'Marketing: setujui/tolak transaksi, pantau piutang pelanggannya, ajukan penghapusan utang. '
+            .'Inventori: stok, katalog, dan daftar harga — tidak melihat piutang pelanggan. '
+            .'Keuangan: konfirmasi pembayaran, verifikasi penghapusan utang, pembukuan. '
+            .'Pemilik: semuanya, termasuk log audit, wilayah, dan pengelolaan staf.';
     }
 }

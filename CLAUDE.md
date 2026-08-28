@@ -91,15 +91,27 @@ across controllers.
 
 ## Roles
 
+Reorganised 2026-08 for the credit-sales operation: customers buy on account,
+every order needs marketing's approval, and debt is watched per customer by
+the team in charge of them.
+
 | Role | Can | Cannot |
 |---|---|---|
-| Sales | Create orders, see prices | Override credit limit, confirm payment |
-| Warehouse | Pick, ship, print surat jalan | See prices or customer credit data |
-| Finance | Confirm payments, manage credit + AR | Edit order line prices |
-| Owner | Everything + audit log | — |
+| Sales | Store visits, order for customers, see prices | Approve credit, confirm payment, see cost |
+| Marketing | Approve/reject pending orders, watch their customers' debt, initiate debt removal | Set prices, confirm payment, see cost |
+| Inventori | Stock work, catalogue, price list, stock statistics (incl. cost) | See customer credit data |
+| Finance | Confirm payments, verify debt removals, manage credit + AR, books | Edit prices, issue credit notes |
+| Owner (admin) | Everything + audit log, regions, staff, teams | — |
 
-**Hard rule:** whoever confirms a payment must not be able to edit the invoice amount.
-Log every price override and credit-limit override with actor, old value, new value, timestamp.
+One sales + one marketing form the **team** in charge of a customer
+(`companies.sales_user_id` / `marketing_user_id`, assigned only by the Owner
+through `TeamAssigner`, audited). Both must hold the right role and belong to
+the customer's region.
+
+**Hard rules:** whoever confirms a payment must not be able to edit the invoice
+amount. Whoever is paid on the sale must not approve its credit (Sales cannot
+approve orders). Whoever sets the price neither approves credit nor confirms
+money. Log every override with actor, old value, new value, timestamp.
 
 ---
 

@@ -67,6 +67,37 @@ class Company extends Model
         return $this->hasMany(PaymentEntry::class);
     }
 
+    /**
+     * The team in charge: one sales, one marketing.
+     *
+     * Deliberately not in Fillable — assignment goes through TeamAssigner,
+     * which checks the seat's role, the region, and writes the audit entry.
+     * "Who approved this customer's credit" traces back through "who was
+     * their marketing at the time", so the columns must not be settable by a
+     * stray mass assignment.
+     */
+    public function salesRep(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_user_id');
+    }
+
+    public function marketingRep(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'marketing_user_id');
+    }
+
+    /** The customers a salesperson answers for. */
+    public function scopeManagedBySales($query, User $sales)
+    {
+        return $query->where('sales_user_id', $sales->getKey());
+    }
+
+    /** The customers whose credit a marketing answers for. */
+    public function scopeManagedByMarketing($query, User $marketing)
+    {
+        return $query->where('marketing_user_id', $marketing->getKey());
+    }
+
     public function virtualAccounts(): HasMany
     {
         return $this->hasMany(VirtualAccount::class);

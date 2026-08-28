@@ -853,6 +853,32 @@ two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
 
+### Peran dan tim — the reorganised role matrix
+
+| Piece | Decides |
+|---|---|
+| `Role::Marketing` | The approval seat: pending orders wait on them, debts report to them |
+| `Role::Warehouse` (label **Inventori**) | Stock work plus the catalogue and price list; sees cost now |
+| `Role::canApproveOrders` | Marketing and Owner — never Sales, who are paid on the sale |
+| `Role::canManagePriceList` | Inventori and Owner — pricing moved out of Sales' hands |
+| `TeamAssigner` | One sales + one marketing per customer, Owner-assigned, audited |
+| `companies.sales_user_id / marketing_user_id` | The team, not fillable, indexed for "my customers" |
+
+The reorganisation (2026-08) reshapes the separations rather than dropping
+them: whoever confirms a payment still cannot move what a customer owes;
+whoever is *paid on the sale* cannot approve its credit — that is why Sales
+cannot approve orders and Marketing can; and whoever sets the price neither
+approves credit nor confirms money. Inventori gained prices and cost (their
+stock statistics are cost figures) and remains blind to customer credit data,
+which is now the boundary that matters for that role.
+
+A team assignment is refused when it would be a fiction: wrong role for the
+seat, a deactivated account, or somebody from another region — the scope
+hides the customer from them, so every pending order would wait on a person
+who cannot see it. Both seats are audited with the name, because "who
+approved this customer's credit" traces back through "who was their marketing
+at the time".
+
 ### Wilayah — one company, several sets of books
 
 | Piece | Decides |
