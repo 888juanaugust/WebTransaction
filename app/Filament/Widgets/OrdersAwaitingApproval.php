@@ -110,6 +110,10 @@ class OrdersAwaitingApproval extends TableWidget
                 // itself cannot drift apart.
                 OrderTransitionActions::setujui(),
                 OrderTransitionActions::tolak(),
+                // Marketing's broom: an order the customer walked away from
+                // is erased right where it clutters, with the audit log as
+                // its remaining trace.
+                OrderTransitionActions::hapus(),
             ]);
     }
 

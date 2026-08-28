@@ -190,6 +190,10 @@ class LogAudit extends Page implements HasTable
             'purchase_order_cancelled',
             'launch_item_retracted',
             'company_status_changed',
+            // A debt disappearing and an order disappearing are exactly the
+            // rows an audit reads this log for.
+            'debt_removal_approved',
+            'order_erased',
         ];
     }
 
@@ -267,6 +271,10 @@ class LogAudit extends Page implements HasTable
             'faktur_exported' => 'Faktur pajak diekspor',
             'nsfp_recorded' => 'NSFP dicatat',
             'company_status_changed' => 'Status pelanggan diubah',
+            'debt_removal_initiated' => 'Penghapusan piutang diajukan',
+            'debt_removal_approved' => 'Penghapusan piutang disetujui',
+            'debt_removal_rejected' => 'Penghapusan piutang ditolak',
+            'order_erased' => 'Order belum jadi dihapus',
             'customer_portal_access_granted' => 'Akses portal diberikan',
             'virtual_account_provisioned' => 'Virtual account dibuat',
             /*

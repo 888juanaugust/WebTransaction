@@ -169,6 +169,18 @@ final class DataInventory
                 ],
             ],
 
+            'debt_removals' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                // Who claimed the money and who verified it are the two names
+                // the whole control rests on; the free-text fields describe a
+                // cash handover and can name people and places.
+                'personal' => ['initiated_by', 'decided_by', 'alasan', 'keputusan_catatan'],
+                'bukan' => [
+                    'invoice_id', 'company_id', 'amount_rupiah', 'status',
+                    'decided_at', 'payment_entry_id',
+                ],
+            ],
+
             'virtual_accounts' => [
                 'kategori' => 'pajak_dan_pembayaran',
                 'personal' => ['account_number', 'external_id', 'gateway_id'],

@@ -112,6 +112,29 @@ and PPN, and the terbilang line.
 > is not the same number as rounding a summed total — and the difference ends
 > up on a tax return."
 
+### Cash paid at the counter — 2 min
+
+Still as marketing, open **Faktur** and click **Ajukan penghapusan** on an
+open invoice: the customer handed over cash on a store visit, and the system
+is hearing about it after the fact.
+
+> "Marketing says the money was received. Nothing has moved yet — a claim is
+> paperwork, not a payment."
+
+Switch to `finance@example.test`. The claim sits on the dashboard under
+**Penghapusan piutang menunggu verifikasi**, with marketing's account of
+where the cash went. Click **Setujui**.
+
+> "Two keys, never the same hand — the person who claims the money can never
+> be the one who declares it real, and that includes the owner. Approving
+> posted an ordinary payment: the invoice settled, the order completed, and
+> if the customer was frozen for old debt, they just thawed."
+
+While you are marketing, note the **Hapus** button on the approval queue: an
+order the customer walked away from can be erased before it is confirmed —
+after confirmation it holds reserved stock and must be rejected instead. The
+erasure itself lands in the audit log with the order's summary.
+
 ### Switch to the warehouse login — 1 min
 
 Log in as `warehouse@example.test`.
@@ -508,7 +531,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1630 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1659 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

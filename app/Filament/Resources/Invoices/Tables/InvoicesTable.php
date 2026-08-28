@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Invoices\Tables;
 
+use App\Domain\Access\Role;
+use App\Domain\Credit\DebtRemover;
 use App\Domain\Money;
 use App\Domain\Payments\PaymentLedger;
 use App\Models\Invoice;
@@ -20,6 +22,23 @@ use Illuminate\Support\Carbon;
 
 class InvoicesTable
 {
+    /**
+     * Mirrors DebtRemover::assertMayInitiate so the button only shows when
+     * the click would succeed; the domain class still enforces it.
+     */
+    private static function mayInitiateRemoval(Invoice $record): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->role() === Role::Owner
+            || ($user->role() === Role::Marketing
+                && (int) $record->company->marketing_user_id === (int) $user->getKey());
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -124,6 +143,56 @@ class InvoicesTable
                  * through the gateway. Restricted to Finance and Owner, and it
                  * appends to the ledger — it never edits the invoice amount.
                  */
+                /*
+                 * The claim that a debt was paid outside the system — cash
+                 * handed over on a store visit. Only the marketing in charge
+                 * of this customer (or the Owner) can file it, and filing
+                 * moves no money: finance verifies before anything posts.
+                 */
+                Action::make('ajukan_penghapusan')
+                    ->label('Ajukan penghapusan')
+                    ->icon('heroicon-o-hand-raised')
+                    ->color('warning')
+                    ->visible(fn (Invoice $record) => $record->status === Invoice::STATUS_OPEN
+                        && self::mayInitiateRemoval($record))
+                    ->modalHeading('Ajukan penghapusan piutang')
+                    ->modalDescription('Pengajuan ini menunggu verifikasi finance — tidak ada yang berubah sebelum mereka menyetujui.')
+                    ->schema(fn (Invoice $record) => [
+                        TextInput::make('amount_rupiah')
+                            ->label('Jumlah diterima (Rp)')
+                            ->numeric()
+                            ->required()
+                            ->default($record->amountOutstanding())
+                            ->helperText('Sisa tagihan: '.Money::format($record->amountOutstanding())),
+                        Textarea::make('alasan')
+                            ->label('Bagaimana uangnya diterima')
+                            ->helperText('Di mana, kapan, dalam bentuk apa — inilah yang diverifikasi finance.')
+                            ->required()
+                            ->maxLength(500),
+                    ])
+                    ->action(function (Invoice $record, array $data) {
+                        try {
+                            app(DebtRemover::class)->initiate(
+                                $record,
+                                auth()->user(),
+                                (int) $data['amount_rupiah'],
+                                $data['alasan'],
+                            );
+
+                            Notification::make()
+                                ->title('Pengajuan terkirim')
+                                ->body('Menunggu verifikasi finance.')
+                                ->success()
+                                ->send();
+                        } catch (\DomainException $e) {
+                            Notification::make()
+                                ->title('Tidak bisa diajukan')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
                 Action::make('catat_pembayaran')
                     ->label('Catat pembayaran')
                     ->icon('heroicon-o-banknotes')

@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Widgets\AccountsAwaitingApproval;
 use App\Filament\Widgets\BackupStatus;
+use App\Filament\Widgets\DebtRemovalsAwaitingVerification;
 use App\Filament\Widgets\GiroDue;
 use App\Filament\Widgets\LaunchReadinessSummary;
 use App\Filament\Widgets\OrdersAwaitingApproval;
@@ -89,6 +90,9 @@ class AdminPanelProvider extends PanelProvider
                 OrdersAwaitingApproval::class,
                 AccountsAwaitingApproval::class,
                 UnmatchedPayments::class,
+                // A claim that a debt was paid in cash, waiting on finance's
+                // key. Sits with the other money queues.
+                DebtRemovalsAwaitingVerification::class,
                 OrdersReadyToPick::class,
                 OverdueInvoices::class,
                 // Silent unless a giro is dated today or earlier.

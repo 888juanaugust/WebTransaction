@@ -915,6 +915,32 @@ five months; the sweep tells the truth when it meets an invoice already past
 the freeze (a backdated faktur, a team seated late) instead of promising a
 month that is gone.
 
+### Penghapusan piutang — a debt settled outside the system
+
+| Piece | Decides |
+|---|---|
+| `DebtRemover::initiate` | The marketing in charge (or Owner) claims cash was received — paperwork only, no money moves |
+| `DebtRemover::approve` | Finance's key: posts an ordinary `recordManualPayment`, so the invoice settles, the order advances, the freeze lifts — the same as a bank transfer |
+| `DebtRemover::reject` | Requires a reason; frees the invoice for a corrected claim |
+| `debt_removals` | The authorisation trail: claim, decision, and the `payment_entry_id` the approval posted. The books never reference it |
+| One pending per invoice | Partial unique index on `status = 'diajukan'` |
+| `DebtRemovalsAwaitingVerification` | Finance's dashboard queue; `DebtRemovalResource` is the register behind it, scoped to a team member's own customers |
+
+Two keys, never the same hand: the initiator cannot verify their own claim,
+even the Owner. A stale claim — the balance shrank while it waited — is
+refused at approval and re-filed at today's figure, because approving more
+than what is owed would push the invoice into credit on a stale number.
+
+### Menghapus order belum jadi — marketing's broom
+
+`OrderEraser::erase` deletes a `draft` or `submitted` order outright — the
+same seat as approving (the customer's marketing, or the Owner), because a
+submitted order is already a claim on marketing's attention. Anything from
+`confirmed` on holds reserved stock and snapshotted prices and must end
+through the state machine instead. The audit entry (`order_erased`) carries
+the order's summary — number, customer, total, status — because the row it
+describes no longer exists to ask.
+
 ### Wilayah — one company, several sets of books
 
 | Piece | Decides |

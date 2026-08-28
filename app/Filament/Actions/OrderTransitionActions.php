@@ -6,6 +6,7 @@ namespace App\Filament\Actions;
 
 use App\Domain\Access\Role;
 use App\Domain\Money;
+use App\Domain\Orders\OrderEraser;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Stock\InsufficientStockException;
@@ -126,6 +127,49 @@ class OrderTransitionActions
                 } catch (DomainException $e) {
                     Notification::make()
                         ->title('Tidak bisa ditolak')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
+            });
+    }
+
+    /**
+     * Erase an unfinished order — marketing clearing the clutter.
+     *
+     * Not a transition: draft and submitted orders hold nothing (no reserved
+     * stock, no snapshotted prices, no invoice), so they may simply go.
+     * OrderEraser enforces the same seat rule and writes the audit snapshot
+     * that outlives the row.
+     */
+    public static function hapus(string $name = 'hapus'): Action
+    {
+        return Action::make($name)
+            ->label('Hapus')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->modalHeading('Hapus order yang belum jadi')
+            ->modalDescription(fn (Order $record) => "Order {$record->nomor} untuk {$record->company->nama} akan dihapus. "
+                .'Jejaknya tetap tercatat di log audit.')
+            ->schema([
+                Textarea::make('alasan')
+                    ->label('Alasan')
+                    ->helperText('Kenapa order ini dihapus — tercatat di log audit.')
+                    ->maxLength(500),
+            ])
+            ->visible(fn (Order $record) => in_array($record->status, [OrderStatus::Draft, OrderStatus::Submitted], true)
+                && static::holdsApprovalSeat($record))
+            ->action(function (Order $record, array $data) {
+                try {
+                    app(OrderEraser::class)->erase($record, auth()->user(), $data['alasan'] ?? null);
+
+                    Notification::make()
+                        ->title("Order {$record->nomor} dihapus")
+                        ->success()
+                        ->send();
+                } catch (DomainException $e) {
+                    Notification::make()
+                        ->title('Tidak bisa dihapus')
                         ->body($e->getMessage())
                         ->danger()
                         ->send();
@@ -319,6 +363,7 @@ class OrderTransitionActions
             self::suratJalan(),
             self::faktur(),
             self::tolak(),
+            self::hapus(),
         ];
     }
 }
