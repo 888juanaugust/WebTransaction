@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Access\TeamAssigner;
 use App\Domain\Billing\CreditNoteIssuer;
 use App\Domain\Billing\CreditNotePoster;
 use App\Domain\Billing\CreditNoteType;
@@ -62,9 +63,16 @@ class NotaKreditDocumentTest extends TestCase
         config()->set('xendit.secret_key', '');
 
         $this->warehouse = Warehouse::factory()->create();
-        $this->sales = User::factory()->sales()->create();
+        $this->sales = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
         $this->finance = User::factory()->role(Role::Finance)->create();
         $this->company = Company::factory()->creditLimit(500_000_000)->create(['payment_terms_days' => 30]);
+
+        // Returs are filed by the sales who holds the store.
+        app(TeamAssigner::class)->assignSales(
+            $this->company,
+            $this->sales,
+            User::factory()->owner()->create(),
+        );
 
         $version = PriceListVersion::factory()->published()->create([
             'effective_from' => now()->subDay()->toDateString(),
@@ -149,9 +157,9 @@ class NotaKreditDocumentTest extends TestCase
     {
         return [
             'sales' => [Role::Sales, true],
-            // Warehouse take the cartons back and still never see what they
-            // were worth.
-            'gudang' => [Role::Warehouse, false],
+            // Inventori verify returs now, so the register is theirs to
+            // open — the price columns come with the job since 2026-08.
+            'gudang' => [Role::Warehouse, true],
             // Finance cannot raise one and must be able to read one.
             'keuangan' => [Role::Finance, true],
             'pemilik' => [Role::Owner, true],
@@ -278,7 +286,8 @@ class NotaKreditDocumentTest extends TestCase
     {
         $order = $this->shippedOrder(50);
 
-        return app(CreditNotePoster::class)->post($this->draftFor($order, $qty, $alasan), $this->sales);
+        // Posting a retur is Inventori's verification, never the drafter's.
+        return app(CreditNotePoster::class)->post($this->draftFor($order, $qty, $alasan), User::factory()->role(Role::Warehouse)->create());
     }
 
     private function draftFor(Order $order, int $qty, string $alasan = 'Barang tidak sesuai'): CreditNote

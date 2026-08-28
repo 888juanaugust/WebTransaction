@@ -275,6 +275,9 @@ class LogAudit extends Page implements HasTable
             'debt_removal_approved' => 'Pelunasan piutang disetujui',
             'debt_removal_rejected' => 'Pelunasan piutang ditolak',
             'order_erased' => 'Order belum jadi dihapus',
+            'sales_expense_claimed' => 'Biaya ekspedisi diajukan',
+            'sales_expense_approved' => 'Biaya ekspedisi disetujui',
+            'sales_expense_rejected' => 'Biaya ekspedisi ditolak',
             'customer_portal_access_granted' => 'Akses portal diberikan',
             'virtual_account_provisioned' => 'Virtual account dibuat',
             /*

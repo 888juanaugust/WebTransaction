@@ -44,10 +44,16 @@ class CreditNoteResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nomor';
 
-    /** Anyone who may see what a customer owes may see why it went down. */
+    /**
+     * Anyone who may see what a customer owes may see why it went down —
+     * and Inventori, who see no credit data elsewhere, see this screen
+     * because verifying returs is their key to turn.
+     */
     public static function canViewAny(): bool
     {
-        return auth()->user()?->role()->canSeeCreditData() ?? false;
+        $role = auth()->user()?->role();
+
+        return ($role?->canSeeCreditData() ?? false) || ($role?->canVerifyReturns() ?? false);
     }
 
     public static function canCreate(): bool

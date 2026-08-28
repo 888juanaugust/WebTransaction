@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Access\TeamAssigner;
 use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Billing\CreditNoteIssuer;
@@ -73,7 +74,7 @@ class ReportingTest extends TestCase
         config()->set('xendit.secret_key', '');
 
         $this->gudang = Warehouse::factory()->create();
-        $this->sales = User::factory()->sales()->create();
+        $this->sales = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
         $this->finance = User::factory()->role(Role::Finance)->create();
         $this->warehouse = User::factory()->role(Role::Warehouse)->create();
 
@@ -769,11 +770,20 @@ class ReportingTest extends TestCase
 
     private function customer(string $nama): Company
     {
-        return Company::factory()->creditLimit(5_000_000_000)->create([
+        $company = Company::factory()->creditLimit(5_000_000_000)->create([
             'nama' => $nama,
             'payment_terms_days' => 30,
             'status' => Company::STATUS_ACTIVE,
         ]);
+
+        // Returs are filed by the sales who holds the store.
+        app(TeamAssigner::class)->assignSales(
+            $company,
+            $this->sales,
+            User::factory()->owner()->create(),
+        );
+
+        return $company;
     }
 
     /**
@@ -846,7 +856,7 @@ class ReportingTest extends TestCase
             'qty_base' => $qty,
         ]);
 
-        app(CreditNotePoster::class)->post($note->refresh(), $this->sales);
+        app(CreditNotePoster::class)->post($note->refresh(), $this->warehouse);
     }
 
     private function stockUp(string $sku, int $qty, int $unitCost): void

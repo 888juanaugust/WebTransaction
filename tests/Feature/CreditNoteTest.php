@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Access\TeamAssigner;
 use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Accounting\LedgerReconciliation;
@@ -79,10 +80,18 @@ class CreditNoteTest extends TestCase
         config()->set('xendit.secret_key', '');
 
         $this->warehouse = Warehouse::factory()->create();
-        $this->sales = User::factory()->sales()->create();
+        $this->sales = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
         $this->finance = User::factory()->role(Role::Finance)->create();
         $this->gudang = User::factory()->role(Role::Warehouse)->create();
         $this->company = Company::factory()->creditLimit(500_000_000)->create(['payment_terms_days' => 30]);
+
+        // The 2026-08 seat rule: a sales drafts returs only for stores they
+        // hold, so the test sales is seated on the test customer.
+        app(TeamAssigner::class)->assignSales(
+            $this->company,
+            $this->sales,
+            User::factory()->owner()->create(),
+        );
 
         $version = PriceListVersion::factory()->published()->create([
             'effective_from' => now()->subDay()->toDateString(),
@@ -131,7 +140,7 @@ class CreditNoteTest extends TestCase
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('melebihi yang pernah dikirim');
 
-        app(CreditNotePoster::class)->post($note, $this->sales);
+        app(CreditNotePoster::class)->post($note, $this->gudang);
     }
 
     public function test_two_partial_returns_cannot_add_up_to_more_than_shipped(): void
@@ -140,13 +149,13 @@ class CreditNoteTest extends TestCase
         $order = $this->shippedOrder(50);
         $poster = app(CreditNotePoster::class);
 
-        $poster->post($this->returFor($order, 30), $this->sales);
+        $poster->post($this->returFor($order, 30), $this->gudang);
 
         $this->assertSame(20, app(CreditNoteIssuer::class)->creditable($order->invoice)[0]->remainingQty());
 
         $this->expectExceptionMessage('tersisa 20');
 
-        $poster->post($this->returFor($order, 21), $this->sales);
+        $poster->post($this->returFor($order, 21), $this->gudang);
     }
 
     public function test_a_potongan_on_a_line_cannot_exceed_what_that_line_was_worth(): void
@@ -219,7 +228,7 @@ class CreditNoteTest extends TestCase
         // The price list moves after the sale. The refund must not.
         PriceListItem::query()->update(['harga' => 250_000]);
 
-        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->sales);
+        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->gudang);
 
         // 10 of 50 at the invoiced 100,000 each, plus PPN at 11% effective.
         $this->assertSame(1_000_000, $note->subtotal_rupiah);
@@ -247,7 +256,7 @@ class CreditNoteTest extends TestCase
         // 10% off, so the line is not 50 × the 100,000 list price.
         $this->assertSame(4_500_000, (int) $line->line_total_rupiah);
 
-        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->sales);
+        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->gudang);
 
         $this->assertSame(900_000, $note->subtotal_rupiah);
     }
@@ -274,8 +283,8 @@ class CreditNoteTest extends TestCase
         $lineTotal = (int) $order->lines()->first()->line_total_rupiah;
 
         $poster = app(CreditNotePoster::class);
-        $first = $poster->post($this->returFor($order, 2), $this->sales);
-        $second = $poster->post($this->returFor($order, 1), $this->sales);
+        $first = $poster->post($this->returFor($order, 2), $this->gudang);
+        $second = $poster->post($this->returFor($order, 1), $this->gudang);
 
         $this->assertSame($lineTotal, $first->subtotal_rupiah + $second->subtotal_rupiah);
         $this->assertSame(0, app(CreditNoteIssuer::class)->creditable($order->invoice)[0]->remainingValueRupiah());
@@ -302,8 +311,8 @@ class CreditNoteTest extends TestCase
         $this->assertNotSame(0, $shipped % 3);
 
         $poster = app(CreditNotePoster::class);
-        $poster->post($this->returFor($order, 2), $this->sales);
-        $poster->post($this->returFor($order, 1), $this->sales);
+        $poster->post($this->returFor($order, 2), $this->gudang);
+        $poster->post($this->returFor($order, 1), $this->gudang);
 
         $this->assertSame($before + $shipped, app(InventoryValuation::class)->totalValue());
     }
@@ -314,7 +323,7 @@ class CreditNoteTest extends TestCase
         $order = $this->shippedOrder(50);
         $invoice = $order->invoice;
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->gudang);
 
         $invoice->refresh();
 
@@ -346,7 +355,7 @@ class CreditNoteTest extends TestCase
 
         $this->assertSame(50, (int) StockLevel::query()->where('sku', self::SKU)->sum('qty_on_hand'));
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->gudang);
 
         $this->assertSame(70, (int) StockLevel::query()->where('sku', self::SKU)->sum('qty_on_hand'));
 
@@ -372,7 +381,7 @@ class CreditNoteTest extends TestCase
         $this->stockUp(100, 90_000);          // average is now well above 60,000
         $valuedBefore = app(InventoryValuation::class)->totalValue();
 
-        $note = app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->sales);
+        $note = app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->gudang);
 
         $this->assertSame(3_000_000, $note->hpp_rupiah);
         $this->assertSame($valuedBefore + 3_000_000, app(InventoryValuation::class)->totalValue());
@@ -383,7 +392,7 @@ class CreditNoteTest extends TestCase
         $this->stockUp(100, 60_000);
         $order = $this->shippedOrder(50);
 
-        $note = app(CreditNotePoster::class)->post($this->returFor($order, 17), $this->sales);
+        $note = app(CreditNotePoster::class)->post($this->returFor($order, 17), $this->gudang);
 
         $this->assertSame(17 * 60_000, $note->hpp_rupiah);
     }
@@ -400,7 +409,7 @@ class CreditNoteTest extends TestCase
         $ppnBefore = $ledger->balanceOf(AccountCode::PPN_KELUARAN);
         $piutangBefore = $ledger->balanceOf(AccountCode::PIUTANG_USAHA);
 
-        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->sales);
+        $note = app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->gudang);
 
         $this->assertSame($penjualanBefore - 1_000_000, $ledger->balanceOf(AccountCode::PENJUALAN));
         $this->assertSame($ppnBefore - 110_000, $ledger->balanceOf(AccountCode::PPN_KELUARAN));
@@ -416,7 +425,7 @@ class CreditNoteTest extends TestCase
 
         $this->assertSame(3_000_000, $ledger->balanceOf(AccountCode::HARGA_POKOK_PENJUALAN));
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->gudang);
 
         $this->assertSame(3_000_000 - 1_200_000, $ledger->balanceOf(AccountCode::HARGA_POKOK_PENJUALAN));
         $this->assertSame(
@@ -443,7 +452,7 @@ class CreditNoteTest extends TestCase
         $this->stockUp(100, 60_000);
         $order = $this->shippedOrder(50);
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 20), $this->gudang);
 
         $reconciliation = app(LedgerReconciliation::class);
 
@@ -462,7 +471,7 @@ class CreditNoteTest extends TestCase
         $order = $this->shippedOrder(50);
         $ledger = app(Ledger::class);
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->gudang);
 
         $this->assertSame(0, $ledger->balanceOf(AccountCode::PENJUALAN));
         $this->assertSame(0, $ledger->balanceOf(AccountCode::HARGA_POKOK_PENJUALAN));
@@ -485,7 +494,7 @@ class CreditNoteTest extends TestCase
         $invoice = $order->invoice;
 
         app(PaymentLedger::class)->recordManualPayment($this->company, 1_000_000, $this->finance, $invoice);
-        app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 10), $this->gudang);
 
         $receivables = app(OutstandingReceivables::class);
         $expected = (int) $invoice->total_rupiah - 1_000_000 - 1_110_000;
@@ -503,7 +512,7 @@ class CreditNoteTest extends TestCase
 
         $before = app(CreditChecker::class)->available($this->company);
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 50), $this->gudang);
 
         $this->assertSame($before + (int) $order->invoice->total_rupiah, app(CreditChecker::class)->available($this->company));
     }
@@ -573,11 +582,68 @@ class CreditNoteTest extends TestCase
         $this->assertTrue($posted->isPosted());
     }
 
+    public function test_a_sales_cannot_file_a_retur_for_a_colleagues_store(): void
+    {
+        /*
+         * The seat rule the 2026-08 change introduced: retur comes in
+         * through the sales who visits that store — the customer cannot
+         * file one, and neither can somebody else's sales.
+         */
+        $this->stockUp(100, 60_000);
+        $order = $this->shippedOrder(50);
+
+        $lain = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageMatches('/bukan tanggung jawab Anda/');
+
+        app(CreditNoteIssuer::class)->draft(
+            $order->invoice,
+            CreditNoteType::ReturBarang,
+            $lain,
+            'Barang rusak',
+            warehouseId: $this->warehouse->id,
+        );
+    }
+
+    public function test_the_drafter_cannot_verify_their_own_retur(): void
+    {
+        /*
+         * Two keys, two people — the Owner included. Without this, "sales
+         * files, Inventori confirms the goods" collapses whenever one person
+         * holds both hats.
+         */
+        $this->stockUp(100, 60_000);
+        $order = $this->shippedOrder(50);
+
+        $owner = User::factory()->owner()->create();
+        $note = app(CreditNoteIssuer::class)->draft(
+            $order->invoice, CreditNoteType::ReturBarang, $owner, 'Barang rusak',
+            warehouseId: $this->warehouse->id,
+        );
+        CreditNoteLine::factory()->create([
+            'credit_note_id' => $note->id,
+            'order_line_id' => $order->lines()->first()->id,
+            'sku' => self::SKU, 'urutan' => 1, 'qty_base' => 5,
+        ]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageMatches('/dua kunci/');
+
+        app(CreditNotePoster::class)->post($note->refresh(), $owner);
+    }
+
     public static function roles(): array
     {
+        /*
+         * For a stock-moving retur the poster is the verifier: Inventori
+         * confirms the goods came back, and the sales who filed it cannot.
+         * (A potongan still posts with the issuing seat — pinned by
+         * test_a_potongan_moves_money_without_moving_goods.)
+         */
         return [
-            'sales' => [Role::Sales, true],
-            'gudang' => [Role::Warehouse, false],
+            'sales' => [Role::Sales, false],
+            'gudang' => [Role::Warehouse, true],
             // Finance confirm payments, so they must not be able to write a
             // receivable off as a return nobody witnessed.
             'keuangan' => [Role::Finance, false],
@@ -633,12 +699,12 @@ class CreditNoteTest extends TestCase
         $this->stockUp(100, 60_000);
         $order = $this->shippedOrder(50);
 
-        app(CreditNotePoster::class)->post($this->returFor($order, 10, 'Dua dus penyok saat kirim'), $this->sales);
+        app(CreditNotePoster::class)->post($this->returFor($order, 10, 'Dua dus penyok saat kirim'), $this->gudang);
 
         $log = AuditLog::query()->where('action', 'credit_note_posted')->sole();
 
         $this->assertSame('Dua dus penyok saat kirim', $log->alasan);
-        $this->assertSame($this->sales->id, $log->actor_id);
+        $this->assertSame($this->gudang->id, $log->actor_id);
     }
 
     // ------------------------------------------------------------ idempotency
@@ -650,10 +716,10 @@ class CreditNoteTest extends TestCase
         $note = $this->returFor($order, 20);
         $poster = app(CreditNotePoster::class);
 
-        $poster->post($note, $this->sales);
+        $poster->post($note, $this->gudang);
 
         try {
-            $poster->post($note->fresh(), $this->sales);
+            $poster->post($note->fresh(), $this->gudang);
             $this->fail('A credit note was posted twice.');
         } catch (DomainException $e) {
             $this->assertStringContainsString('sudah diposting', $e->getMessage());

@@ -42,8 +42,11 @@ class NotaKreditController extends Controller
     {
         $user = auth('web')->user();
 
-        if ($user === null || ! $user->role()->canSeeCreditData()) {
-            throw new AccessDeniedHttpException('Gudang tidak berhak melihat nota kredit.');
+        // Inventori read it too since 2026-08: posting a retur is their
+        // verification, and nobody verifies a document they cannot open.
+        if ($user === null
+            || ! ($user->role()->canSeeCreditData() || $user->role()->canVerifyReturns())) {
+            throw new AccessDeniedHttpException('Peran Anda tidak berhak melihat nota kredit.');
         }
 
         return $this->render($creditNote);

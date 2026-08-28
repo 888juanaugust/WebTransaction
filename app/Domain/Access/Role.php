@@ -220,6 +220,17 @@ enum Role: string
         return in_array($this, [self::Sales, self::Owner], true);
     }
 
+    /**
+     * Verify that returned goods physically came back — the second key on a
+     * retur. Inventori, because they are the ones standing at the shelf the
+     * goods land on; the sales who filed the return can never be the one who
+     * confirms the boxes arrived.
+     */
+    public function canVerifyReturns(): bool
+    {
+        return in_array($this, [self::Warehouse, self::Owner], true);
+    }
+
     public function canOverrideCreditLimit(): bool
     {
         return in_array($this, [self::Finance, self::Owner], true);

@@ -53,8 +53,14 @@ class PostCreditNoteAction
                 return $text.' Setelah diposting, dokumen ini tidak bisa diubah lagi.';
             })
             ->modalSubmitActionLabel('Posting')
+            // Mirrors CreditNotePoster: a retur's posting is Inventori's
+            // verification and never the drafter's; a price correction stays
+            // with the issuing seat. The poster still enforces both.
             ->visible(fn (CreditNote $record) => $record->isDraft()
-                && (auth()->user()?->role()->canIssueCreditNote() ?? false))
+                && ($record->jenis->movesStock()
+                    ? (auth()->user()?->role()->canVerifyReturns() ?? false)
+                        && (int) $record->created_by !== (int) auth()->id()
+                    : (auth()->user()?->role()->canIssueCreditNote() ?? false)))
             ->action(function (CreditNote $record) {
                 try {
                     app(CreditNotePoster::class)->post($record, auth()->user());

@@ -896,30 +896,38 @@ who cannot see it. Both seats are audited with the name, because "who
 approved this customer's credit" traces back through "who was their marketing
 at the time".
 
-### Piutang menua — the three-month notice and the four-month freeze
+### Piutang menua — the 120-day notice and the 150-day freeze
+
+Counted in days since the 2026-08 terms change, and distinct from the
+faktur's own printed due date (`payment_terms_days`, default 30): that is the
+promise on the paper, these are where the organisation acts on it being long
+broken.
 
 | Piece | Decides |
 |---|---|
-| `DebtAging::noticeCutoff` | Three months from `issued_on` — the reminder line |
-| `DebtAging::freezeCutoff` | Four months **and a day**: exactly four months still buys |
+| `DebtAging::noticeCutoff` | 120 days from `issued_on` — the reminder line |
+| `DebtAging::freezeCutoff` | Strictly past 150 days: exactly 150 still buys |
 | `DebtAging::isFrozen` | Derived on every ask, **never stored** — paying the invoice unfreezes with no state to reset |
 | `SweepDebtAging` | Nightly (00:30): claims each invoice once via a conditional UPDATE on `debt_notified_at`, bells the customer's sales and marketing |
 | `CreditChecker` | The freeze is the credit blocker; *merely overdue* no longer blocks — buying on account means invoices run late |
 | `CartService::checkout` | Refuses a frozen customer's checkout, naming the invoice |
-| `PeringatanTunggakan` | Portal banner, computed live: warning at three months, danger + locked at the freeze |
+| `PeringatanTunggakan` | Portal banner, computed live: warning at 120 days, danger + locked at the freeze |
 
 The customer's own warning is never "sent" — the portal computes it on every
 visit, which cannot go stale and cannot be missed. Only the team's reminder is
-a notification, because a bell you saw yesterday is exactly how a debt gets to
-five months; the sweep tells the truth when it meets an invoice already past
-the freeze (a backdated faktur, a team seated late) instead of promising a
-month that is gone.
+a notification, because a bell you saw yesterday is exactly how a debt gets
+past the freeze; the sweep tells the truth when it meets an invoice already
+past 150 days (a backdated faktur, a team seated late) instead of promising
+30 days that are gone.
 
-### Penghapusan piutang — a debt settled outside the system
+### Pelunasan piutang — a debt settled outside the system
+
+The honest name (relabelled from "penghapusan"): it posts a payment, not a
+write-off. The internal class and table names keep the old word.
 
 | Piece | Decides |
 |---|---|
-| `DebtRemover::initiate` | The marketing in charge (or Owner) claims cash was received — paperwork only, no money moves |
+| `DebtRemover::initiate` | The customer's own team — their sales or their marketing (or Owner) — claims cash was received; paperwork only, no money moves |
 | `DebtRemover::approve` | Finance's key: posts an ordinary `recordManualPayment`, so the invoice settles, the order advances, the freeze lifts — the same as a bank transfer |
 | `DebtRemover::reject` | Requires a reason; frees the invoice for a corrected claim |
 | `debt_removals` | The authorisation trail: claim, decision, and the `payment_entry_id` the approval posted. The books never reference it |
@@ -941,6 +949,45 @@ through the state machine instead. The audit entry (`order_erased`) carries
 the order's summary — number, customer, total, status — because the row it
 describes no longer exists to ask.
 
+### Retur penjualan — sales files, Inventori confirms the boxes
+
+The customer never files a return from the portal; it comes in through the
+sales who visits the store. Reuses the credit-note document with a second key
+bolted on:
+
+| Piece | Decides |
+|---|---|
+| `CreditNoteIssuer::draft` | A sales drafts a retur only for customers whose `sales_user_id` is them (Owner free) |
+| `CreditNotePoster::post` | For stock-moving notes: `canVerifyReturns()` — Inventori or Owner, **never the drafter** — because posting is the "goods are physically back" confirmation. A pure potongan stays with the issuing seat |
+| `ReturnsAwaitingVerification` | Inventori's dashboard queue of retur drafts; posting from it puts stock on the shelf and takes the amount off the debt |
+
+Inventori therefore reads the credit-note register and document now — the
+value columns come with the price-list responsibility they already hold;
+customer credit data still never reaches them.
+
+### Biaya ekspedisi — sales' road spending, verified by hand
+
+| Piece | Decides |
+|---|---|
+| `SalesExpenseClaims::file` | A sales claims their own spending: date, amount, what for. Nothing reaches the books |
+| `SalesExpenseClaims::approve` | Finance's key: posts an ordinary `ExpenseRecorder::record` onto Beban Ongkos Kirim, paid from kas or bank as finance says |
+| `SalesExpenseClaims::reject` | Requires a reason the sales will read |
+| `SalesExpenseClaimResource` | The register — a sales reads only their own claims; the claim form is a header action on it |
+| `ExpenseClaimsAwaitingVerification` | Finance's dashboard queue |
+
+The approved expense lands in laba rugi and the neraca like any cost finance
+keyed in themselves — because it *is* one, with an authorisation trail in
+front of it.
+
+### Pelanggan saya — the visit-preparation screen
+
+`CustomerInsight` computes three answers from the order history (statuses
+confirmed and beyond — a draft is not a purchase): recent orders; catalogue
+items this customer never bought, ranked by how much the rest of the market
+buys them; and items they bought and stopped (90 days). The page
+(`WawasanPelanggan`) offers a sales their own customers, a marketing theirs,
+the Owner all.
+
 ### Wilayah — one company, several sets of books
 
 | Piece | Decides |
@@ -958,9 +1005,14 @@ them: no inter-region transfers, no shared customers, no due-to/due-from
 accounts. That was the design decision that keeps this tractable.
 
 What stays group-wide: the catalogue, the price list (pricing stays one pure
-function), and the chart of accounts — balances split by region because every
+function), the chart of accounts — balances split by region because every
 `journal_entries` row carries one, so `1-1100 Piutang Usaha` means the same
-thing everywhere and still reports separately.
+thing everywhere and still reports separately — and, since 2026-08,
+**marketing**: the role is bound open-to-all by the middleware (badge "Semua
+wilayah", no switcher, any leftover `region_id` ignored) and holds customer
+seats in any region. Their writes still land in one set of books because the
+domain classes they mutate through — the state machine, DebtRemover, the
+eraser, order creation — pin themselves to the subject's region.
 
 The scope is structural, not per screen. Every model whose table has a
 `region_id` column must carry `HasRegion` — RegionScopingTest derives that from

@@ -74,6 +74,7 @@ class RoleMatrixTest extends TestCase
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => false,
                 'canTransferStock' => false,
+                'canVerifyReturns' => false,
                 'canCountStock' => false,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
@@ -126,6 +127,8 @@ class RoleMatrixTest extends TestCase
                 // Counts the shelf; approving what they found is somebody
                 // else's, or a count is a way to make stock disappear.
                 'canTransferStock' => true,
+                // The second key on a retur: they confirm the goods came back.
+                'canVerifyReturns' => true,
                 'canCountStock' => true,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
@@ -166,6 +169,7 @@ class RoleMatrixTest extends TestCase
                 'canOverrideCreditLimit' => false,
                 'canPickAndShip' => false,
                 'canTransferStock' => false,
+                'canVerifyReturns' => false,
                 'canCountStock' => false,
                 'canApproveStockCount' => false,
                 'canAllocateLandedCost' => false,
@@ -198,6 +202,7 @@ class RoleMatrixTest extends TestCase
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => false,
                 'canTransferStock' => false,
+                'canVerifyReturns' => false,
                 'canCountStock' => false,
                 'canApproveStockCount' => true,
                 // Bookkeeping judgement about a supplier invoice, so it
@@ -242,6 +247,8 @@ class RoleMatrixTest extends TestCase
                 'canOverrideCreditLimit' => true,
                 'canPickAndShip' => true,
                 'canTransferStock' => true,
+                // The second key on a retur: they confirm the goods came back.
+                'canVerifyReturns' => true,
                 'canCountStock' => true,
                 'canApproveStockCount' => true,
                 'canAllocateLandedCost' => true,
@@ -420,6 +427,13 @@ class RoleMatrixTest extends TestCase
              * quantity is what they counted.
              */
             'StockOpnameResource',
+            /*
+             * Deliberately opened 2026-08: returs sales file are verified by
+             * Inventori, and posting one happens on this screen. The value
+             * columns come with the price-list responsibility they already
+             * hold; customer credit data still never reaches them.
+             */
+            'CreditNoteResource',
             /*
              * Deliberately opened by the reorganisation: the price list is
              * Inventori's to maintain now. The boundary that survives is

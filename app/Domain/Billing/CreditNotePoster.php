@@ -43,7 +43,23 @@ class CreditNotePoster
 
     public function post(CreditNote $note, User $actor): CreditNote
     {
-        if (! $actor->role()->canIssueCreditNote()) {
+        /*
+         * Two different keys, by type. A retur moves goods, and the person
+         * who says "the boxes are back on the shelf" is Inventori — never
+         * the sales who filed the return, even when that sales is the Owner
+         * wearing another hat: the drafter of a stock-moving note cannot be
+         * its verifier. A pure price correction moves no goods, so it stays
+         * with the seat that may issue it.
+         */
+        if ($note->jenis->movesStock()) {
+            if (! $actor->role()->canVerifyReturns()) {
+                throw new DomainException('Retur barang diverifikasi Inventori — merekalah yang memastikan barangnya benar-benar kembali.');
+            }
+
+            if ((int) $note->created_by === (int) $actor->getKey()) {
+                throw new DomainException('Yang mengajukan retur tidak boleh memverifikasinya sendiri — dua kunci, dua orang.');
+            }
+        } elseif (! $actor->role()->canIssueCreditNote()) {
             throw new DomainException('Anda tidak berhak memposting nota kredit.');
         }
 

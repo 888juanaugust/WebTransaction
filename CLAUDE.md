@@ -97,21 +97,29 @@ the team in charge of them.
 
 | Role | Can | Cannot |
 |---|---|---|
-| Sales | Store visits, order for customers, see prices | Approve credit, confirm payment, see cost |
-| Marketing | Approve/reject pending orders, watch their customers' debt, initiate debt removal | Set prices, confirm payment, see cost |
-| Inventori | Stock work, catalogue, price list, stock statistics (incl. cost) | See customer credit data |
-| Finance | Confirm payments, verify debt removals, manage credit + AR, books | Edit prices, issue credit notes |
-| Owner (admin) | Everything + audit log, regions, staff, teams | — |
+| Sales | Store visits, order for customers, see prices, file pelunasan-piutang claims and returs for their own stores, claim biaya ekspedisi, customer insight (history + unsold recommendations) | Approve credit, confirm payment, see cost, verify anything they filed |
+| Marketing | **Global — reads every region, no pin.** Approve/reject pending orders, watch their customers' debt, file pelunasan claims, erase draft/submitted orders | Set prices, confirm payment, see cost |
+| Inventori | Stock work, catalogue, price list, stock statistics (incl. cost), **verify returs** (their posting is the goods-are-back confirmation) | See customer credit data |
+| Finance | Confirm payments, verify pelunasan-piutang and biaya-ekspedisi claims, manage credit + AR, books (incl. entering other expenses) | Edit prices, issue credit notes |
+| Owner (admin) | Everything + audit log, regions, staff, teams | Verify a claim they themselves filed |
 
 One sales + one marketing form the **team** in charge of a customer
 (`companies.sales_user_id` / `marketing_user_id`, assigned only by the Owner
-through `TeamAssigner`, audited). Both must hold the right role and belong to
-the customer's region.
+through `TeamAssigner`, audited). The sales must belong to the customer's
+region; marketing is global and may hold customers in any region. Customers
+never file returs from the portal — retur comes in through the sales.
 
 **Hard rules:** whoever confirms a payment must not be able to edit the invoice
 amount. Whoever is paid on the sale must not approve its credit (Sales cannot
 approve orders). Whoever sets the price neither approves credit nor confirms
-money. Log every override with actor, old value, new value, timestamp.
+money. Whoever files a claim (pelunasan, retur, biaya) never verifies it —
+two keys, two people, the Owner included. Log every override with actor, old
+value, new value, timestamp.
+
+**Debt terms (2026-08):** faktur due date defaults to 30 days. Aging counts
+from the transaction (issue) date: notice to customer + team at 120 days,
+hard freeze — no new transactions — strictly after 150 days, lifted the
+moment the aged invoice is settled. Derived arithmetic, never stored state.
 
 ---
 

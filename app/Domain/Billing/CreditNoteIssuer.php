@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Billing;
 
+use App\Domain\Access\Role;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Money;
 use App\Domain\Stock\MovementReason;
@@ -141,6 +142,17 @@ class CreditNoteIssuer
     ): CreditNote {
         if (! $actor->role()->canIssueCreditNote()) {
             throw new DomainException('Anda tidak berhak menerbitkan nota kredit.');
+        }
+
+        /*
+         * A sales files returns for the stores they hold, not for a
+         * colleague's — the same seat rule as their pelunasan claims. The
+         * customer cannot file one at all: retur comes in through the sales
+         * who visits, and Inventori's posting is the verification.
+         */
+        if ($actor->role() === Role::Sales
+            && (int) $invoice->company->sales_user_id !== (int) $actor->getKey()) {
+            throw new DomainException("Pelanggan {$invoice->company->nama} bukan tanggung jawab Anda — returnya diajukan sales yang memegang toko itu.");
         }
 
         if ($invoice->status === Invoice::STATUS_VOID) {

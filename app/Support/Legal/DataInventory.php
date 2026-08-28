@@ -169,6 +169,12 @@ final class DataInventory
                 ],
             ],
 
+            'sales_expense_claims' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['sales_user_id', 'decided_by', 'keterangan', 'keputusan_catatan'],
+                'bukan' => ['tanggal', 'amount_rupiah', 'status', 'decided_at', 'expense_id'],
+            ],
+
             'debt_removals' => [
                 'kategori' => 'pajak_dan_pembayaran',
                 // Who claimed the money and who verified it are the two names

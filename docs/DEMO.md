@@ -50,7 +50,7 @@ Every password is `password`.
 |---|---|---|
 | Pemilik (sees everything) | `/admin` | `owner@example.test` |
 | Sales | `/admin` | `sales@example.test` |
-| Marketing (the approval seat) | `/admin` | `marketing@example.test` |
+| Marketing (approval seat — global, all regions) | `/admin` | `marketing@example.test` |
 | Keuangan | `/admin` | `finance@example.test` |
 | Inventori | `/admin` | `warehouse@example.test` |
 | **Buyer — CV Sinar Distribusi** | `/portal` | `distributor@pembeli.example` |
@@ -114,7 +114,7 @@ and PPN, and the terbilang line.
 
 ### Cash paid at the counter — 2 min
 
-Still as marketing, open **Faktur** and click **Ajukan penghapusan** on an
+Still as marketing, open **Faktur** and click **Ajukan pelunasan** on an
 open invoice: the customer handed over cash on a store visit, and the system
 is hearing about it after the fact.
 
@@ -122,13 +122,19 @@ is hearing about it after the fact.
 > paperwork, not a payment."
 
 Switch to `finance@example.test`. The claim sits on the dashboard under
-**Penghapusan piutang menunggu verifikasi**, with marketing's account of
+**Pelunasan piutang menunggu verifikasi**, with marketing's account of
 where the cash went. Click **Setujui**.
 
 > "Two keys, never the same hand — the person who claims the money can never
 > be the one who declares it real, and that includes the owner. Approving
 > posted an ordinary payment: the invoice settled, the order completed, and
 > if the customer was frozen for old debt, they just thawed."
+
+As sales, two more things worth a beat: **Pelanggan saya** shows the store's
+history plus what the rest of the market buys that this store never has — the
+visit's agenda — and **Biaya ekspedisi** is where they claim fuel and tolls,
+which finance verifies from their own dashboard queue before it becomes a
+cost in the books.
 
 While you are marketing, note the **Hapus** button on the approval queue: an
 order the customer walked away from can be erased before it is confirmed —
@@ -531,7 +537,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1659 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1686 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 

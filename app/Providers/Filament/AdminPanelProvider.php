@@ -7,11 +7,13 @@ namespace App\Providers\Filament;
 use App\Filament\Widgets\AccountsAwaitingApproval;
 use App\Filament\Widgets\BackupStatus;
 use App\Filament\Widgets\DebtRemovalsAwaitingVerification;
+use App\Filament\Widgets\ExpenseClaimsAwaitingVerification;
 use App\Filament\Widgets\GiroDue;
 use App\Filament\Widgets\LaunchReadinessSummary;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
+use App\Filament\Widgets\ReturnsAwaitingVerification;
 use App\Filament\Widgets\UnmatchedPayments;
 use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
@@ -93,6 +95,11 @@ class AdminPanelProvider extends PanelProvider
                 // A claim that a debt was paid in cash, waiting on finance's
                 // key. Sits with the other money queues.
                 DebtRemovalsAwaitingVerification::class,
+                // Returs sales filed, waiting for Inventori to confirm the
+                // goods are physically back.
+                ReturnsAwaitingVerification::class,
+                // Road spending sales claimed, for finance's manual check.
+                ExpenseClaimsAwaitingVerification::class,
                 OrdersReadyToPick::class,
                 OverdueInvoices::class,
                 // Silent unless a giro is dated today or earlier.
