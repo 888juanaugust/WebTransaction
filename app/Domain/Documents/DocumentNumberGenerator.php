@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Documents;
 
+use App\Domain\Regions\RegionContext;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,20 @@ class DocumentNumberGenerator
     public const SCOPE_FAKTUR_EXPORT = 'faktur_export';
 
     /**
+     * Numbers carry the region and count per region: INV-PST-202608-0001.
+     *
+     * The region code in the middle is not decoration. Each region keeps its
+     * own register — its own counter row, its own sequence — and `nomor` is
+     * globally unique on every document table, so two regions issuing from one
+     * shared sequence would interleave each other's registers, and two regions
+     * counting separately without the code in the number would collide on the
+     * same string. The code is what lets both registers read straight and both
+     * numbers exist.
+     *
+     * The region comes from RegionContext and is required: a document number
+     * with no region is a document filed in nobody's books. Jobs and commands
+     * that issue documents must run inside `RegionContext::within()`.
+     *
      * @param  string  $prefix  'SO' or 'INV'.
      */
     public function next(string $scope, string $prefix, ?DateTimeInterface $date = null): string
@@ -64,11 +79,15 @@ class DocumentNumberGenerator
         $date = $date ? Carbon::parse($date) : Carbon::now();
         $period = $date->format('Ym');
 
-        $sequence = DB::transaction(function () use ($scope, $period) {
+        $regionId = app(RegionContext::class)->requireRegionId();
+        $regionKode = (string) DB::table('regions')->where('id', $regionId)->value('kode');
+
+        $sequence = DB::transaction(function () use ($scope, $period, $regionId) {
             // Create the period's counter on first use. insertOrIgnore so two
             // concurrent first-issues of a month don't collide on the unique
             // index — the loser simply reads the winner's row below.
             DB::table('document_counters')->insertOrIgnore([
+                'region_id' => $regionId,
                 'scope' => $scope,
                 'period' => $period,
                 'next_value' => 1,
@@ -77,6 +96,7 @@ class DocumentNumberGenerator
             ]);
 
             $counter = DB::table('document_counters')
+                ->where('region_id', $regionId)
                 ->where('scope', $scope)
                 ->where('period', $period)
                 ->lockForUpdate()
@@ -92,7 +112,7 @@ class DocumentNumberGenerator
             return (int) $counter->next_value;
         });
 
-        return sprintf('%s-%s-%04d', $prefix, $period, $sequence);
+        return sprintf('%s-%s-%s-%04d', $prefix, $regionKode, $period, $sequence);
     }
 
     public function nextOrderNumber(?DateTimeInterface $date = null): string

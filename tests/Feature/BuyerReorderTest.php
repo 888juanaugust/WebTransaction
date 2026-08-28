@@ -154,7 +154,7 @@ class BuyerReorderTest extends TestCase
         $new = $this->placer()->repeat($this->buyer, $this->previous, []);
 
         $this->assertNotSame($this->previous->nomor, $new->nomor);
-        $this->assertMatchesRegularExpression('/^SO-\d{6}-\d{4}$/', $new->nomor);
+        $this->assertMatchesRegularExpression('/^SO-[A-Z0-9]{1,8}-\d{6}-\d{4}$/', $new->nomor);
     }
 
     // --- the boundary: a buyer proposes, staff dispose ----------------------

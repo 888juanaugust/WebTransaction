@@ -33,7 +33,17 @@ final class DataInventory
      * `created_at` on a *record* is not personal data; `last_login_at` on a
      * person is. The distinction is drawn per table below, not here.
      */
-    private const STRUCTURAL = ['id', 'created_at', 'updated_at'];
+    private const STRUCTURAL = [
+        'id', 'created_at', 'updated_at',
+        /*
+         * Which set of company books a row belongs to. Organisational
+         * structure, not personal data: it says which branch holds the record,
+         * never anything about a person. On `users` it doubles as an access
+         * boundary — which region an account may see — and that is employment
+         * data of the same kind as `role`, already accounted for there.
+         */
+        'region_id',
+    ];
 
     /**
      * Every table that holds anything about an identifiable person.
@@ -595,6 +605,12 @@ final class DataInventory
     public static function tablesWithoutPersonalData(): array
     {
         return [
+            /*
+             * Company structure. A region's address and phone number are the
+             * branch's, not a person's.
+             */
+            'regions',
+
             // Catalogue and commercial reference data.
             'products', 'warehouses', 'price_tiers', 'price_tier_items',
             'price_list_versions', 'price_list_items', 'company_price_overrides',

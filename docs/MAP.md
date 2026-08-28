@@ -62,7 +62,8 @@ otherwise every surface falls back to the wordmark.
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
-| `/admin/staf` | Staf | **Owner only** | Hire, change a role, set a password, switch a leaver off. Nothing here deletes |
+| `/admin/wilayah` | Wilayah | **Owner only** | Each region a complete separate set of books. Create, deactivate — never delete |
+| `/admin/staf` | Staf | **Owner only** | Hire, change a role, set a password, pin to a region, switch a leaver off. Nothing here deletes |
 | `/admin/log-audit` | Log audit | **Owner only** | Who did what, and what it used to be. Read-only, with no resource behind it |
 | `/admin/profile` | Profil | all staff | Name, email, and the only way to change your own password |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
@@ -851,6 +852,46 @@ exists to prevent.
 two cannot disagree today, but this figure proves a control account, and a
 control account that trusts a cached flag only proves the flag agrees with
 itself.
+
+### Wilayah — one company, several sets of books
+
+| Piece | Decides |
+|---|---|
+| `RegionContext` | Which region this request works in: pinned, open-to-all, or unbound |
+| `HasRegion` | The global scope on 30 models, and the creating-stamp |
+| `whereBoundRegion()` | The same filter for raw `DB::table()` reports and line-table joins |
+| `BindRegionContext` | Middleware: account pins staff, session moves the Owner, company pins a buyer |
+| `StaffRegistrar::assignRegion` | Only the Owner moves people, audited both sides, session ended |
+| `DocumentNumberGenerator` | Numbers carry the region and count per region: `INV-PST-202608-0001` |
+
+Each region is a **complete, separate set of books** — its own stock, customers,
+suppliers, journals, document registers and month-ends. Nothing moves between
+them: no inter-region transfers, no shared customers, no due-to/due-from
+accounts. That was the design decision that keeps this tractable.
+
+What stays group-wide: the catalogue, the price list (pricing stays one pure
+function), and the chart of accounts — balances split by region because every
+`journal_entries` row carries one, so `1-1100 Piutang Usaha` means the same
+thing everywhere and still reports separately.
+
+The scope is structural, not per screen. Every model whose table has a
+`region_id` column must carry `HasRegion` — RegionScopingTest derives that from
+the schema and fails the build otherwise. Queries the scope cannot reach (raw
+report builders, aggregates starting from a line table) use `whereBoundRegion()`
+at the site, and the trial balance proving per region is the test that catches
+a missed one.
+
+Three context states, and the difference is what happens on a write. **Pinned**
+filters and stamps. **Open to all** (the Owner's "Semua wilayah") reads
+everything and refuses every create — a row created in that state belongs to
+nobody's books. **Unbound** (console, queue) also reads everything, and a job
+that creates scoped rows must pin itself first — the webhook job pins to the
+paying customer's region.
+
+`users.region_id` is the access boundary: pinned staff get a badge, the Owner
+gets the switcher, a crafted POST to the switcher endpoint is refused for
+anyone pinned. A clerk nobody assigned gets *one* region (the first active),
+never all of them — the unsafe reading of a blank.
 
 ### Staf — the screen that grants every other permission
 

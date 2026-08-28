@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Audit;
 
+use App\Domain\Regions\RegionContext;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,13 @@ class AuditLogger
         return AuditLog::create([
             'actor_id' => $actor?->id,
             'actor_role' => $actor?->role?->value,
+            /*
+             * Which region's books the action touched — null for the actions
+             * that belong to none (a staff account created, a backup run).
+             * Deliberately not required and not scoped: the log records
+             * everything, and its Owner-only screen filters by this column.
+             */
+            'region_id' => app(RegionContext::class)->regionId(),
             'action' => $action,
             'subject_type' => $subject ? $subject::class : null,
             'subject_id' => $subject ? (string) $subject->getKey() : null,

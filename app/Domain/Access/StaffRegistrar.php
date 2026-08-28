@@ -41,6 +41,7 @@ class StaffRegistrar
         Role $role,
         string $password,
         ?User $actor = null,
+        ?int $regionId = null,
     ): User {
         $staff = User::create([
             'name' => $nama,
@@ -48,16 +49,61 @@ class StaffRegistrar
             'password' => $password,
             'role' => $role,
             'is_active' => true,
+            // Null means every region — the Owner's posture. Anyone else with
+            // null is pinned to the default region by the middleware, so an
+            // unassigned clerk sees one region, never all of them.
+            'region_id' => $role === Role::Owner ? null : $regionId,
         ]);
 
         $this->audit->log(
             action: 'staff_created',
             subject: $staff,
-            newValue: ['name' => $nama, 'email' => $email, 'role' => $role->value],
+            newValue: [
+                'name' => $nama,
+                'email' => $email,
+                'role' => $role->value,
+                'region_id' => $staff->region_id,
+            ],
             actor: $actor,
         );
 
         return $staff;
+    }
+
+    /**
+     * Move somebody to a different region — or, for an Owner, to none.
+     *
+     * Audited on its own key rather than folded into a rename: which region an
+     * account can see is an access boundary, the same kind of fact as its
+     * role. Only the Owner reaches this (the screen is Owner-only), which is
+     * what the new organisation asks: regions are assigned by admin alone.
+     */
+    public function assignRegion(User $staff, ?int $regionId, ?User $actor = null): void
+    {
+        $lama = $staff->region_id === null ? null : (int) $staff->region_id;
+
+        if ($lama === $regionId) {
+            return;
+        }
+
+        $this->refuseSelf($staff, $actor ?? auth()->user(), 'Wilayah sendiri tidak bisa diubah dari layar ini.');
+
+        $staff->forceFill(['region_id' => $regionId])->save();
+
+        $this->audit->log(
+            action: 'staff_region_changed',
+            subject: $staff,
+            oldValue: ['region_id' => $lama],
+            newValue: ['region_id' => $regionId],
+            actor: $actor,
+        );
+
+        /*
+         * Their open session was showing the old region. End it, so the next
+         * page load re-binds from the account rather than carrying on reading
+         * books that are no longer theirs.
+         */
+        $this->endSessions($staff);
     }
 
     /**

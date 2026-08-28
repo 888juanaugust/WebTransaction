@@ -304,6 +304,7 @@ class ReorderScreenTest extends TestCase
         ]);
 
         DB::table('stock_movements')->insert([
+            'region_id' => $this->currentRegion()->id,
             'sku' => $sku,
             'warehouse_id' => $this->gudang->id,
             'qty_signed' => -365,
@@ -315,7 +316,7 @@ class ReorderScreenTest extends TestCase
 
         DB::table('stock_levels')->updateOrInsert(
             ['sku' => $sku, 'warehouse_id' => $this->gudang->id],
-            ['qty_on_hand' => $onHand, 'qty_reserved' => 0],
+            ['qty_on_hand' => $onHand, 'qty_reserved' => 0, 'region_id' => $this->currentRegion()->id],
         );
 
         if ($supplier !== null) {
@@ -333,6 +334,7 @@ class ReorderScreenTest extends TestCase
         $at = Carbon::now()->subDays(30);
 
         $id = DB::table('goods_receipts')->insertGetId([
+            'region_id' => $this->currentRegion()->id,
             'nomor' => 'TB-'.fake()->unique()->numerify('######'),
             'supplier_id' => $supplier->id,
             'warehouse_id' => $this->gudang->id,

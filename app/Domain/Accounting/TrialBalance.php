@@ -52,6 +52,14 @@ final class TrialBalance
     {
         $totals = JournalLine::query()
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            /*
+             * Lines carry no region — their entry does. Starting from the line
+             * model puts this query outside the HasRegion scope, so the head
+             * is filtered explicitly: a trial balance is *a region's* trial
+             * balance whenever a region is bound, and the whole company's when
+             * nothing is (a consolidation, or a console command).
+             */
+            ->whereBoundRegion('journal_entries')
             ->when($asOf !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '<=', $asOf))
             ->when($from !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '>=', $from))
             ->groupBy('journal_lines.account_id')

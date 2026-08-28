@@ -137,6 +137,7 @@ class LapsedCustomers
     private function orderHistory(): array
     {
         $rows = DB::table('orders')
+            ->whereBoundRegion('orders')
             ->join('companies', 'orders.company_id', '=', 'companies.id')
             ->where('companies.status', Company::STATUS_ACTIVE)
             ->whereNotNull('orders.confirmed_at')

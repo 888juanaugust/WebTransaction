@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Staff\Schemas;
 
 use App\Domain\Access\Role;
+use App\Domain\Regions\RegionContext;
+use App\Models\Region;
 use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -56,6 +58,7 @@ class StaffForm
                 Section::make('Peran')
                     ->description('Peran menentukan apa yang bisa dilihat dan dikerjakan. '
                         .'Satu orang satu peran.')
+                    ->columns(2)
                     ->schema([
                         Select::make('role')
                             ->label('Peran')
@@ -65,6 +68,9 @@ class StaffForm
                             ->default(Role::Sales->value)
                             ->required()
                             ->native(false)
+                            // Live so the region field can hide itself the
+                            // moment the role becomes Pemilik.
+                            ->live()
                             /*
                              * Your own row is read-only here. The registrar
                              * refuses it anyway, but a select that accepts the
@@ -77,6 +83,36 @@ class StaffForm
                                 && $record->getKey() === auth()->id()
                                     ? 'Peran sendiri tidak bisa diubah. Minta pemilik lain yang mengubahnya.'
                                     : static::ringkasanPeran()),
+
+                        /*
+                         * Which region's books this account can see — the
+                         * whole of them, and nothing else. Hidden for the
+                         * Owner role, whose empty region *is* the grant of
+                         * every region; a value here would quietly pin the
+                         * one account that must not be pinned.
+                         */
+                        Select::make('region_id')
+                            ->label('Wilayah')
+                            /*
+                             * Defaults to the region the person filling the
+                             * form is looking at — with one region that makes
+                             * the field invisible work, and with several it is
+                             * still the likeliest answer.
+                             */
+                            ->default(fn () => app(RegionContext::class)->regionId())
+                            ->options(fn () => Region::query()
+                                ->where('aktif', true)
+                                ->orderBy('kode')
+                                ->get()
+                                ->mapWithKeys(fn (Region $r) => [$r->id => $r->label()])
+                                ->all())
+                            ->required(fn (callable $get) => $get('role') !== Role::Owner->value)
+                            ->native(false)
+                            ->hidden(fn (callable $get) => $get('role') === Role::Owner->value)
+                            ->disabled(fn (?User $record) => $record !== null
+                                && $record->getKey() === auth()->id())
+                            ->helperText('Akun ini hanya melihat data wilayah tersebut: '
+                                .'stok, pelanggan, order, dan pembukuannya.'),
                     ]),
             ]);
     }

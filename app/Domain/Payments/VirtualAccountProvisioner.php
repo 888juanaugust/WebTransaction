@@ -53,6 +53,12 @@ class VirtualAccountProvisioner
             // the unique index on (company_id, bank_code) decides, and the
             // loser returns the winner's row rather than raising.
             VirtualAccount::query()->insertOrIgnore([
+                // The VA belongs to the customer's region: payments into it
+                // land in whichever books the customer is kept in. Derived
+                // from the company rather than RegionContext because
+                // insertOrIgnore skips the HasRegion stamp, and because a job
+                // provisioning across regions carries no bound region at all.
+                'region_id' => $company->region_id,
                 'company_id' => $company->id,
                 'bank_code' => $bankCode,
                 'account_number' => $account['account_number'],

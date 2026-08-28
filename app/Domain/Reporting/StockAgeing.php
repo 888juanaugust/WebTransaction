@@ -150,6 +150,7 @@ class StockAgeing
     private function onHand(): array
     {
         return DB::table('stock_levels')
+            ->whereBoundRegion('stock_levels')
             ->join('products', 'stock_levels.sku', '=', 'products.kode')
             ->leftJoin('product_costs', 'stock_levels.sku', '=', 'product_costs.sku')
             ->groupBy('stock_levels.sku', 'products.description', 'products.merk',
@@ -177,6 +178,7 @@ class StockAgeing
     private function soldSince(Carbon $since, Carbon $until): array
     {
         return DB::table('stock_movements')
+            ->whereBoundRegion('stock_movements')
             ->where('reason', MovementReason::Pengiriman->value)
             ->whereBetween('created_at', [$since, $until])
             ->groupBy('sku')
@@ -197,6 +199,7 @@ class StockAgeing
     private function lastSaleDates(Carbon $until): array
     {
         return DB::table('stock_movements')
+            ->whereBoundRegion('stock_movements')
             ->where('reason', MovementReason::Pengiriman->value)
             ->where('created_at', '<=', $until)
             ->groupBy('sku')

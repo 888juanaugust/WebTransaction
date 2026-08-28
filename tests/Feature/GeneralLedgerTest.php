@@ -122,7 +122,7 @@ class GeneralLedgerTest extends TestCase
         $this->assertSame(11_100_000, $entry->total_kredit_rupiah);
         $this->assertTrue($entry->isBalanced());
         $this->assertCount(3, $entry->lines);
-        $this->assertMatchesRegularExpression('/^JU-\d{6}-\d{4}$/', $entry->nomor);
+        $this->assertMatchesRegularExpression('/^JU-[A-Z0-9]{1,8}-\d{6}-\d{4}$/', $entry->nomor);
     }
 
     public function test_an_unbalanced_entry_is_refused_and_writes_nothing(): void
@@ -701,7 +701,9 @@ class GeneralLedgerTest extends TestCase
 
         $nomor = JournalEntry::query()->orderBy('id')->pluck('nomor')->all();
 
-        $this->assertSame(['JU-202607-0001', 'JU-202607-0002', 'JU-202608-0001'], $nomor);
+        // PST is the region: numbers carry the region code and count per
+        // region, so each region's register reads straight on its own.
+        $this->assertSame(['JU-PST-202607-0001', 'JU-PST-202607-0002', 'JU-PST-202608-0001'], $nomor);
     }
 
     // ---------------------------------------------------------------- helpers

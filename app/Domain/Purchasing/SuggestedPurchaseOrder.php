@@ -151,6 +151,7 @@ class SuggestedPurchaseOrder
         }
 
         $rows = DB::table('goods_receipt_lines')
+            ->whereBoundRegion('goods_receipts')
             ->join('goods_receipts', 'goods_receipt_lines.goods_receipt_id', '=', 'goods_receipts.id')
             ->whereIn('goods_receipt_lines.sku', $skus)
             ->whereNotNull('goods_receipts.posted_at')

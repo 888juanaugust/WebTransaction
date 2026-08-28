@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Stock;
 
+use App\Domain\Regions\RegionContext;
 use App\Models\ProductCost;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
@@ -286,7 +287,17 @@ class InventoryValuation
             return $cost;
         }
 
+        /*
+         * The cost pool is per region — each region's books average their own
+         * purchases, so the same SKU legitimately carries a different average
+         * in Jakarta and Surabaya. insertOrIgnore skips Eloquent events, so
+         * the HasRegion stamp does not run and the region is explicit. It is
+         * required rather than defaulted: valuation with no region bound is a
+         * job that forgot to pin itself, and a cost pool filed under the wrong
+         * region misprices every shipment out of it.
+         */
         ProductCost::query()->insertOrIgnore([
+            'region_id' => app(RegionContext::class)->requireRegionId(),
             'sku' => $sku,
             'qty_base' => 0,
             'value_rupiah' => 0,

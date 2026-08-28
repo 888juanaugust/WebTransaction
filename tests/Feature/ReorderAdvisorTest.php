@@ -499,6 +499,7 @@ class ReorderAdvisorTest extends TestCase
     private function sold(string $sku, int $qty): void
     {
         DB::table('stock_movements')->insert([
+            'region_id' => $this->currentRegion()->id,
             'sku' => $sku,
             'warehouse_id' => $this->gudang->id,
             'qty_signed' => -$qty,
@@ -513,7 +514,7 @@ class ReorderAdvisorTest extends TestCase
     {
         DB::table('stock_levels')->updateOrInsert(
             ['sku' => $sku, 'warehouse_id' => $this->gudang->id],
-            ['qty_on_hand' => $qty, 'qty_reserved' => $reserved],
+            ['qty_on_hand' => $qty, 'qty_reserved' => $reserved, 'region_id' => $this->currentRegion()->id],
         );
     }
 
@@ -568,6 +569,7 @@ class ReorderAdvisorTest extends TestCase
         $at = Carbon::now()->subDays($daysAgo);
 
         $id = DB::table('goods_receipts')->insertGetId([
+            'region_id' => $this->currentRegion()->id,
             'nomor' => 'TB-'.fake()->unique()->numerify('######'),
             'supplier_id' => $supplier->id,
             'warehouse_id' => $this->gudang->id,

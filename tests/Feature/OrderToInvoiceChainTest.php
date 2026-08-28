@@ -247,12 +247,13 @@ class OrderToInvoiceChainTest extends TestCase
     {
         $numbers = app(DocumentNumberGenerator::class);
         $period = now()->format('Ym');
+        $wilayah = $this->currentRegion()->kode;
 
-        $this->assertSame("SO-{$period}-0001", $numbers->nextOrderNumber());
-        $this->assertSame("SO-{$period}-0002", $numbers->nextOrderNumber());
+        $this->assertSame("SO-{$wilayah}-{$period}-0001", $numbers->nextOrderNumber());
+        $this->assertSame("SO-{$wilayah}-{$period}-0002", $numbers->nextOrderNumber());
 
         // Invoices count separately from orders.
-        $this->assertSame("INV-{$period}-0001", $numbers->nextInvoiceNumber());
+        $this->assertSame("INV-{$wilayah}-{$period}-0001", $numbers->nextInvoiceNumber());
     }
 
     // --- virtual accounts ---------------------------------------------------

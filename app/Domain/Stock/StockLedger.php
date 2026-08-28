@@ -10,6 +10,7 @@ use App\Models\StockLevel;
 use App\Models\StockMovement;
 use App\Models\StockReservation;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
@@ -526,9 +527,24 @@ class StockLedger
             return $level;
         }
 
+        /*
+         * The level's region is the warehouse's region, read from the
+         * warehouse row rather than from RegionContext. They are the same
+         * whenever a request is pinned — a pinned request cannot see another
+         * region's warehouse to pass in — but a console command or job walking
+         * all regions is unpinned, and deriving from the warehouse keeps the
+         * pair from ever disagreeing. insertOrIgnore skips Eloquent events, so
+         * the HasRegion stamp does not run here and the column is explicit.
+         */
+        $regionId = Warehouse::query()
+            ->withoutGlobalScope('region')
+            ->whereKey($warehouseId)
+            ->value('region_id');
+
         // Two concurrent first-touches race here; the unique index decides,
         // and the loser re-reads the winner's row under the same lock.
         StockLevel::query()->insertOrIgnore([
+            'region_id' => $regionId,
             'sku' => $sku,
             'warehouse_id' => $warehouseId,
             'qty_on_hand' => 0,

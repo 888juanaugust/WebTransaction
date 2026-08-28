@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Giro\GiroDirection;
 use App\Domain\Giro\GiroStatus;
+use App\Domain\Regions\HasRegion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,6 +29,7 @@ use Illuminate\Support\Carbon;
 class Giro extends Model
 {
     use HasFactory;
+    use HasRegion;
 
     protected $attributes = ['status' => GiroStatus::Beredar->value];
 

@@ -295,6 +295,7 @@ class LogAudit extends Page implements HasTable
             'staff_created' => 'Staf ditambahkan',
             'staff_renamed' => 'Nama staf diubah',
             'staff_role_changed' => 'Peran staf diubah',
+            'staff_region_changed' => 'Wilayah staf diubah',
             'staff_password_reset' => 'Sandi staf disetel ulang',
             'staff_deactivated' => 'Staf dinonaktifkan',
             'staff_reactivated' => 'Staf diaktifkan lagi',

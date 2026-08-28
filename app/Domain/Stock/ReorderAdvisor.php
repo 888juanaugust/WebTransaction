@@ -294,6 +294,7 @@ class ReorderAdvisor
     private function measuredLeadTimes(): array
     {
         return DB::table('goods_receipts')
+            ->whereBoundRegion('goods_receipts')
             ->join('purchase_orders', 'goods_receipts.purchase_order_id', '=', 'purchase_orders.id')
             ->whereNotNull('purchase_orders.sent_at')
             ->whereNotNull('goods_receipts.posted_at')
@@ -322,6 +323,7 @@ class ReorderAdvisor
     private function onOrder(): array
     {
         return DB::table('purchase_order_lines')
+            ->whereBoundRegion('purchase_orders')
             ->join('purchase_orders', 'purchase_order_lines.purchase_order_id', '=', 'purchase_orders.id')
             ->whereIn('purchase_orders.status', [
                 PurchaseOrderStatus::Draft->value,
@@ -350,6 +352,7 @@ class ReorderAdvisor
     private function stockPositions(): array
     {
         return DB::table('stock_levels')
+            ->whereBoundRegion('stock_levels')
             ->groupBy('sku')
             ->selectRaw('sku, SUM(qty_on_hand) AS on_hand, SUM(qty_reserved) AS reserved')
             ->get()
@@ -377,6 +380,7 @@ class ReorderAdvisor
     private function lastSupplierPerSku(): array
     {
         $rows = DB::table('goods_receipt_lines')
+            ->whereBoundRegion('goods_receipts')
             ->join('goods_receipts', 'goods_receipt_lines.goods_receipt_id', '=', 'goods_receipts.id')
             ->join('suppliers', 'goods_receipts.supplier_id', '=', 'suppliers.id')
             ->whereNotNull('goods_receipts.posted_at')
@@ -440,6 +444,7 @@ class ReorderAdvisor
     private function soldSince(Carbon $since, Carbon $until): array
     {
         return DB::table('stock_movements')
+            ->whereBoundRegion('stock_movements')
             ->where('reason', MovementReason::Pengiriman->value)
             ->whereBetween('created_at', [$since, $until])
             ->groupBy('sku')

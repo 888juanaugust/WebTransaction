@@ -115,6 +115,7 @@ class StaffScreenTest extends TestCase
                 'name' => 'Rina',
                 'email' => 'rina@example.test',
                 'role' => Role::Finance->value,
+                'region_id' => $this->currentRegion()->id,
                 'password' => 'sandi-awal-panjang',
             ])
             ->call('create')
@@ -178,6 +179,7 @@ class StaffScreenTest extends TestCase
                 'name' => 'Budi Santoso',
                 'email' => 'budi@example.test',
                 'role' => Role::Sales->value,
+                'region_id' => $this->currentRegion()->id,
             ])
             ->call('save')
             ->assertHasNoFormErrors();

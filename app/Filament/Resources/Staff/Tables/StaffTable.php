@@ -39,6 +39,17 @@ class StaffTable
                     ->searchable(['name', 'email'])
                     ->sortable(),
 
+                TextColumn::make('region.kode')
+                    ->label('Wilayah')
+                    ->badge()
+                    ->color('info')
+                    /*
+                     * The Owner's blank is a grant, not an omission, and a
+                     * blank cell would read as data entry someone forgot.
+                     */
+                    ->placeholder('Semua wilayah')
+                    ->toggleable(),
+
                 TextColumn::make('role')
                     ->label('Peran')
                     ->badge()

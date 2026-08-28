@@ -99,6 +99,7 @@ class SalesReport
     private function revenue(Period $period, SalesDimension $dimension): array
     {
         $query = DB::table('invoices')
+            ->whereBoundRegion('invoices')
             ->join('orders', 'invoices.order_id', '=', 'orders.id')
             ->join('order_lines', 'orders.id', '=', 'order_lines.order_id')
             ->join('companies', 'invoices.company_id', '=', 'companies.id')
@@ -141,6 +142,7 @@ class SalesReport
     private function credits(Period $period, SalesDimension $dimension): array
     {
         $query = DB::table('credit_notes')
+            ->whereBoundRegion('credit_notes')
             ->join('credit_note_lines', 'credit_notes.id', '=', 'credit_note_lines.credit_note_id')
             ->join('companies', 'credit_notes.company_id', '=', 'companies.id')
             ->leftJoin('products', 'credit_note_lines.sku', '=', 'products.kode')
@@ -182,6 +184,7 @@ class SalesReport
         };
 
         return DB::table('invoices')
+            ->whereBoundRegion('invoices')
             ->join('orders', 'invoices.order_id', '=', 'orders.id')
             ->join('companies', 'invoices.company_id', '=', 'companies.id')
             ->join('stock_movements', function ($join) {
@@ -286,6 +289,7 @@ class SalesReport
     private function unshippedInvoiceCount(Period $period): int
     {
         return DB::table('invoices')
+            ->whereBoundRegion('invoices')
             ->join('orders', 'invoices.order_id', '=', 'orders.id')
             ->where('invoices.status', '!=', Invoice::STATUS_VOID)
             ->whereBetween('invoices.issued_on', [$period->from->toDateString(), $period->to->toDateString()])
@@ -296,6 +300,7 @@ class SalesReport
     private function hasUnlinkedCredits(Period $period): bool
     {
         return DB::table('credit_notes')
+            ->whereBoundRegion('credit_notes')
             ->join('credit_note_lines', 'credit_notes.id', '=', 'credit_note_lines.credit_note_id')
             ->where('credit_notes.status', CreditNote::STATUS_POSTED)
             ->whereBetween('credit_notes.posted_at', [$period->from, $period->to])

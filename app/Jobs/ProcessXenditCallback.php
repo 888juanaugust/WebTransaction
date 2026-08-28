@@ -8,6 +8,7 @@ use App\Domain\Orders\IllegalTransitionException;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Payments\PaymentLedger;
+use App\Domain\Regions\RegionContext;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\VirtualAccount;
@@ -142,6 +143,29 @@ class ProcessXenditCallback implements ShouldQueue
 
             return;
         }
+
+        /*
+         * Queue workers run unbound, and everything below writes scoped rows —
+         * the payment entry, the journal behind it, the journal's number. The
+         * region is the customer's: a payment belongs in the books of whoever
+         * was paid, and the VA that matched tells us who that is.
+         */
+        app(RegionContext::class)->within((int) $company->region_id, function () use ($event, $ledger, $orders, $payload, $company): void {
+            $this->settle($event, $ledger, $orders, $payload, $company);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function settle(
+        WebhookEvent $event,
+        PaymentLedger $ledger,
+        OrderStateMachine $orders,
+        array $payload,
+        Company $company,
+    ): void {
+        $amount = (int) ($payload['amount'] ?? 0);
 
         $order = $this->resolveOrder($payload, $company->id);
 

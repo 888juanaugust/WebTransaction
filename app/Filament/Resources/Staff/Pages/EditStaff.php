@@ -54,6 +54,21 @@ class EditStaff extends EditRecord
         $role = Role::from($data['role'] ?? $record->role->value);
         $registrar->changeRole($record, $role, $actor);
 
+        /*
+         * Region moves through the registrar too — audited, self-change
+         * refused, and the person's open session ended so their next page
+         * load reads the right books. Hidden-and-absent for the Owner role,
+         * whose region must stay null; array_key_exists so an explicit null
+         * (a role just changed to Owner) still clears it.
+         */
+        if (array_key_exists('region_id', $data) || $role === Role::Owner) {
+            $regionId = $role === Role::Owner
+                ? null
+                : (isset($data['region_id']) ? (int) $data['region_id'] : null);
+
+            $registrar->assignRegion($record->refresh(), $regionId, $actor);
+        }
+
         return $record->refresh();
     }
 

@@ -12,6 +12,7 @@ use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
 use App\Filament\Widgets\OverdueInvoices;
 use App\Filament\Widgets\UnmatchedPayments;
+use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
 use App\Support\Branding;
 use Filament\Http\Middleware\Authenticate;
@@ -21,6 +22,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -97,8 +99,28 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            /*
+             * The region switcher, next to the user menu. For the Owner it is
+             * a select that changes which books every screen below reads; for
+             * pinned staff it is a label naming the one region they work in —
+             * both render nothing while only one region exists, so the panel
+             * looks exactly as before until a second region is created.
+             */
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => auth()->check()
+                    ? view('filament.wilayah-switcher')->render()
+                    : '',
+            )
             ->authMiddleware([
                 Authenticate::class,
+                /*
+                 * After Authenticate, because it reads the signed-in account to
+                 * decide which region everything below can see. In authMiddleware
+                 * rather than middleware so it never runs on the login page,
+                 * where there is nobody to bind it from.
+                 */
+                BindRegionContext::class,
             ]);
     }
 }

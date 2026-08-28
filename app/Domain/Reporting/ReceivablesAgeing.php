@@ -154,10 +154,12 @@ class ReceivablesAgeing
     private function openInvoices()
     {
         $paid = DB::table('payment_entries')
+            ->whereBoundRegion('payment_entries')
             ->selectRaw('COALESCE(SUM(amount_rupiah), 0)')
             ->whereColumn('payment_entries.invoice_id', 'invoices.id');
 
         $credited = DB::table('credit_notes')
+            ->whereBoundRegion('credit_notes')
             ->selectRaw('COALESCE(SUM(total_rupiah), 0)')
             ->whereColumn('credit_notes.invoice_id', 'invoices.id')
             /*
@@ -169,6 +171,7 @@ class ReceivablesAgeing
             ->where('credit_notes.status', CreditNote::STATUS_POSTED);
 
         return DB::table('invoices')
+            ->whereBoundRegion('invoices')
             ->join('companies', 'invoices.company_id', '=', 'companies.id')
             ->where('invoices.status', '!=', Invoice::STATUS_VOID)
             ->select([
@@ -189,6 +192,7 @@ class ReceivablesAgeing
     private function giroHeld(): array
     {
         return DB::table('giros')
+            ->whereBoundRegion('giros')
             ->join('companies', 'giros.company_id', '=', 'companies.id')
             ->where('giros.arah', GiroDirection::Masuk->value)
             ->where('giros.status', GiroStatus::Beredar->value)
@@ -206,6 +210,7 @@ class ReceivablesAgeing
     private function unmatchedPayments(): array
     {
         return DB::table('payment_entries')
+            ->whereBoundRegion('payment_entries')
             ->join('companies', 'payment_entries.company_id', '=', 'companies.id')
             ->whereNull('payment_entries.invoice_id')
             ->groupBy('payment_entries.company_id', 'companies.nama')

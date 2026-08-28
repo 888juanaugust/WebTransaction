@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use App\Filament\Portal\Widgets\KreditTersedia;
 use App\Filament\Portal\Widgets\OrderTerakhir;
 use App\Filament\Portal\Widgets\TagihanTerbuka;
+use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
 use App\Support\Branding;
 use Filament\Http\Middleware\Authenticate;
@@ -72,6 +73,14 @@ class PortalPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                /*
+                 * A buyer's region comes from the company they belong to. This
+                 * sits underneath ScopedToBuyer rather than replacing it: that
+                 * trait keeps one customer out of another's rows, this keeps a
+                 * whole region's data out of a request that has no business
+                 * touching it.
+                 */
+                BindRegionContext::class,
             ]);
     }
 }

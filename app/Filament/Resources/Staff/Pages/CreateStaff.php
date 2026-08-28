@@ -35,6 +35,7 @@ class CreateStaff extends CreateRecord
             role: Role::from($data['role']),
             password: $data['password'],
             actor: auth()->user(),
+            regionId: isset($data['region_id']) ? (int) $data['region_id'] : null,
         );
     }
 

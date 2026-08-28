@@ -12,6 +12,7 @@ use App\Domain\Payments\LocalVirtualAccountGateway;
 use App\Domain\Payments\VirtualAccountGateway;
 use App\Domain\Payments\XenditVirtualAccountGateway;
 use App\Domain\Pricing\PriceResolver;
+use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
@@ -20,6 +21,7 @@ use App\Jobs\SweepStuckWebhookEvents;
 use App\Models\Company;
 use App\Observers\CompanyObserver;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -80,6 +82,38 @@ class AppServiceProvider extends ServiceProvider
          * hold Monday's answer all week.
          */
         $this->app->scoped(LaunchReadiness::class);
+
+        /*
+         * Which region this request is working in.
+         *
+         * `scoped`, and it has to be. A global scope on thirty models reads
+         * this object, so a singleton on a long-lived queue worker would carry
+         * one job's region into the next — and the symptom would be a Surabaya
+         * document filed in Jakarta's books, discovered by somebody reading a
+         * neraca months later.
+         *
+         * Unbound until something binds it. Console commands and queue jobs
+         * therefore see every region, which is what a nightly reconciliation
+         * needs; the panels bind it per request from whoever signed in.
+         */
+        $this->app->scoped(RegionContext::class);
+
+        /*
+         * Region filtering for queries the HasRegion scope cannot reach.
+         *
+         * The global scope covers every query that starts from a scoped model.
+         * Two shapes escape it: raw `DB::table()` builders in the reports, and
+         * aggregates that start from a line table and join their scoped head —
+         * the line carries no region on purpose, so the head must be filtered
+         * by hand. This macro is that hand, written once: a no-op when nothing
+         * is bound (jobs, console), a WHERE on the named table when pinned.
+         */
+        QueryBuilder::macro('whereBoundRegion', function (string $table): QueryBuilder {
+            /** @var QueryBuilder $this */
+            $regionId = app(RegionContext::class)->regionId();
+
+            return $regionId === null ? $this : $this->where("{$table}.region_id", $regionId);
+        });
 
         /*
          * VA provisioning talks to Xendit only when there is a key to talk

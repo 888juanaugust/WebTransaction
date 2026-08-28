@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Domain\Orders\OrderStatus;
+use App\Domain\Regions\HasRegion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Order extends Model
 {
     use HasFactory;
+    use HasRegion;
 
     /**
      * `status` is deliberately absent from the fillable list — only

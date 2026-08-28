@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\GantiWilayahController;
 use App\Http\Controllers\FakturController;
 use App\Http\Controllers\FakturExportController;
 use App\Http\Controllers\NotaKreditController;
@@ -76,6 +77,15 @@ Route::view('/masuk', 'publik.masuk')->name('masuk');
 Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/surat-jalan/{order}', SuratJalanController::class)
     ->name('dokumen.surat-jalan');
+
+/*
+ * The Owner switching which region they are looking at. POST because it
+ * changes state; the controller refuses anyone whose region is pinned on
+ * their account.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->post('/admin/wilayah-aktif', GantiWilayahController::class)
+    ->name('admin.wilayah-aktif');
 
 /*
  * Faktur — the invoice, and the surat jalan's opposite number: all money, down
