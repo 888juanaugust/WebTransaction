@@ -51,7 +51,9 @@ class LaunchReadiness
         'email' => 'sales@example.com',
     ];
 
-    private const PLACEHOLDER_PARTNER_PREFIX = 'Nama Mitra';
+    // The shipped example partners are named "Partner Name One/Two" since the
+    // shopfront went English; the check must track whatever the config ships.
+    private const PLACEHOLDER_PARTNER_PREFIX = 'Partner Name';
 
     /** @var list<LaunchCheck>|null */
     private ?array $memo = null;

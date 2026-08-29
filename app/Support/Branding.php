@@ -38,6 +38,28 @@ final class Branding
         return file_exists(public_path($path)) ? asset($path) : null;
     }
 
+    /**
+     * The mark for a dark ground, or null when there is none.
+     *
+     * Derived from the configured logo by name (logo.svg → logo-dark.svg)
+     * rather than a second config key: the dark twin only makes sense next
+     * to the light one, and a second key would be one more thing to leave
+     * blank.
+     */
+    public static function darkLogoUrl(): ?string
+    {
+        $path = config('perusahaan.logo');
+
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        $path = ltrim(trim($path), '/');
+        $dark = preg_replace('/(\.[a-z0-9]+)$/i', '-dark$1', $path, 1);
+
+        return ($dark !== $path && file_exists(public_path($dark))) ? asset($dark) : null;
+    }
+
     public static function hasLogo(): bool
     {
         return self::logoUrl() !== null;

@@ -5,38 +5,75 @@
 @source '../../storage/framework/views/*.php';
 
 /*
+ * Geist, self-hosted from public/fonts (SIL OFL 1.1, licence alongside it).
+ *
+ * A webfont, but not a CDN one: the file ships with the app, so the build
+ * still needs no network and the privacy notice's "no CDN webfonts" stays
+ * true. One variable file covers every weight the site uses; `font-display:
+ * swap` paints the system stack first, so a phone in a workshop reads the
+ * page before the 70 KB arrives.
+ *
+ * The panels load the same file through Filament's LocalFontProvider
+ * (public/fonts/geist.css) — one face for every surface the company shows.
+ */
+@font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Geist-Variable.woff2') format('woff2');
+}
+
+/*
  * Public site palette — the same company colours as the admin panel.
  * Company blue #073185 is the logo's own colour.
- * See app/Support/BrandColors.php; keep these two in step.
+ * See app/Support/BrandColors.php; keep the blue ramp in step.
+ *
+ * 2026-08 redesign: the shopfront sits on an off-white ground with white
+ * surfaces and hairline borders. Blue is the only accent on the site. Red
+ * stays a panel colour — there it means overdue, short, destroy — and never
+ * appears decoratively on the shopfront.
  */
 @theme {
-    /* System stack, not a webfont: the build must not depend on a CDN, and
-       the site should render instantly on a phone in a workshop. */
-    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-        Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 
     /* Company blue, taken from the logo. */
     --color-brand-50: #f0f5ff;
     --color-brand-100: #dde9ff;
     --color-brand-200: #c2d8ff;
-    /*
-     * 500 exists so solid buttons can lighten on hover.
-     *
-     * The usual move is to darken, and every button here did — but #073185 is
-     * already dark, so brand-700 under the cursor was a luminance change of
-     * 0.012: no feedback at all. Filament reached the same conclusion for the
-     * panel and lightens; the public site now matches it.
-     */
     --color-brand-300: #9dbdf7;
+    --color-brand-400: #6696f1;
+    /*
+     * 500 exists so solid buttons can lighten on hover: #073185 is already
+     * dark, so darkening under the cursor is no feedback at all. Filament
+     * reached the same conclusion for the panel and lightens too.
+     */
     --color-brand-500: #3169d7;
     --color-brand-600: #073185;
     --color-brand-700: #00247b;
     --color-brand-800: #021c60;
     --color-brand-900: #011547;
 
-    --color-accent-50: #fef2f2;
-    --color-accent-600: #dc2626;
-    --color-accent-700: #b91c1c;
+    /* Neutrals: one cool-tinted grey family, never mixed with warm greys. */
+    --color-ground: #f8f8f7;      /* the page */
+    --color-ground-2: #eef0f4;    /* a tinted surface on the page */
+    --color-ink: #16181d;         /* headings and primary text */
+    --color-ink-muted: #5f6470;   /* supporting text */
+    --color-ink-faint: #8a8f99;   /* captions, legal lines */
+    --color-line: rgb(22 24 29 / 0.08);
+    --color-line-strong: rgb(22 24 29 / 0.14);
+
+    /* Shadows carry the blue of the brand, never plain black. */
+    --shadow-card: 0 1px 2px rgb(22 24 29 / 0.04), 0 8px 24px rgb(7 49 133 / 0.06);
+    --shadow-panel: 0 24px 60px rgb(7 49 133 / 0.12);
+    --shadow-btn: 0 1px 2px rgb(7 49 133 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.15);
+
+    --radius-btn: 10px;
+    --radius-card: 16px;
+    --radius-panel: 20px;
+
+    --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html {
@@ -44,12 +81,39 @@ html {
 
     /*
      * The public site commits to light: it is the company's shopfront, and the
-     * brand is white with blue and red.
+     * brand is white with blue.
      *
      * Declaring it explicitly matters. Without this, a visitor whose OS is in
      * dark mode gets browser-drawn chrome — scrollbars, select menus, date
-     * pickers, autofill highlights — rendered dark against our white page.
+     * pickers, autofill highlights — rendered dark against our light page.
      * The panels, which do have a real dark mode, are unaffected.
      */
     color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/*
+ * Scroll-entry reveal for the home page sections. Purely CSS: elements start
+ * a little low and transparent, and `.is-in` (set by a few lines of inline JS
+ * in the layout, from an IntersectionObserver) settles them. Without JS, or
+ * with reduced motion, nothing is ever hidden.
+ */
+@layer utilities {
+    @media (prefers-reduced-motion: no-preference) {
+        html.js .reveal {
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 600ms var(--ease-out-soft), transform 600ms var(--ease-out-soft);
+        }
+
+        html.js .reveal.is-in {
+            opacity: 1;
+            transform: none;
+        }
+    }
 }

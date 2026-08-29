@@ -15,14 +15,14 @@ computes a price, moves stock, or writes an order status.
 
 | URL | Page | What it does |
 |---|---|---|
-| `/` | Beranda | Company profile, categories, brands, partners, call to action |
-| `/tentang-kami` | Tentang | About: legal entity, brands, categories |
-| `/mitra` | Mitra | Joint-venture partners |
-| `/kontak` | Kontak | Address, phone, hours |
+| `/` | Home | The company at a glance, categories, brands, how an account opens, partners, call to action |
+| `/tentang-kami` | About Us | Profile, who we serve, how it works, company details |
+| `/mitra` | Partners | Joint-venture partners |
+| `/kontak` | Contact | Address, phone, WhatsApp, email, business hours |
 | `/kebijakan-privasi` | Kebijakan Privasi | UU PDP 27/2022. Renders from `DataInventory` |
 | `/syarat-penjualan` | Syarat Penjualan | B2B terms: credit, late payment, delivery, returns |
-| `/rencana-pengembangan` | Rencana | Roadmap |
-| `/masuk` | Chooser | Pick staff login or buyer login |
+| `/rencana-pengembangan` | Roadmap | What is running and what is planned |
+| `/masuk` | Sign in | Pick the customer portal or the staff panel (URL slugs unchanged; the pages are English) |
 | `/robots.txt` | — | Route, not a file: disallows `/admin`, `/portal`, `/dokumen`; names the sitemap by absolute URL |
 | `/sitemap.xml` | — | The eight public pages, absolute URLs from `route()` |
 
@@ -30,16 +30,28 @@ All content comes from `config/perusahaan.php` through `App\Support\Perusahaan`.
 **The shipped text is placeholder** — especially the partners, since naming a
 company in public is a claim about a real business relationship.
 
-The visual language (2026-08 refurbishment): navy carries the weight — the
-hero and footer are dark gradient panels, so every page opens and closes on
-the brand — red is only the small kicker line every section header repeats
-(`publik/partials/kicker`, `hero-halaman`), and content sits in soft-shadow
-`ring-1` cards, never hairline boxes. Mobile gets a real hamburger (plain
-button + hidden panel, five lines of inline JS). The head carries canonical,
-og:, and an Organization JSON-LD from the same config the footer prints.
-System font stack, zero external assets — the page renders instantly on a
-phone in a workshop. The logo shows when `PERUSAHAAN_LOGO` points at a file
-that exists; otherwise every surface falls back to the wordmark.
+The visual language (2026-08 redesign): one off-white ground from the top
+of the page to the footer, white surfaces with a 1px hairline and a faintly
+blue shadow, and company blue as the only accent — red is a panel colour
+(overdue, short, destroy) and never decoration here. The header is a floating
+bar; the home hero is a centred statement over a faint, oversized copy of the
+mark, followed by a "company at a glance" panel (the mark, the name, four
+facts from config). No catalogue, no customer data: the shopfront shows the
+company and nothing else. Section openers are a title and a lede
+(`publik/partials/kicker`, `hero-halaman`), never a label above them. Mobile
+gets a real hamburger (plain button + hidden panel, a few lines of inline
+JS), and sections fade up on scroll via an IntersectionObserver that respects
+`prefers-reduced-motion`. The head carries canonical, og:, and an Organization
+JSON-LD from the same config the footer prints. Typeface: Geist, self-hosted
+from `public/fonts` (no CDN), shared with both panels. The logo shows when
+`PERUSAHAAN_LOGO` points at a file that exists; otherwise every surface falls
+back to the wordmark.
+
+Language: the shopfront is **English** — it introduces the company to buyers
+and to the overseas suppliers and partners it deals with. The two legal pages
+stay in Bahasa Indonesia (instruments under Indonesian law) and declare
+`lang="id"` on their own; everything behind a login, and every printed
+document, stays Indonesian.
 
 ### Admin panel — staff, `web` guard against `users`
 

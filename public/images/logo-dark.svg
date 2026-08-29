@@ -3,23 +3,18 @@
   <!--
     The mark alone, without the company name beneath it.
 
-    Traced from the company's logo file (2026-08): the swoosh is two cubic
-    curves fitted to the original outline, the two bars are the original
-    parallelograms. Against the source image the fill differs by under one
-    percent of pixels, all of it edge anti-aliasing.
+    The dark-mode twin of logo.svg: the same traced paths, filled with the
+    light blue the panel theme uses for text on a dark ground. Navy on
+    near-black disappears; this stays legible. Keep the two files' paths
+    identical.
 
     The panel draws this at 1.75rem — twenty-eight pixels — and renders no
     wordmark beside it, so the name in the full lockup would be about four
     pixels of grey mush. The lockup (logo-lockup.svg) belongs on a letterhead.
 
-    Filled #073185, the company blue the whole panel is built from: every
-    button and every active nav item below this mark is that value, and a
-    sidebar logo a shade off from them reads as wrong without anybody being
-    able to say why.
-
     No `width` or `height` attribute on purpose. Every surface sets its own
     height and lets the viewBox scale it, and a fixed intrinsic size is what
     makes an SVG logo turn up the wrong size in the one place nobody checked.
   -->
-  <path fill="#073185" d="M0,686 L394,686 L394,160 C376,231 372,239 355,284 C291,446 167,594 0,686Z M529,78 L416,144 L416,686 L529,686Z M664,0 L552,64 L552,686 L664,686Z"/>
+  <path fill="#9bbefd" d="M0,686 L394,686 L394,160 C376,231 372,239 355,284 C291,446 167,594 0,686Z M529,78 L416,144 L416,686 L529,686Z M664,0 L552,64 L552,686 L664,686Z"/>
 </svg>

@@ -216,12 +216,17 @@ and on a printed delivery note alike.
 
 ### Language
 
-Bahasa Indonesia throughout — public site, admin panel, buyer portal.
+Bahasa Indonesia behind every login and on every printed document — admin
+panel, buyer portal, surat jalan, faktur. The public site is English (2026-08):
+it introduces the company to buyers and to the overseas suppliers and partners
+it deals with, and its copy lives in `config/perusahaan.php`. The two legal
+pages are the exception on the public site: they are instruments under
+Indonesian law, stay in Bahasa Indonesia, and declare `lang="id"` themselves.
 
-The site was briefly bilingual, with an English home page in front of
-Indonesian inner pages. That meant every nav label changed language depending
-on which page you stood on, and one sentence had two copies in config to keep
-in step. One language, one copy of each sentence.
+One copy of each sentence. The site was once bilingual with `['id' => ...,
+'en' => ...]` pairs in config, and the two versions drifted; that is not
+coming back. The only deliberate pair is the business hours — one string for
+the Indonesian documents, one for the English site.
 
 The app locale is `id` and stays there. Public copy lives in
 `config/perusahaan.php` and is read through `App\Support\Perusahaan`.
@@ -264,6 +269,11 @@ moment a user picks a theme, so anything written against the media query paints
 light styles over dark chrome for anyone whose toggle disagrees with their
 laptop. Light rules are scoped `:where(html:not(.dark))`, dark rules `html.dark`,
 and `ThemeTest` fails the build if that slips.
+
+Both panels and the public site set in Geist, self-hosted from `public/fonts`
+(SIL OFL); the panels load it through Filament's `LocalFontProvider`, so no
+surface fetches a font from a CDN and the privacy notice stays true. The panel
+sidebars show the mark alone, as before (`logo-dark.svg` once dark mode is on).
 
 The public site is deliberately light-only and declares `color-scheme: light`,
 so a visitor on a dark-mode OS doesn't get dark browser chrome — scrollbars,

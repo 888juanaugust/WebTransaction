@@ -23,6 +23,7 @@ use App\Filament\Widgets\UnmatchedPayments;
 use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
 use App\Support\Branding;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -52,7 +53,22 @@ class AdminPanelProvider extends PanelProvider
             // to the brand name, so a missing file is a wordmark rather than a
             // broken image.
             ->brandLogo(fn () => Branding::logoUrl())
+            // The same mark in a lighter blue once the panel is switched to
+            // dark; without it the navy mark sinks into the dark sidebar.
+            ->darkModeBrandLogo(fn () => Branding::darkLogoUrl())
             ->brandLogoHeight('1.75rem')
+            /*
+             * Geist, served from public/fonts: the shopfront's typeface, so
+             * the panel and the site read as one company. LocalFontProvider
+             * because the default provider for a named font fetches it from
+             * a CDN, and the privacy notice promises no CDN webfonts.
+             */
+            ->font(
+                'Geist',
+                url: fn (): string => asset('fonts/geist.css'),
+                provider: LocalFontProvider::class,
+                preload: fn (): array => [asset('fonts/Geist-Variable.woff2')],
+            )
             ->login()
             /*
              * A profile page, which is the only way a staff member can change

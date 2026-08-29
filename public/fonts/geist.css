@@ -1,0 +1,13 @@
+/*
+ * Geist for the Filament panels, served from this app rather than a CDN.
+ * Referenced by AdminPanelProvider and PortalPanelProvider through
+ * Filament's LocalFontProvider. The public site declares the same face in
+ * resources/css/app.css. Licence: Geist-OFL.txt beside the font file.
+ */
+@font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Geist-Variable.woff2') format('woff2');
+}

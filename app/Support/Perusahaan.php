@@ -7,12 +7,13 @@ namespace App\Support;
 /**
  * Reads company profile content out of config/perusahaan.php.
  *
- * The site is Bahasa Indonesia throughout, so this no longer chooses a
- * language. It exists to give the views one way to reach the content, and to
- * keep string-keyed config() calls out of the templates.
+ * The public site is English and the copy in that file is written for it, so
+ * this does not choose a language. It exists to give the views one way to
+ * reach the content, and to keep string-keyed config() calls out of the
+ * templates.
  *
- * It used to take a $lang, back when the home page alone was English. That is
- * gone: one sentence with two versions is one sentence that drifts.
+ * It used to take a $lang, back when the site was bilingual. That is gone:
+ * one sentence with two versions is one sentence that drifts.
  */
 final class Perusahaan
 {

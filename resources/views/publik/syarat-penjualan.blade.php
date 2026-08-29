@@ -13,6 +13,9 @@
 --}}
 @extends('layouts.publik')
 
+{{-- A legal instrument under Indonesian law: Bahasa Indonesia, on an English site. --}}
+@section('lang', 'id')
+
 @section('judul', 'Syarat Penjualan')
 @section('deskripsi', 'Syarat dan ketentuan penjualan grosir ' . config('perusahaan.nama') . ' — termin kredit, pembayaran, pengiriman, dan pengembalian barang.')
 
@@ -27,29 +30,25 @@
 
 @section('konten')
 
-    <section class="bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700">
-        <div class="mx-auto max-w-3xl px-4 py-16">
-            <p class="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
-                <span class="h-px w-8 bg-accent-600" aria-hidden="true"></span>
-                Ketentuan
-            </p>
-            <h1 class="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Syarat Penjualan</h1>
-            <p class="mt-4 text-lg leading-relaxed text-brand-100">
+    <section class="border-b border-line">
+        <div class="mx-auto max-w-3xl px-4 pt-16 pb-12 sm:pt-24 sm:pb-16">
+            <h1 class="text-4xl font-semibold tracking-[-0.03em] text-ink sm:text-5xl">Syarat Penjualan</h1>
+            <p class="mt-4 text-lg leading-relaxed text-ink-muted">
                 Ketentuan yang berlaku atas setiap penjualan grosir dari
                 {{ config('perusahaan.nama') }} kepada pelanggan terdaftar.
             </p>
-            <p class="mt-6 text-sm text-brand-200">
+            <p class="mt-6 text-sm text-ink-faint">
                 Berlaku sejak {{ $berlaku->translatedFormat('j F Y') }} · Versi {{ config('legal.syarat.versi') }}
             </p>
         </div>
     </section>
 
-    <article class="mx-auto max-w-3xl px-4 py-16 [&_h2]:mt-12 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900
-                    [&_h3]:mt-8 [&_h3]:font-semibold [&_h3]:text-slate-900
-                    [&_p]:mt-4 [&_p]:leading-relaxed [&_p]:text-slate-600
-                    [&_li]:leading-relaxed [&_li]:text-slate-600">
+    <article class="mx-auto max-w-3xl px-4 py-16 [&_h2]:mt-12 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-ink
+                    [&_h3]:mt-8 [&_h3]:font-semibold [&_h3]:text-ink
+                    [&_p]:mt-4 [&_p]:leading-relaxed [&_p]:text-ink-muted
+                    [&_li]:leading-relaxed [&_li]:text-ink-muted">
 
-        <p class="!mt-0 rounded-lg border border-brand-200 bg-brand-50/60 p-5 !text-slate-700">
+        <p class="!mt-0 rounded-card border border-brand-200 bg-brand-50/60 p-5 !text-ink">
             Syarat ini berlaku antara pelaku usaha. Pembeli kami adalah bengkel, toko sparepart,
             dan distributor yang membeli untuk dijual kembali atau untuk keperluan usahanya —
             <strong>bukan konsumen akhir</strong>. Dengan mengajukan pesanan, pembeli menyatakan

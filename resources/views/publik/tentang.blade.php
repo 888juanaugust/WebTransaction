@@ -1,94 +1,93 @@
 @extends('layouts.publik')
 
-@section('judul', 'Tentang Kami')
-@section('deskripsi', 'Profil ' . config('perusahaan.nama') . ' — distributor grosir suku cadang otomotif.')
+@section('judul', 'About Us')
+@section('deskripsi', 'Profile of ' . config('perusahaan.nama') . ', a wholesale distributor of automotive spare parts.')
 
 @section('konten')
 
     @include('publik.partials.hero-halaman', [
-        'kicker' => 'Perusahaan',
-        'judul' => 'Tentang Kami',
+        'judul' => 'About Us',
         'lede' => \App\Support\Perusahaan::text('tagline'),
     ])
 
-    <section class="mx-auto max-w-6xl px-4 py-16">
-        <div class="grid gap-12 lg:grid-cols-3">
+    <section class="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+        <div class="grid gap-12 lg:grid-cols-3 lg:gap-16">
 
             <div class="lg:col-span-2">
-                <h2 class="text-xl font-bold text-slate-900">Profil perusahaan</h2>
+                <h2 class="text-2xl font-semibold tracking-tight text-ink">Company profile</h2>
 
-                <div class="mt-6 space-y-5">
+                <div class="mt-5 max-w-2xl space-y-5">
                     @foreach (\App\Support\Perusahaan::list('profil') as $paragraf)
-                        <p class="leading-relaxed text-slate-600">{{ $paragraf }}</p>
+                        <p class="leading-relaxed text-ink-muted">{{ $paragraf }}</p>
                     @endforeach
                 </div>
 
-                <h2 class="mt-14 text-xl font-bold text-slate-900">Siapa yang kami layani</h2>
-                <div class="mt-6 grid gap-4 sm:grid-cols-3">
+                <h2 class="mt-16 text-2xl font-semibold tracking-tight text-ink">Who we serve</h2>
+                <ul class="mt-6 divide-y divide-line border-y border-line">
                     @foreach ([
-                        ['Bengkel', 'Kebutuhan perbaikan harian dengan stok yang bisa diandalkan.'],
-                        ['Toko sparepart', 'Pasokan rutin untuk kebutuhan penjualan kembali.'],
-                        ['Distributor', 'Volume besar dengan skema harga dan termin khusus.'],
+                        ['Workshops', 'Day-to-day repair needs, with stock that can be relied on.'],
+                        ['Parts shops', 'Regular supply for resale.'],
+                        ['Distributors', 'Volume, with dedicated price and payment terms.'],
                     ] as [$judul, $isi])
-                        <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-900/5">
-                            <h3 class="font-semibold text-brand-700">{{ $judul }}</h3>
-                            <p class="mt-2 text-sm leading-relaxed text-slate-600">{{ $isi }}</p>
-                        </div>
+                        <li class="grid gap-1 py-5 sm:grid-cols-[180px_1fr] sm:gap-6">
+                            <h3 class="font-semibold text-ink">{{ $judul }}</h3>
+                            <p class="text-[15px] leading-relaxed text-ink-muted">{{ $isi }}</p>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
 
-                <h2 class="mt-14 text-xl font-bold text-slate-900">Cara kerja</h2>
+                <h2 class="mt-16 text-2xl font-semibold tracking-tight text-ink">How it works</h2>
                 <ol class="mt-6 space-y-4">
                     @foreach ([
-                        'Pendaftaran akun pelanggan dan verifikasi data usaha.',
-                        'Penetapan harga dan limit kredit sesuai kesepakatan.',
-                        'Pemesanan melalui tim sales kami atau portal pelanggan.',
-                        'Pengiriman disertai surat jalan dan faktur pajak.',
+                        'Customer account registration and verification of business details.',
+                        'Prices and a credit limit set by agreement.',
+                        'Orders placed through our sales team or the customer portal.',
+                        'Delivery with a delivery note and a tax invoice.',
                     ] as $i => $langkah)
                         <li class="flex gap-4">
-                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full
-                                         bg-brand-600 text-sm font-semibold text-white">{{ $i + 1 }}</span>
-                            <span class="pt-0.5 leading-relaxed text-slate-600">{{ $langkah }}</span>
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]
+                                         bg-ground-2 text-sm font-semibold text-brand-600">{{ $i + 1 }}</span>
+                            <span class="pt-1 leading-relaxed text-ink-muted">{{ $langkah }}</span>
                         </li>
                     @endforeach
                 </ol>
             </div>
 
             <aside class="lg:col-span-1">
-                <div class="rounded-2xl bg-slate-50 p-6 ring-1 ring-slate-900/5">
-                    <h2 class="font-semibold text-slate-900">Identitas perusahaan</h2>
+                <div class="rounded-panel border border-line bg-white p-6 shadow-card">
+                    <h2 class="font-semibold text-ink">Company details</h2>
 
-                    <dl class="mt-4 space-y-3 text-sm">
-                        <div>
-                            <dt class="text-slate-500">Nama</dt>
-                            <dd class="font-medium text-slate-900">{{ config('perusahaan.nama') }}</dd>
+                    <dl class="mt-4 divide-y divide-line text-sm">
+                        <div class="py-3">
+                            <dt class="text-ink-muted">Name</dt>
+                            <dd class="mt-0.5 font-medium text-ink">{{ config('perusahaan.nama') }}</dd>
                         </div>
-                        <div>
-                            <dt class="text-slate-500">Bentuk badan usaha</dt>
-                            <dd class="font-medium text-slate-900">{{ config('perusahaan.legal.bentuk_badan') }}</dd>
+                        <div class="py-3">
+                            <dt class="text-ink-muted">Legal form</dt>
+                            <dd class="mt-0.5 font-medium text-ink">{{ config('perusahaan.legal.bentuk_badan') }}</dd>
                         </div>
                         @if (config('perusahaan.legal.nib'))
-                            <div>
-                                <dt class="text-slate-500">NIB</dt>
-                                <dd class="font-medium text-slate-900">{{ config('perusahaan.legal.nib') }}</dd>
+                            <div class="py-3">
+                                <dt class="text-ink-muted">NIB</dt>
+                                <dd class="mt-0.5 font-medium text-ink">{{ config('perusahaan.legal.nib') }}</dd>
                             </div>
                         @endif
                         @if (config('perusahaan.legal.tahun_berdiri'))
-                            <div>
-                                <dt class="text-slate-500">Berdiri sejak</dt>
-                                <dd class="font-medium text-slate-900">{{ config('perusahaan.legal.tahun_berdiri') }}</dd>
+                            <div class="py-3">
+                                <dt class="text-ink-muted">Established</dt>
+                                <dd class="mt-0.5 font-medium text-ink">{{ config('perusahaan.legal.tahun_berdiri') }}</dd>
                             </div>
                         @endif
-                        <div>
-                            <dt class="text-slate-500">Kota</dt>
-                            <dd class="font-medium text-slate-900">{{ config('perusahaan.kontak.kota') }}</dd>
+                        <div class="py-3">
+                            <dt class="text-ink-muted">City</dt>
+                            <dd class="mt-0.5 font-medium text-ink">{{ config('perusahaan.kontak.kota') }}</dd>
                         </div>
                     </dl>
 
                     <a href="{{ route('publik.kontak') }}"
-                       class="mt-6 block rounded-md bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold
-                              text-white transition hover:bg-brand-500">
-                        Hubungi kami
+                       class="mt-5 block rounded-btn bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold
+                              text-white shadow-btn transition duration-200 hover:bg-brand-500 active:scale-[0.98]">
+                        Contact us
                     </a>
                 </div>
             </aside>

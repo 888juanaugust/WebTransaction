@@ -16,7 +16,8 @@ use Tests\TestCase;
 /**
  * The public site is open and indexed. Three things must hold: every page
  * renders without a login, no page shows a price, and the language split is
- * respected — every page is Bahasa Indonesia, including the home page.
+ * respected — the shopfront is English, and the two legal pages, which are
+ * instruments under Indonesian law, are Bahasa Indonesia and say so.
  */
 class PublicSiteTest extends TestCase
 {
@@ -35,15 +36,12 @@ class PublicSiteTest extends TestCase
         ];
     }
 
-    /** Every public page except the home page. */
-    public static function halamanBahasa(): array
+    /** The legal pages: Indonesian law, Indonesian text. */
+    public static function halamanHukum(): array
     {
         return [
-            'tentang' => ['/tentang-kami'],
-            'mitra' => ['/mitra'],
-            'rencana' => ['/rencana-pengembangan'],
-            'kontak' => ['/kontak'],
-            'masuk' => ['/masuk'],
+            'privasi' => ['/kebijakan-privasi'],
+            'syarat' => ['/syarat-penjualan'],
         ];
     }
 
@@ -57,40 +55,54 @@ class PublicSiteTest extends TestCase
 
     // --- language split -----------------------------------------------------
 
-    public function test_the_home_page_is_in_bahasa_like_every_other_page(): void
+    public function test_the_home_page_is_in_english(): void
     {
         $response = $this->get('/')->assertOk();
 
         // Declared for search engines and screen readers, not just visually.
-        $response->assertSee('<html lang="id"', escape: false);
-        $response->assertDontSee('<html lang="en"', escape: false);
+        $response->assertSee('<html lang="en"', escape: false);
+        $response->assertDontSee('<html lang="id"', escape: false);
 
         $response->assertSee(Perusahaan::text('ringkasan'), escape: false);
-        $response->assertSee('Tentang perusahaan kami');
-        $response->assertSee('Merk yang kami bawa');
-        $response->assertSee('Kategori produk');
-        $response->assertSee('Menjadi pelanggan dalam tiga langkah');
-        $response->assertSee('Masuk ke akun Anda');
+        $response->assertSee('About the company');
+        $response->assertSee('Brands we carry');
+        $response->assertSee('Product categories');
+        $response->assertSee('Become a customer in three steps');
+        $response->assertSee('Sign in to your account');
     }
 
     /**
-     * The site was briefly bilingual, with an English home page in front of
-     * Indonesian inner pages. That meant nav labels changed language depending
-     * on which page you stood on, and one sentence had two copies in config to
-     * keep in step. This fails if any of it comes back.
+     * The site was once bilingual, with an English home page in front of
+     * Indonesian inner pages, and nav labels changed language depending on
+     * which page you stood on. Now that the shopfront is English, this fails
+     * if any Indonesian chrome comes back on it.
      */
-    public function test_no_english_chrome_survives_on_the_home_page(): void
+    public function test_no_indonesian_chrome_survives_on_the_home_page(): void
     {
         $response = $this->get('/')->assertOk();
 
-        foreach (['Sign in', 'Home', 'About Us', 'Partners', 'Roadmap', 'Contact',
-            'Brands we carry', 'Product categories'] as $english) {
-            $response->assertDontSee($english);
+        foreach (['Beranda', 'Tentang Kami', 'Rencana', 'Kontak', 'Masuk',
+            'Merk yang kami bawa', 'Kategori produk'] as $indonesian) {
+            $response->assertDontSee($indonesian);
         }
     }
 
-    #[DataProvider('halamanBahasa')]
-    public function test_every_other_page_is_in_bahasa(string $path): void
+    #[DataProvider('halamanPublik')]
+    public function test_every_other_page_is_in_english(string $path): void
+    {
+        $this->get($path)
+            ->assertOk()
+            ->assertSee('<html lang="en"', escape: false)
+            ->assertDontSee('<html lang="id"', escape: false);
+    }
+
+    /**
+     * The legal pages are the one exception: written for Indonesian law, in
+     * Indonesian, and declared as such so a screen reader does not read
+     * Bahasa with English pronunciation.
+     */
+    #[DataProvider('halamanHukum')]
+    public function test_the_legal_pages_stay_in_bahasa(string $path): void
     {
         $this->get($path)
             ->assertOk()
@@ -98,7 +110,7 @@ class PublicSiteTest extends TestCase
             ->assertDontSee('<html lang="en"', escape: false);
     }
 
-    public function test_the_about_page_uses_the_indonesian_profile(): void
+    public function test_the_about_page_uses_the_company_profile(): void
     {
         $response = $this->get('/tentang-kami')->assertOk();
 
@@ -162,15 +174,15 @@ class PublicSiteTest extends TestCase
             ->assertSee(config('perusahaan.kontak.email'))
             ->assertSee(config('perusahaan.kontak.telepon'), escape: false)
             ->assertSee(config('perusahaan.kontak.alamat'), escape: false)
-            ->assertSee(Perusahaan::text('kontak.jam_operasional'), escape: false);
+            ->assertSee(Perusahaan::text('kontak.business_hours'), escape: false);
     }
 
     public function test_the_login_page_offers_both_doors(): void
     {
         $this->get('/masuk')
             ->assertOk()
-            ->assertSee('Portal Pelanggan')
-            ->assertSee('Panel Admin')
+            ->assertSee('Customer Portal')
+            ->assertSee('Admin Panel')
             ->assertSee('/portal/login', escape: false)
             ->assertSee('/admin/login', escape: false);
     }

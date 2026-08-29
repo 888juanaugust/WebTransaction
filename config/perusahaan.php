@@ -16,11 +16,18 @@ declare(strict_types=1);
 |
 | LANGUAGE
 | --------
-| Bahasa Indonesia throughout — the public site, both panels, all of it.
+| The copy in this file is what the public site prints, and the public site
+| is in English (2026-08): it introduces the company to buyers and to the
+| overseas suppliers and partners it deals with. The panels and every printed
+| document stay in Bahasa Indonesia — they are for staff and buyers, in the
+| words staff and buyers actually use — and they never read these sentences.
 |
-| This file used to hold ['id' => ..., 'en' => ...] pairs, because the home
-| page alone was in English. That meant one sentence had two versions to keep
-| in step, and they had already begun to drift. One language, one copy.
+| One copy of each sentence. The file once held ['id' => ..., 'en' => ...]
+| pairs, and the two versions had begun to drift; they were collapsed and
+| stay collapsed. The one deliberate exception is `kontak.jam_operasional`
+| next to `kontak.business_hours`: the same hours, but one is printed on
+| Indonesian documents and the other on the English site, so they are two
+| facts for two audiences rather than two copies of one.
 |
 | Note: no prices anywhere on the public site. Public price display is
 | explicitly out of scope for v1.
@@ -35,9 +42,11 @@ return [
     /*
      | Path to the company mark, relative to public/ — e.g. 'images/logo.svg'.
      |
-     | Null until the file is actually in the repository. Every surface falls
-     | back to the wordmark when this is unset, so a missing file is a plain
-     | text logo rather than a broken image on the shopfront.
+     | The mark is in the repository (public/images/logo.svg, traced from the
+     | company's logo file), so it is the default. Every surface still falls
+     | back to the wordmark when the path is blank or the file is missing, so
+     | a bad value is a plain text logo rather than a broken image on the
+     | shopfront. Its dark-mode twin, logo-dark.svg, is found by name.
      |
      | SVG for preference: the mark is flat colour and it has to stay crisp on
      | a phone, in the panel sidebar, and on a printed surat jalan.
@@ -50,28 +59,28 @@ return [
      | beneath the mark reduces that name to about four pixels of grey mush.
      | Keep the lockup for letterheads; the panel wants the mark alone.
      */
-    'logo' => env('PERUSAHAAN_LOGO'),
+    'logo' => env('PERUSAHAAN_LOGO', 'images/logo.svg'),
 
-    'tagline' => 'Distributor grosir suku cadang otomotif',
+    'tagline' => 'Wholesale distributor of automotive spare parts',
 
     /*
-     | One paragraph for the hero. Written for bengkel, toko sparepart and
-     | distributors — not retail buyers.
+     | One paragraph for the hero. Written for workshops, parts shops and
+     | distributors, not retail buyers.
      */
-    'ringkasan' => 'Kami memasok suku cadang otomotif secara grosir untuk bengkel, '
-        .'toko sparepart, dan distributor di seluruh Indonesia. Stok siap kirim, '
-        .'harga khusus per pelanggan, dan penagihan yang rapi.',
+    'ringkasan' => 'We supply automotive spare parts wholesale to workshops, parts shops '
+        .'and distributors across Indonesia. Stock ready to ship, prices set per customer, '
+        .'and invoicing kept in order.',
 
     'profil' => [
-        'Perusahaan kami bergerak di bidang distribusi grosir suku cadang otomotif. '
-            .'Kami melayani bengkel, toko sparepart, dan distributor — bukan pembeli eceran.',
+        'We are a wholesale distributor of automotive spare parts. We serve workshops, '
+            .'parts shops and distributors, not retail buyers.',
 
-        'Dengan jaringan pemasok yang telah terjalin bertahun-tahun, kami menjaga '
-            .'ketersediaan stok untuk kategori yang paling sering dibutuhkan bengkel: '
-            .'hydraulic part, suspension part, electric part, dan bearing part.',
+        'Through a supplier network built over many years, we keep stock of the categories '
+            .'workshops need most often: hydraulic parts, suspension parts, electric parts '
+            .'and bearings.',
 
-        'Setiap pelanggan terdaftar mendapat harga sesuai kesepakatan, limit kredit '
-            .'yang jelas, serta faktur pajak yang sesuai ketentuan yang berlaku.',
+        'Every registered customer gets prices set by agreement, a clear credit limit, '
+            .'and tax invoices that meet the applicable regulations.',
     ],
 
     // Legal identity. Required on the site once PSE registration is done.
@@ -106,7 +115,10 @@ return [
         'telepon' => env('PERUSAHAAN_TELEPON', '+62 21 0000 0000'),
         'whatsapp' => env('PERUSAHAAN_WHATSAPP', '+62 800 0000 0000'),
         'email' => env('PERUSAHAAN_EMAIL', 'sales@example.com'),
+        // Printed on Indonesian documents (the purchase order, the terms of sale).
         'jam_operasional' => 'Senin–Jumat 08.00–17.00, Sabtu 08.00–13.00 WIB',
+        // The same hours for the English site. Keep the two in step.
+        'business_hours' => 'Monday to Friday 08.00-17.00, Saturday 08.00-13.00 WIB',
     ],
 
     /*
@@ -115,26 +127,25 @@ return [
     'merk' => ['YUHOLI', 'OSBORN', 'ASTRO', 'STAVO', 'STAVIX', 'SERVO', 'BDAX'],
 
     /*
-     | Category names are the industry's own English terms and are used
-     | verbatim in the price list and the catalogue, so they are not
-     | translated — only their descriptions are.
+     | Category names are the industry's own terms and are used verbatim in
+     | the price list and the catalogue.
      */
     'kategori' => [
         [
             'nama' => 'HYDRAULIC PART',
-            'deskripsi' => 'Komponen sistem hidrolik untuk kendaraan penumpang dan niaga.',
+            'deskripsi' => 'Hydraulic system components for passenger and commercial vehicles.',
         ],
         [
             'nama' => 'SUSPENSION PART',
-            'deskripsi' => 'Komponen kaki-kaki dan sistem suspensi.',
+            'deskripsi' => 'Undercarriage and suspension system components.',
         ],
         [
             'nama' => 'ELECTRIC PART',
-            'deskripsi' => 'Komponen kelistrikan kendaraan.',
+            'deskripsi' => 'Vehicle electrical components.',
         ],
         [
             'nama' => 'BEARING PART',
-            'deskripsi' => 'Bearing dan komponen putar.',
+            'deskripsi' => 'Bearings and rotating components.',
         ],
     ],
 
@@ -147,25 +158,25 @@ return [
      */
     'mitra' => [
         [
-            'nama' => 'Nama Mitra Satu',
+            'nama' => 'Partner Name One',
             'negara' => 'Indonesia',
             'sejak' => '2021',
-            'bidang' => 'Pemasok suku cadang',
-            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
+            'bidang' => 'Parts supplier',
+            'deskripsi' => 'A short description of the partnership with this company.',
         ],
         [
-            'nama' => 'Nama Mitra Dua',
+            'nama' => 'Partner Name Two',
             'negara' => 'Indonesia',
             'sejak' => '2022',
-            'bidang' => 'Distribusi regional',
-            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
+            'bidang' => 'Regional distribution',
+            'deskripsi' => 'A short description of the partnership with this company.',
         ],
         [
-            'nama' => 'Nama Mitra Tiga',
+            'nama' => 'Partner Name Three',
             'negara' => 'Indonesia',
             'sejak' => '2023',
-            'bidang' => 'Logistik',
-            'deskripsi' => 'Deskripsi singkat kerja sama dengan mitra ini.',
+            'bidang' => 'Logistics',
+            'deskripsi' => 'A short description of the partnership with this company.',
         ],
     ],
 
@@ -178,37 +189,37 @@ return [
      */
     'rencana' => [
         [
-            'judul' => 'Sistem operasional internal',
+            'judul' => 'Internal operations system',
             'status' => 'berjalan',
-            'deskripsi' => 'Pencatatan order, stok, dan penagihan dijalankan langsung oleh tim kami.',
+            'deskripsi' => 'Orders, stock and invoicing recorded directly by our own team.',
         ],
         [
-            'judul' => 'Penjualan kredit dengan penagihan rapi',
+            'judul' => 'Credit sales with orderly collection',
             'status' => 'berjalan',
-            'deskripsi' => 'Pembayaran lewat transfer bank, tunai, atau giro — dikonfirmasi dan '
-                .'direkonsiliasi oleh tim keuangan kami.',
+            'deskripsi' => 'Payment by bank transfer, cash or giro, confirmed and reconciled '
+                .'by our finance team.',
         ],
         [
-            'judul' => 'Portal pelanggan',
+            'judul' => 'Customer portal',
             'status' => 'berjalan',
-            'deskripsi' => 'Pelanggan terdaftar dapat memantau kredit, faktur, dan riwayat order.',
+            'deskripsi' => 'Registered customers can follow their credit, invoices and order history.',
         ],
         [
-            'judul' => 'Pemesanan mandiri lewat portal',
+            'judul' => 'Self-service ordering through the portal',
             'status' => 'berjalan',
-            'deskripsi' => 'Pelanggan dapat mengulang order sebelumnya, menyusun keranjang, '
-                .'dan mengajukan pesanan sendiri.',
+            'deskripsi' => 'Customers can repeat a previous order, build a cart and submit '
+                .'orders themselves.',
         ],
         [
-            'judul' => 'Katalog produk daring',
+            'judul' => 'Online product catalogue',
             'status' => 'berjalan',
-            'deskripsi' => 'Katalog lengkap dengan harga khusus per pelanggan, '
-                .'dapat dicari berdasarkan merk, kategori, dan tipe mobil.',
+            'deskripsi' => 'The full catalogue at each customer\'s own prices, searchable '
+                .'by brand, category and vehicle type.',
         ],
         [
-            'judul' => 'Faktur pajak elektronik (Coretax)',
+            'judul' => 'Electronic tax invoices (Coretax)',
             'status' => 'rencana',
-            'deskripsi' => 'Ekspor faktur pajak sesuai format impor Coretax.',
+            'deskripsi' => 'Tax invoice export in the Coretax import format.',
         ],
     ],
 

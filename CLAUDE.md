@@ -21,9 +21,13 @@ Three surfaces over one shared domain core:
 
 ## Language
 
-Bahasa Indonesia is the primary UI language. Domain terms stay in Indonesian where that's
-what staff and buyers actually say: `surat jalan`, `faktur pajak`, `harga`, `kode`, `merk`,
-`gudang`, `dus`, `karton`. Code identifiers in English; user-facing strings in Indonesian.
+Bahasa Indonesia is the UI language of both panels and every printed document. The
+**public site is English** (its copy is in `config/perusahaan.php`); its two legal pages
+stay Indonesian and declare `lang="id"` themselves.
+
+Domain terms stay in Indonesian where that's what staff and buyers actually say: `surat
+jalan`, `faktur pajak`, `harga`, `kode`, `merk`, `gudang`, `dus`, `karton`. Code identifiers
+in English; user-facing strings in the panels in Indonesian.
 
 ---
 

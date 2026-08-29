@@ -5,38 +5,42 @@
     appear anywhere on it: public price display is out of scope for v1, and
     wholesale pricing is per-customer by definition.
 
-    Bahasa Indonesia throughout. The site was briefly bilingual, with an English
-    home page in front of Indonesian inner pages; that meant every nav label
-    changed language depending on which page you were standing on, and the two
-    versions of the company summary drifted apart in config. One language, one
-    copy of each sentence.
+    English throughout the shopfront (2026-08): the site introduces the company
+    to buyers and to overseas suppliers and partners, so it speaks the language
+    both read. The two legal pages are the exception — they are instruments
+    under Indonesian law and stay in Bahasa Indonesia, declaring their own
+    `lang`. The panels and every printed document stay Indonesian too: they are
+    for staff and buyers, in the words staff and buyers actually use.
 
-    The visual language, deliberately: navy carries the weight (the hero and
-    the footer are dark, so the page opens and closes with the brand), red
-    appears only as a small kicker accent — it is the panels' danger colour,
-    so here it stays an accent and never a surface — and everything between
-    sits on white with soft-shadow cards rather than hairline boxes.
+    The visual language, deliberately: an off-white ground, white surfaces
+    with a hairline border, and company blue as the only accent. The mark and
+    the name carry the brand; red is the panels' danger colour and never shows
+    up here as decoration. No section flips to a dark background — the page
+    reads as one surface from the top to the footer.
 --}}
 <!DOCTYPE html>
-<html lang="id" class="scroll-smooth">
+<html lang="@yield('lang', 'en')" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {{-- The shopfront commits to light; see color-scheme in app.css. --}}
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#073185">
+    <meta name="theme-color" content="#f8f8f7">
 
-    <title>@yield('judul', config('perusahaan.nama')) — {{ config('perusahaan.nama') }}</title>
+    <title>@yield('judul', config('perusahaan.nama')) · {{ config('perusahaan.nama') }}</title>
     <meta name="description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
 
     <link rel="canonical" href="{{ url()->current() }}">
     <meta property="og:site_name" content="{{ config('perusahaan.nama') }}">
     <meta property="og:title" content="@yield('judul', config('perusahaan.nama'))">
     <meta property="og:description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
-    <meta property="og:locale" content="id_ID">
+    <meta property="og:locale" content="en_ID">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
+    @if (\App\Support\Branding::hasLogo())
+        <link rel="icon" type="image/svg+xml" href="{{ \App\Support\Branding::logoUrl() }}">
+    @endif
 
     {{--
         Organization schema, from the same config the footer prints. Search
@@ -70,50 +74,56 @@
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 
+    {{-- Self-hosted; see app.css. Preloaded because it paints the whole page. --}}
+    <link rel="preload" href="{{ asset('fonts/Geist-Variable.woff2') }}" as="font" type="font/woff2" crossorigin>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- Marks the document as scripted so .reveal only ever hides with JS present. --}}
+    <script>document.documentElement.classList.add('js')</script>
 </head>
-<body class="flex min-h-screen flex-col bg-white text-slate-800 antialiased">
+<body class="flex min-h-dvh flex-col bg-ground text-ink antialiased">
 
     <a href="#konten" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50
-        focus:rounded-md focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white">
-        Lompat ke konten
+        focus:rounded-btn focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white">
+        Skip to content
     </a>
 
     @php
         $menu = [
-            'publik.beranda' => 'Beranda',
-            'publik.tentang' => 'Tentang Kami',
-            'publik.mitra' => 'Mitra',
-            'publik.rencana' => 'Rencana',
-            'publik.kontak' => 'Kontak',
+            'publik.beranda' => 'Home',
+            'publik.tentang' => 'About Us',
+            'publik.mitra' => 'Partners',
+            'publik.rencana' => 'Roadmap',
+            'publik.kontak' => 'Contact',
         ];
     @endphp
 
-    <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4" aria-label="Utama">
-            {{-- The mark if there is one, the wordmark if there is not. --}}
-            <a href="{{ route('publik.beranda') }}"
-               class="flex items-center gap-2.5 text-lg font-bold tracking-tight text-brand-600">
+    {{--
+        A floating bar rather than a full-width band: the page ground shows on
+        either side, so the header reads as a control sitting on the surface.
+        Sticky, with a blur so content sliding under it stays legible.
+    --}}
+    <header class="sticky top-0 z-40 px-4 pt-3 sm:pt-5">
+        <nav class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 rounded-[14px] border
+                    border-line bg-white/80 pr-2 pl-4 shadow-card backdrop-blur-md sm:h-[60px] sm:pl-5"
+             aria-label="Main">
+            {{-- The mark if there is one, the wordmark either way. --}}
+            <a href="{{ route('publik.beranda') }}" class="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight text-ink">
                 @if (\App\Support\Branding::hasLogo())
-                    <img src="{{ \App\Support\Branding::logoUrl() }}"
-                         alt="{{ config('perusahaan.nama') }}" class="h-9 w-auto">
+                    <img src="{{ \App\Support\Branding::logoUrl() }}" alt="" aria-hidden="true" class="h-6 w-auto">
                 @endif
                 {{ config('perusahaan.nama_singkat') }}
             </a>
 
-            {{--
-                Active page marked by a red underline, not a filled pill: the
-                underline reads at a glance without adding another surface to
-                a bar that already holds a logo and a button.
-            --}}
-            <div class="hidden items-center gap-6 md:flex">
+            {{-- The current page is the one link in ink; the rest sit back in grey. --}}
+            <div class="hidden items-center gap-7 md:flex">
                 @foreach ($menu as $rute => $label)
                     <a href="{{ route($rute) }}"
                        @class([
-                           'relative py-1.5 text-sm font-medium transition',
-                           'text-brand-700 after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-accent-600'
-                               => request()->routeIs($rute),
-                           'text-slate-600 hover:text-brand-700' => ! request()->routeIs($rute),
+                           'text-sm font-medium transition-colors duration-200',
+                           'text-ink' => request()->routeIs($rute),
+                           'text-ink-muted hover:text-ink' => ! request()->routeIs($rute),
                        ])
                        @if (request()->routeIs($rute)) aria-current="page" @endif>
                         {{ $label }}
@@ -121,34 +131,34 @@
                 @endforeach
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
                 <a href="{{ route('masuk') }}"
-                   class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
-                          transition hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600
-                          focus:ring-offset-2">
-                    Masuk
+                   class="rounded-[9px] bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-btn
+                          transition duration-200 hover:bg-brand-500 active:scale-[0.98]
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+                    Sign in
                 </a>
 
                 {{-- Hamburger. Plain button + hidden panel: no framework, no fetch. --}}
                 <button id="tombol-menu" type="button"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600
-                               transition hover:bg-slate-100 hover:text-brand-700 md:hidden"
-                        aria-expanded="false" aria-controls="menu-seluler" aria-label="Buka menu">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-[9px] text-ink-muted
+                               transition hover:bg-ground-2 hover:text-ink md:hidden"
+                        aria-expanded="false" aria-controls="menu-seluler" aria-label="Open menu">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
                     </svg>
                 </button>
             </div>
         </nav>
 
-        <div id="menu-seluler" class="hidden border-t border-slate-100 bg-white px-4 py-3 md:hidden" hidden>
-            <div class="grid gap-1">
+        <div id="menu-seluler" class="mx-auto mt-2 hidden max-w-6xl rounded-[14px] border border-line bg-white p-2 shadow-card md:hidden" hidden>
+            <div class="grid gap-0.5">
                 @foreach ($menu as $rute => $label)
                     <a href="{{ route($rute) }}"
                        @class([
-                           'rounded-lg px-3 py-2.5 text-sm font-medium',
-                           'bg-brand-50 text-brand-700' => request()->routeIs($rute),
-                           'text-slate-700 hover:bg-slate-50' => ! request()->routeIs($rute),
+                           'rounded-[9px] px-3 py-2.5 text-sm font-medium',
+                           'bg-ground-2 text-ink' => request()->routeIs($rute),
+                           'text-ink-muted hover:bg-ground hover:text-ink' => ! request()->routeIs($rute),
                        ])>{{ $label }}</a>
                 @endforeach
             </div>
@@ -159,61 +169,59 @@
         @yield('konten')
     </main>
 
-    {{--
-        The footer closes the page the way the hero opens it: on the brand.
-        Dark navy, light text, and the same four columns as before.
-    --}}
-    <footer class="mt-24 bg-brand-900 text-slate-300">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-5">
-            <div class="sm:col-span-2">
-                <p class="text-lg font-bold text-white">{{ config('perusahaan.nama') }}</p>
-                <p class="mt-3 max-w-md text-sm leading-relaxed text-slate-400">
-                    {{ \App\Support\Perusahaan::text('ringkasan') }}
-                </p>
-                @if (config('perusahaan.legal.nib'))
-                    <p class="mt-5 text-xs text-slate-500">NIB {{ config('perusahaan.legal.nib') }}</p>
-                @endif
+    {{-- The footer stays on the same ground as the page: a hairline, four columns, no colour flip. --}}
+    <footer class="mt-24 px-4 pb-10">
+        <div class="mx-auto max-w-6xl border-t border-line pt-10">
+            <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.4fr]">
+                <div>
+                    <p class="flex items-center gap-2.5 text-[15px] font-semibold text-ink">
+                        @if (\App\Support\Branding::hasLogo())
+                            <img src="{{ \App\Support\Branding::logoUrl() }}" alt="" aria-hidden="true" class="h-5 w-auto">
+                        @endif
+                        {{ config('perusahaan.nama') }}
+                    </p>
+                    <p class="mt-3 max-w-sm text-sm leading-relaxed text-ink-muted">
+                        {{ \App\Support\Perusahaan::text('ringkasan') }}
+                    </p>
+                    @if (config('perusahaan.legal.nib'))
+                        <p class="mt-4 text-xs text-ink-faint">NIB {{ config('perusahaan.legal.nib') }}</p>
+                    @endif
+                </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-ink">Pages</p>
+                    <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
+                        @foreach (array_slice($menu, 1, null, true) as $rute => $label)
+                            <li><a class="transition-colors hover:text-ink" href="{{ route($rute) }}">{{ $label }}</a></li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-ink">Legal</p>
+                    <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
+                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.privasi') }}">Privacy Policy</a></li>
+                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.syarat') }}">Terms of Sale</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <p class="text-sm font-semibold text-ink">Contact</p>
+                    <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
+                        <li>{{ config('perusahaan.kontak.telepon') }}</li>
+                        <li>
+                            <a class="transition-colors hover:text-ink" href="mailto:{{ config('perusahaan.kontak.email') }}">
+                                {{ config('perusahaan.kontak.email') }}
+                            </a>
+                        </li>
+                        <li class="leading-relaxed">{{ config('perusahaan.kontak.alamat') }}</li>
+                    </ul>
+                </div>
             </div>
 
-            <div>
-                <p class="text-sm font-semibold text-white">Halaman</p>
-                <ul class="mt-4 space-y-2.5 text-sm">
-                    @foreach (array_slice($menu, 1, null, true) as $rute => $label)
-                        <li><a class="transition hover:text-white" href="{{ route($rute) }}">{{ $label }}</a></li>
-                    @endforeach
-                </ul>
-            </div>
-
-            <div>
-                <p class="text-sm font-semibold text-white">Ketentuan</p>
-                <ul class="mt-4 space-y-2.5 text-sm">
-                    <li><a class="transition hover:text-white" href="{{ route('publik.privasi') }}">Kebijakan Privasi</a></li>
-                    <li><a class="transition hover:text-white" href="{{ route('publik.syarat') }}">Syarat Penjualan</a></li>
-                </ul>
-            </div>
-
-            <div>
-                <p class="text-sm font-semibold text-white">Kontak</p>
-                <ul class="mt-4 space-y-2.5 text-sm">
-                    <li>{{ config('perusahaan.kontak.telepon') }}</li>
-                    <li>
-                        <a class="transition hover:text-white" href="mailto:{{ config('perusahaan.kontak.email') }}">
-                            {{ config('perusahaan.kontak.email') }}
-                        </a>
-                    </li>
-                    <li class="leading-relaxed text-slate-400">{{ config('perusahaan.kontak.alamat') }}</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="border-t border-white/10">
-            <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between">
-                <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. Seluruh hak cipta dilindungi.</p>
-                <p class="flex flex-wrap gap-x-4 gap-y-1">
-                    <span>Harga grosir hanya untuk pelanggan terdaftar.</span>
-                    <a class="transition hover:text-slate-300" href="{{ route('publik.privasi') }}">Kebijakan Privasi</a>
-                    <a class="transition hover:text-slate-300" href="{{ route('publik.syarat') }}">Syarat Penjualan</a>
-                </p>
+            <div class="mt-10 flex flex-col gap-2 border-t border-line pt-6 text-xs text-ink-faint sm:flex-row sm:justify-between">
+                <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. All rights reserved.</p>
+                <p>Wholesale prices are for registered customers only.</p>
             </div>
         </div>
     </footer>
@@ -226,8 +234,16 @@
                 panel.hidden = ! panel.hidden;
                 panel.classList.toggle('hidden', panel.hidden);
                 tombol.setAttribute('aria-expanded', String(! panel.hidden));
-                tombol.setAttribute('aria-label', panel.hidden ? 'Buka menu' : 'Tutup menu');
+                tombol.setAttribute('aria-label', panel.hidden ? 'Open menu' : 'Close menu');
             });
+
+            // Scroll-entry reveal: settle each .reveal once it is a fifth in view.
+            const io = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+                for (const e of entries) {
+                    if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+                }
+            }, { threshold: 0.2 }) : null;
+            document.querySelectorAll('.reveal').forEach((el) => io ? io.observe(el) : el.classList.add('is-in'));
         })();
     </script>
 

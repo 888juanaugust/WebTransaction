@@ -14,6 +14,9 @@
 --}}
 @extends('layouts.publik')
 
+{{-- A legal instrument under Indonesian law: Bahasa Indonesia, on an English site. --}}
+@section('lang', 'id')
+
 @section('judul', 'Kebijakan Privasi')
 @section('deskripsi', 'Bagaimana ' . config('perusahaan.nama') . ' mengumpulkan, memakai, dan melindungi data pribadi sesuai UU No. 27 Tahun 2022.')
 
@@ -42,29 +45,25 @@
 
 @section('konten')
 
-    <section class="bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700">
-        <div class="mx-auto max-w-3xl px-4 py-16">
-            <p class="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
-                <span class="h-px w-8 bg-accent-600" aria-hidden="true"></span>
-                Ketentuan
-            </p>
-            <h1 class="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Kebijakan Privasi</h1>
-            <p class="mt-4 text-lg leading-relaxed text-brand-100">
+    <section class="border-b border-line">
+        <div class="mx-auto max-w-3xl px-4 pt-16 pb-12 sm:pt-24 sm:pb-16">
+            <h1 class="text-4xl font-semibold tracking-[-0.03em] text-ink sm:text-5xl">Kebijakan Privasi</h1>
+            <p class="mt-4 text-lg leading-relaxed text-ink-muted">
                 Bagaimana kami mengumpulkan, memakai, menyimpan, dan melindungi data pribadi
                 dalam sistem pemesanan grosir kami.
             </p>
-            <p class="mt-6 text-sm text-brand-200">
+            <p class="mt-6 text-sm text-ink-faint">
                 Berlaku sejak {{ $berlaku->translatedFormat('j F Y') }} · Versi {{ config('legal.privasi.versi') }}
             </p>
         </div>
     </section>
 
-    <article class="mx-auto max-w-3xl px-4 py-16 [&_h2]:mt-12 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900
-                    [&_h3]:mt-8 [&_h3]:font-semibold [&_h3]:text-slate-900
-                    [&_p]:mt-4 [&_p]:leading-relaxed [&_p]:text-slate-600
-                    [&_li]:leading-relaxed [&_li]:text-slate-600">
+    <article class="mx-auto max-w-3xl px-4 py-16 [&_h2]:mt-12 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-ink
+                    [&_h3]:mt-8 [&_h3]:font-semibold [&_h3]:text-ink
+                    [&_p]:mt-4 [&_p]:leading-relaxed [&_p]:text-ink-muted
+                    [&_li]:leading-relaxed [&_li]:text-ink-muted">
 
-        <p class="!mt-0 rounded-lg border border-brand-200 bg-brand-50/60 p-5 !text-slate-700">
+        <p class="!mt-0 rounded-card border border-brand-200 bg-brand-50/60 p-5 !text-ink">
             Kebijakan ini disusun mengikuti <strong>Undang-Undang Nomor 27 Tahun 2022 tentang
             Pelindungan Data Pribadi</strong> (UU PDP) dan Peraturan Pemerintah Nomor 71 Tahun 2019
             tentang Penyelenggaraan Sistem dan Transaksi Elektronik.
@@ -106,23 +105,23 @@
         </p>
 
         @foreach (DataInventory::categories() as $kategori)
-            <div class="mt-8 rounded-xl border border-slate-200 p-6">
+            <div class="mt-8 rounded-card border border-line p-6">
                 <h3 class="!mt-0 text-base">{{ $kategori['judul'] }}</h3>
 
                 <p class="!mt-3 text-sm">{!! $kategori['isi'] !!}</p>
 
-                <dl class="mt-5 space-y-3 border-t border-slate-100 pt-4 text-sm">
+                <dl class="mt-5 space-y-3 border-t border-line pt-4 text-sm">
                     <div class="sm:flex sm:gap-4">
-                        <dt class="shrink-0 font-semibold text-slate-500 sm:w-32">Tujuan</dt>
-                        <dd class="text-slate-600">{{ $kategori['tujuan'] }}</dd>
+                        <dt class="shrink-0 font-semibold text-ink-muted sm:w-32">Tujuan</dt>
+                        <dd class="text-ink-muted">{{ $kategori['tujuan'] }}</dd>
                     </div>
                     <div class="sm:flex sm:gap-4">
-                        <dt class="shrink-0 font-semibold text-slate-500 sm:w-32">Dasar hukum</dt>
-                        <dd class="text-slate-600">{{ $kategori['dasar'] }}</dd>
+                        <dt class="shrink-0 font-semibold text-ink-muted sm:w-32">Dasar hukum</dt>
+                        <dd class="text-ink-muted">{{ $kategori['dasar'] }}</dd>
                     </div>
                     <div class="sm:flex sm:gap-4">
-                        <dt class="shrink-0 font-semibold text-slate-500 sm:w-32">Lama simpan</dt>
-                        <dd class="text-slate-600">{{ $kategori['retensi'] }}</dd>
+                        <dt class="shrink-0 font-semibold text-ink-muted sm:w-32">Lama simpan</dt>
+                        <dd class="text-ink-muted">{{ $kategori['retensi'] }}</dd>
                     </div>
                 </dl>
             </div>
@@ -152,17 +151,17 @@
         <h2 id="pihak-ketiga">5. Kepada siapa data dibagikan</h2>
         <p>Kami tidak menjual data pribadi. Data dibagikan hanya kepada pihak berikut:</p>
         <ul class="mt-4 space-y-3">
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900">Direktorat Jenderal Pajak</strong> — identitas wajib
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink">Direktorat Jenderal Pajak</strong> — identitas wajib
                 pajak dan nilai transaksi, sebatas yang wajib dilaporkan dalam rangka penerbitan
                 faktur pajak dan pelaporan Pajak Pertambahan Nilai.
             </li>
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900">Jasa pengiriman</strong> — nama penerima, alamat
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink">Jasa pengiriman</strong> — nama penerima, alamat
                 kirim, dan nomor telepon, sebatas yang diperlukan agar barang sampai.
             </li>
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900">Aparat penegak hukum atau instansi berwenang</strong>
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink">Aparat penegak hukum atau instansi berwenang</strong>
                 — hanya atas permintaan yang sah menurut peraturan perundang-undangan.
             </li>
         </ul>
@@ -181,16 +180,16 @@
             cookie pelacakan, cookie iklan, maupun cookie profil di situs ini.
         </p>
         <ul class="mt-4 space-y-3">
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900 font-mono text-sm">{{ config('session.cookie') }}</strong>
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink font-mono text-sm">{{ config('session.cookie') }}</strong>
                 <p class="!mt-1 text-sm">
                     Menjaga sesi Anda. Isinya berupa penanda sesi terenkripsi, bukan identitas Anda.
                     Berlaku {{ config('session.lifetime') }} menit dan tidak dapat dibaca oleh skrip
                     di peramban.
                 </p>
             </li>
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900 font-mono text-sm">XSRF-TOKEN</strong>
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink font-mono text-sm">XSRF-TOKEN</strong>
                 <p class="!mt-1 text-sm">
                     Melindungi formulir dari pemalsuan permintaan lintas situs, agar tidak ada situs
                     lain yang bisa mengirim perintah atas nama Anda.
@@ -235,8 +234,8 @@
         <p>UU PDP memberi Anda hak-hak berikut, dan kami menghormatinya:</p>
         <div class="mt-6 space-y-3">
             @foreach ($hak as [$judul, $isi])
-                <div class="rounded-lg border border-slate-200 p-4">
-                    <p class="!mt-0 font-semibold text-slate-900">{{ $judul }}</p>
+                <div class="rounded-[12px] border border-line p-4">
+                    <p class="!mt-0 font-semibold text-ink">{{ $judul }}</p>
                     <p class="!mt-1 text-sm">{{ $isi }}</p>
                 </div>
             @endforeach
@@ -283,7 +282,7 @@
             gugatan sebagaimana diatur Pasal 12 UU PDP.
         </p>
 
-        <div class="mt-14 rounded-xl border border-slate-200 bg-slate-50 p-6">
+        <div class="mt-14 rounded-card border border-line bg-white shadow-card p-6">
             <p class="!mt-0 text-sm">
                 Kebijakan ini melengkapi
                 <a class="font-semibold text-brand-600 hover:text-brand-700" href="{{ route('publik.syarat') }}">Syarat Penjualan</a>

@@ -20,7 +20,7 @@ class BrandingTest extends TestCase
 {
     protected function tearDown(): void
     {
-        foreach (['images/logo-test.svg', 'logo-test-root.svg'] as $path) {
+        foreach (['images/logo-test.svg', 'images/logo-test-dark.svg', 'logo-test-root.svg'] as $path) {
             if (file_exists(public_path($path))) {
                 unlink(public_path($path));
             }
@@ -99,5 +99,22 @@ class BrandingTest extends TestCase
     public function test_the_wordmark_is_the_short_company_name(): void
     {
         $this->assertSame(config('perusahaan.nama_singkat'), Branding::wordmark());
+    }
+
+    /**
+     * The dark-mode mark is the light one's twin by name, and only counts
+     * when the twin actually exists — a navy mark on a dark sidebar is
+     * invisible, but a broken image there is worse.
+     */
+    public function test_the_dark_mark_is_found_beside_the_light_one(): void
+    {
+        $this->writeLogo('images/logo-test.svg');
+        config()->set('perusahaan.logo', 'images/logo-test.svg');
+
+        $this->assertNull(Branding::darkLogoUrl(), 'no twin file, no dark mark');
+
+        $this->writeLogo('images/logo-test-dark.svg');
+
+        $this->assertStringEndsWith('/images/logo-test-dark.svg', (string) Branding::darkLogoUrl());
     }
 }
