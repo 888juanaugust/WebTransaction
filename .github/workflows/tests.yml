@@ -26,8 +26,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # composer.json allows ^8.3; test the floor and the version the VPS runs.
-        php: ['8.3', '8.4']
+        # 8.4 only: composer.lock resolves Symfony 8, which requires PHP
+        # >= 8.4.1 — the 8.3 leg could not even install the lock file, so it
+        # tested nothing. composer.json says ^8.4 to match, and the VPS
+        # (deploy/provision.sh) installs 8.4.
+        php: ['8.4']
 
     name: PHP ${{ matrix.php }}
 
@@ -70,6 +73,21 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The screen tests render Filament pages through the Vite theme; with
+      # no manifest every one of them is a 500. This is also the build
+      # check itself — a class the compiler cannot resolve fails here, not
+      # on the VPS mid-deploy.
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
 
       - name: Prepare environment
         run: |
@@ -120,31 +138,14 @@ jobs:
       - name: Check formatting
         run: vendor/bin/pint --test
 
+      - name: Audit dependencies
+        # Known advisories in the lock file fail the build. The day this
+        # blocks a release for a transitive package is the day it worked.
+        run: composer audit
+
       - name: Lint the deploy kit
         # bash -n catches the syntax error that would otherwise be found
         # halfway through provisioning a production server.
         run: |
           bash -n deploy/provision.sh
           bash -n deploy/deploy.sh
-
-  frontend:
-    runs-on: ubuntu-latest
-    name: Vite build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      # The one failure CI never caught: a blade change referencing a
-      # Tailwind class the build cannot compile only surfaced on the VPS,
-      # mid-deploy, with the site already in maintenance mode.
-      - name: Build assets
-        run: |
-          npm ci
-          npm run build
