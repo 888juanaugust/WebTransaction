@@ -12,6 +12,7 @@ use App\Models\LaunchAttestation;
 use App\Models\Order;
 use App\Models\PriceListVersion;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -261,11 +262,23 @@ class LaunchReadiness
          * `password`, which is right for a fresh install and indefensible on a
          * live one. Checked by hashing rather than by trusting anybody to
          * remember whether they changed it.
+         *
+         * The verdict is cached against the stored hash itself, and that is
+         * what makes the cache sound: whether `password` verifies against a
+         * given bcrypt hash is a fixed fact — change the password and the
+         * hash changes, so the key changes and the fact is computed once for
+         * the new hash. Without this, the Owner's dashboard paid one bcrypt
+         * per staff account on every load (measured: ~900ms at three
+         * accounts, and it grows with headcount), for answers that had not
+         * changed since the last load.
          */
         $seeded = User::query()
             ->whereIn('role', array_column(Role::cases(), 'value'))
             ->get()
-            ->filter(fn (User $u) => Hash::check('password', (string) $u->password));
+            ->filter(fn (User $u) => Cache::rememberForever(
+                'sandi-bawaan:'.md5((string) $u->password),
+                fn () => Hash::check('password', (string) $u->password),
+            ));
 
         return LaunchCheck::checked(
             kunci: 'sandi_staf',

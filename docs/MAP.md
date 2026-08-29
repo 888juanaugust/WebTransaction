@@ -1250,6 +1250,20 @@ generated URL, and `SESSION_SECURE_COOKIE=true` is part of the deploy env.
 | `LaunchCheck::checked` / `::attested` | Which of the two kinds an item is |
 | `AttestationRecorder::attest` | Records somebody's word, with evidence |
 
+**Volume pass (2026-08, pre-pilot).** A seeded year of trading — 1,400
+SKUs, 60 customers, 4,200 orders/invoices, 23k lines — measured every hot
+path. Most held: the year's sales report runs in ~55ms and 4 queries, the
+resolver prices a 20-line order in ~40ms, the onboarding worklist reads 60
+customers in ~12ms. Two convictions, both fixed and pinned in
+`PerformanceGuardTest`: the receivables ageing took 1.1s because its
+per-invoice "paid so far" subselect could not seek the (company_id,
+invoice_id) composite — `payment_entries` now carries a lone invoice_id
+index (ageing 55ms, ringkasan 72ms after); and every Owner page paid one
+bcrypt per staff account through the launch checklist's nav badge — the
+seeded-password verdict is now cached against the stored hash itself,
+which is sound because that verdict can only change when the hash does
+(dashboard 2.8s → 1.2s warm on the dev server).
+
 **Security audit (2026-08, pre-pilot).** A pass over the whole application's
 attack surfaces, each outcome pinned in `SecurityAuditTest`. Held without
 change: raw-SQL report groupings (enum-match literals only), the document
