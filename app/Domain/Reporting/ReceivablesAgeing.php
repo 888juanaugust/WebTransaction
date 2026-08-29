@@ -145,6 +145,39 @@ class ReceivablesAgeing
     }
 
     /**
+     * The table's picture: how much debt sits in each age band.
+     *
+     * Reads the totals row of the table it is handed — the same buckets, the
+     * same netting — with each bar labelled by its column. The unmatched and
+     * giro columns join the bars because money in transit is still part of
+     * the answer to "where does the receivable balance sit".
+     */
+    public function chart(ReportTable $table): ReportChart
+    {
+        $buckets = [
+            'belum_jatuh_tempo', 'b1', 'b2', 'b3', 'b4',
+            'belum_dicocokkan', 'dijamin_giro',
+        ];
+
+        $labels = [];
+        $values = [];
+
+        foreach ($table->columns as $column) {
+            if (in_array($column->key, $buckets, true)) {
+                $labels[] = $column->label;
+                $values[] = max(0, (int) ($table->totals[$column->key] ?? 0));
+            }
+        }
+
+        return new ReportChart(
+            judul: 'Piutang per umur',
+            labels: $labels,
+            values: $values,
+            catatan: 'Pembayaran belum dicocokkan dan giro belum cair ditampilkan positif.',
+        );
+    }
+
+    /**
      * Invoices with their payments and credits already netted, in one query.
      *
      * Sub-selects rather than a walk over the models: an ageing report over a

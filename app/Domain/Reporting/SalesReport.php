@@ -87,6 +87,62 @@ class SalesReport
     }
 
     /**
+     * The table's picture: who matters, or the shape of the year.
+     *
+     * Derived from the rows already built — same figures, same filters — so
+     * the bars can never disagree with the table under them. By month the
+     * chart keeps the calendar's order; every other dimension shows the
+     * biggest first.
+     */
+    public function chart(ReportTable $table, SalesDimension $dimension): ReportChart
+    {
+        if ($dimension === SalesDimension::Bulan) {
+            return new ReportChart(
+                judul: 'Penjualan per bulan',
+                labels: array_column($table->rows, 'dimensi'),
+                values: array_map(fn ($r) => max(0, (int) $r['penjualan']), $table->rows),
+            );
+        }
+
+        return ReportChart::topRows(
+            judul: $table->judul.' — terbesar',
+            rows: $table->rows,
+            labelKey: 'dimensi',
+            valueKey: 'penjualan',
+        );
+    }
+
+    /**
+     * Sales per region for the period — the one chart with its own query.
+     *
+     * Regions are not a dimension of the table (a pinned reader's table is
+     * one region by construction), so this reads across every region's books
+     * deliberately. Shown only to viewers who already see all regions; the
+     * page is the gate.
+     */
+    public function regionChart(Period $period): ReportChart
+    {
+        $rows = DB::table('invoices')
+            ->join('regions', 'invoices.region_id', '=', 'regions.id')
+            ->join('orders', 'invoices.order_id', '=', 'orders.id')
+            ->join('order_lines', 'orders.id', '=', 'order_lines.order_id')
+            ->where('invoices.status', '!=', Invoice::STATUS_VOID)
+            ->whereBetween('invoices.issued_on', [$period->from->toDateString(), $period->to->toDateString()])
+            ->whereNotNull('order_lines.line_total_rupiah')
+            ->selectRaw('regions.kode AS kode, SUM(order_lines.line_total_rupiah) AS nilai')
+            ->groupBy('regions.kode')
+            ->orderByDesc('nilai')
+            ->get();
+
+        return new ReportChart(
+            judul: 'Penjualan per wilayah',
+            labels: $rows->pluck('kode')->map(fn ($k) => (string) $k)->all(),
+            values: $rows->pluck('nilai')->map(fn ($v) => (int) $v)->all(),
+            catatan: 'Semua wilayah, sebelum nota kredit.',
+        );
+    }
+
+    /**
      * Invoiced revenue, from the order line snapshots behind each invoice.
      *
      * `line_total_rupiah` is the figure after discount and before PPN, which

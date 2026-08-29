@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Laporan;
 
+use App\Domain\Reporting\ReportChart;
 use App\Domain\Reporting\ReportCsv;
 use App\Domain\Reporting\ReportTable;
 use BackedEnum;
@@ -32,6 +33,30 @@ abstract class ReportPage extends Page
     protected string $view = 'filament.pages.laporan.report';
 
     abstract public function getReport(): ReportTable;
+
+    /**
+     * The charts drawn above the table, derived from the table already built.
+     *
+     * Takes the report as an argument rather than calling getReport() again:
+     * some of these reports walk a year of invoices, and building one twice
+     * per request to draw its own picture would be the report screens' first
+     * performance bug. Empty charts are dropped here so no page has to ask.
+     *
+     * @return list<ReportChart>
+     */
+    public function chartsFor(ReportTable $report): array
+    {
+        return [];
+    }
+
+    /** @return list<ReportChart> */
+    public function visibleCharts(ReportTable $report): array
+    {
+        return array_values(array_filter(
+            $this->chartsFor($report),
+            fn (ReportChart $chart) => ! $chart->isEmpty(),
+        ));
+    }
 
     /**
      * A Blade partial with this report's own controls, or null for none.

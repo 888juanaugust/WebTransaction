@@ -776,6 +776,16 @@ return.
 | `ReceivablesAgeing::build` | 30/60/90 buckets, unmatched payments in their own column |
 | `LapsedCustomers::build` | Customers silent for more than twice **their own** median ordering interval |
 | `StockAgeing::build` | On-hand value and months of cover, never-sold first |
+| `ReportChart` | A report's picture: labelled bars, drawn server-side as one Blade partial — no script, so the chart prints with the report |
+| `SalesReport::chart` / `regionChart` | Top rows of the table (calendar order by month); sales per wilayah for viewers who already see all regions |
+| `ReceivablesAgeing::chart` / `LapsedCustomers::chart` / `StockAgeing::chart` | Buckets from the totals row · monthly value going quiet · shelf value by idle band |
+
+Each chart **derives from the ReportTable already built** — same rows, same
+filters — so the bars can never disagree with the figures under them. The one
+exception, sales per region, runs its own unscoped query on purpose and is
+shown only to a viewer who already sees every region; for anyone pinned the
+page never draws it, because a chart that leaks other regions' sales would be
+the report screen quietly undoing the region scope.
 
 Every report is anchored to something it must agree with, and says so when it
 does not. Sales ties to the Penjualan account; ageing ties to Piutang Usaha and

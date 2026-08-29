@@ -50,4 +50,9 @@ class UmurPiutang extends ReportPage
     {
         return app(ReceivablesAgeing::class)->build(Carbon::parse($this->perTanggal));
     }
+
+    public function chartsFor(ReportTable $report): array
+    {
+        return [app(ReceivablesAgeing::class)->chart($report)];
+    }
 }

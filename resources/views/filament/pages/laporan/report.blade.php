@@ -8,11 +8,20 @@
 @php
     $report = $this->getReport();
     $columns = $report->visibleColumns();
+    $charts = $this->visibleCharts($report);
 @endphp
 
 <x-filament-panels::page>
     @if ($controls = $this->controlsView())
         @include($controls)
+    @endif
+
+    @if ($charts !== [])
+        <div @class(['grid gap-4', 'lg:grid-cols-2' => count($charts) > 1])>
+            @foreach ($charts as $chart)
+                @include('filament.pages.laporan.chart', ['chart' => $chart])
+            @endforeach
+        </div>
     @endif
 
     @foreach ($report->catatan as $note)

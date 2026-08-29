@@ -33,6 +33,11 @@ class PelangganPasif extends ReportPage
         return app(LapsedCustomers::class)->build();
     }
 
+    public function chartsFor(ReportTable $report): array
+    {
+        return [app(LapsedCustomers::class)->chart($report)];
+    }
+
     /** A count worth seeing before opening the page. */
     public static function getNavigationBadge(): ?string
     {

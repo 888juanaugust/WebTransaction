@@ -138,6 +138,44 @@ class StockAgeing
     }
 
     /**
+     * The table's picture: how much shelf value sits idle, by how long.
+     *
+     * The table answers "which SKU"; the chart answers "how bad overall" —
+     * the same rows folded into bands of days since the last sale, so the
+     * money stuck on the shelf reads as one glance instead of two hundred
+     * lines. "Belum pernah keluar" leads because it is the worst band.
+     */
+    public function chart(ReportTable $table): ReportChart
+    {
+        $bands = [
+            'Belum pernah keluar' => 0,
+            '> 180 hari' => 0,
+            '91–180 hari' => 0,
+            '31–90 hari' => 0,
+            '≤ 30 hari' => 0,
+        ];
+
+        foreach ($table->rows as $row) {
+            $band = match (true) {
+                $row['diam'] === null => 'Belum pernah keluar',
+                $row['diam'] > 180 => '> 180 hari',
+                $row['diam'] > 90 => '91–180 hari',
+                $row['diam'] > 30 => '31–90 hari',
+                default => '≤ 30 hari',
+            };
+
+            $bands[$band] += (int) $row['nilai'];
+        }
+
+        return new ReportChart(
+            judul: 'Nilai stok per lama diam',
+            labels: array_keys($bands),
+            values: array_values($bands),
+            catatan: 'Dihitung dari hari sejak barang terakhir keluar.',
+        );
+    }
+
+    /**
      * Quantity and value on hand, per SKU.
      *
      * Value comes from `product_costs` — the moving average pair the whole

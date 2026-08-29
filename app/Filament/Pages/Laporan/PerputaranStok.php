@@ -43,4 +43,9 @@ class PerputaranStok extends ReportPage
     {
         return app(StockAgeing::class)->build(minValue: max(0, $this->nilaiMinimal));
     }
+
+    public function chartsFor(ReportTable $report): array
+    {
+        return [app(StockAgeing::class)->chart($report)];
+    }
 }

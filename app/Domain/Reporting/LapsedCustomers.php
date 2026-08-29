@@ -92,6 +92,30 @@ class LapsedCustomers
 
         usort($rows, fn ($a, $b) => $b['per_bulan'] <=> $a['per_bulan']);
 
+        return $this->table($rows, $asOf);
+    }
+
+    /**
+     * The table's picture: the monthly money going quiet.
+     *
+     * Bars are `per_bulan` — what each lapsed customer used to spend in an
+     * ordinary month — because that is the recurring loss, where lifetime
+     * spend only says who used to be big.
+     */
+    public function chart(ReportTable $table): ReportChart
+    {
+        return ReportChart::topRows(
+            judul: 'Nilai bulanan yang hilang — terbesar',
+            rows: $table->rows,
+            labelKey: 'dimensi',
+            valueKey: 'per_bulan',
+            catatan: 'Rata-rata belanja per bulan semasa aktif, per pelanggan yang diam.',
+        );
+    }
+
+    /** @param  list<array<string, mixed>>  $rows */
+    private function table(array $rows, Carbon $asOf): ReportTable
+    {
         return new ReportTable(
             judul: 'Pelanggan yang berhenti pesan',
             period: Period::asOf($asOf),

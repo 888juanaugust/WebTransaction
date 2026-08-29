@@ -464,6 +464,13 @@ version you email.
 
 ### The four reports — 2 min
 
+Each opens with its picture before its table: the biggest customers as bars,
+the receivable by age bucket, the monthly value going quiet per lapsed
+customer, and the shelf value by how long it has sat. Drawn by the server with
+no script, so they print with the report — and for the Owner on "Semua
+wilayah" the sales report adds a per-region comparison no pinned staff ever
+sees.
+
 Open **Laporan**. Four questions, one screen each, every one downloadable as a
 spreadsheet.
 
@@ -562,7 +569,7 @@ faktur pajak is booked to expense rather than into stock value. Both are
 written up in `docs/MAP.md`.
 
 **"Is it finished?"** The order-to-cash and purchase-to-pay chains are complete
-and tested, and so are the books over the top of them — 1744 tests. Before real users touch it: PSE registration, a
+and tested, and so are the books over the top of them — 1720 tests. Before real users touch it: PSE registration, a
 lawyer's review of the two legal pages, and the real company details replacing
 the placeholders.
 
