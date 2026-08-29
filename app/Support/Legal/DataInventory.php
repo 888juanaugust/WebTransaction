@@ -104,6 +104,16 @@ final class DataInventory
              * Who placed and handled each order. Personal in the sense that
              * matters: it links a named person to a commercial act.
              */
+            'quotations' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by', 'catatan'],
+                'bukan' => [
+                    'nomor', 'company_id', 'status', 'valid_until',
+                    'subtotal_rupiah', 'discount_rupiah', 'dpp_rupiah', 'ppn_rupiah',
+                    'total_rupiah', 'sent_at', 'accepted_at', 'order_id',
+                ],
+            ],
+
             'orders' => [
                 'kategori' => 'aktivitas_transaksi',
                 'personal' => ['created_by', 'sales_user_id', 'placed_by_customer_user_id', 'catatan'],
@@ -645,6 +655,10 @@ final class DataInventory
             'products', 'warehouses', 'price_tiers', 'price_tier_items',
             'price_list_versions', 'price_list_items', 'company_price_overrides',
             'price_list_import_rows',
+
+            // Quote lines: goods and prices, no person — the quote's own
+            // header carries who prepared it.
+            'quotation_lines',
 
             // Stock and costing: quantities and money about goods, not people.
             'stock_levels', 'stock_movements', 'stock_reservations', 'product_costs',

@@ -6,6 +6,7 @@ use App\Http\Controllers\FakturController;
 use App\Http\Controllers\FakturExportController;
 use App\Http\Controllers\GantiWilayahController;
 use App\Http\Controllers\NotaKreditController;
+use App\Http\Controllers\PenawaranController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\RekeningPelangganController;
 use App\Http\Controllers\ReturPembelianController;
@@ -213,3 +214,11 @@ Route::get('/sitemap.xml', function () {
 
     return response($xml)->header('Content-Type', 'application/xml');
 })->name('sitemap');
+
+/*
+ * Dokumen penawaran — staff print the priced offer for a customer. Same
+ * posture as the faktur: staff guard, credit-data gate in the controller.
+ */
+Route::middleware(['web', 'auth:web'])
+    ->get('/dokumen/penawaran/{quotation}', PenawaranController::class)
+    ->name('dokumen.penawaran');

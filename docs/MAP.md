@@ -84,9 +84,11 @@ that exists; otherwise every surface falls back to the wordmark.
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
+| `/admin/laporan/umur-hutang` | Umur hutang | Finance, Owner | The payables mirror: whom **we** owe, by age, tied to Hutang Usaha |
 | `/admin/laporan/rekening-pelanggan` | Rekening pelanggan | Sales, Finance, Owner | One customer's account, and the statement to send them |
 | `/admin/laporan/pelanggan-pasif` | Pelanggan pasif | Sales, Finance, Owner | Customers who broke their own ordering rhythm |
 | `/admin/laporan/perputaran-stok` | Perputaran stok | Finance, Owner | Dead stock, ranked by the money stuck in it |
+| `/admin/quotations` | Penawaran | not Inventori | Quotes: draft → kirim → terima → jadikan order. Kedaluwarsa is derived, never stored |
 | `/dokumen/surat-jalan/{order}` | Surat jalan | Warehouse, Owner | Print-styled delivery note, **no prices** |
 | `/dokumen/faktur/{invoice}` | Faktur | Sales, Finance, Owner | Print-styled invoice, DPP + PPN per line. **Not Warehouse** |
 | `/dokumen/nota-kredit/{creditNote}` | Nota kredit | Sales, Finance, Owner | The credit the customer receives. Drafts are a 404 |
@@ -94,6 +96,7 @@ that exists; otherwise every surface falls back to the wordmark.
 | `/dokumen/retur-pembelian/{purchaseReturn}` | Nota retur | Finance, Owner | Goes back with the goods. **We** issue it, not the supplier. Drafts are a 404 |
 | `/dokumen/rekening-pelanggan/{company}` | Rekening koran | Sales, Finance, Owner | The statement, print-styled. Window comes from the query string |
 | `/dokumen/faktur-pajak/{export}` | Ekspor faktur pajak | Finance, Owner | The filing file, served from disk as written — never regenerated |
+| `/dokumen/penawaran/{quotation}` | Penawaran | not Inventori | The quote as the customer receives it. Drafts print with a DRAF watermark |
 
 The accounting screens are behind `canSeeBooks()` — except the reconciliation
 desk, which is behind `canReconcileBank()` because it posts. They carry cost and
@@ -276,6 +279,20 @@ company blanket → tier blanket → list price. Within each, the highest
 
 Cart, order confirmation, invoice and quote all call `resolve()`. **If you find
 a price computed anywhere else, that is the bug.**
+
+### Penawaran — the price promised in writing
+
+| Function | Decides |
+|---|---|
+| `QuotationFlow::draft` | Lines priced by **the resolver**, never typed; DPP/PPN per line; nomor `PEN-…` from the shared sequence; 14 days' validity by default |
+| `QuotationFlow::send` / `accept` / `cancel` | The quote's small state machine, each step audited. Accept refuses an expired quote |
+| `Quotation::statusTampil` | `kedaluwarsa` is **derived** from `valid_until` over draft/terkirim — never stored, so it can never be stale |
+| `QuotationFlow::toOrder` | An accepted quote becomes **one** draft order — goods travel, prices do not. The order re-resolves at `confirmed` like every order (invariant 3 belongs to `confirmed`); `order_id` on the quote makes a second conversion impossible |
+
+A quote is a promise about price, so creating one is gated like creating an
+order, and the printed document says the promise's limit out loud: valid until
+its date, binding only when an order is confirmed. Drafts print with a DRAF
+watermark so an unsent quote cannot pass for an offer made.
 
 ### Orders — every transition in one place
 
@@ -789,6 +806,8 @@ return.
 | `SalesReport::chart` / `regionChart` | Top rows of the table (calendar order by month); sales per wilayah for viewers who already see all regions |
 | `ReceivablesAgeing::chart` / `LapsedCustomers::chart` / `StockAgeing::chart` | Buckets from the totals row · monthly value going quiet · shelf value by idle band |
 | `ReceivablesAgeing::bucketTotals` | The totals row's buckets **signed** — unmatched payments and giro negative, so the seven values sum to Piutang Usaha. The chart clamps them for bars; anything shown beside the balance reads these |
+| `PayablesAgeing::build` | The mirror: whom **we** owe, per supplier per bill, same 30/60/90 buckets. Unattached payments, returns + credit notes, and giro keluar beredar each in their own negative column |
+| `PayablesAgeing::bucketTotals` | Signed like the receivables side, summing to `SupplierLedger::totalPayable()` — and a `PERIKSA:` caveat in the report when they disagree |
 | `RingkasanBulanan::build` | The owner's month on one sheet, **composed from the reports above** — never its own SUM, so the summary cannot contradict its detail pages. Flow (penjualan, margin, uang masuk from the payment ledger net of reversals) is the chosen month; position (piutang, umur) is today's, and the screen says so. Owner-only page `laporan/ringkasan`, defaults to last month, prints without panel chrome |
 
 Each chart **derives from the ReportTable already built** — same rows, same

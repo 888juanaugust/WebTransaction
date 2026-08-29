@@ -5,7 +5,7 @@
                   dark:border-white/10 dark:bg-gray-800 dark:text-gray-100" />
 
     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Umur dihitung dari jatuh tempo faktur. Totalnya harus sama dengan Piutang Usaha di
+        Umur dihitung dari jatuh tempo faktur. Totalnya harus sama dengan {{ $this->akunKontrol() }} di
         buku besar — kalau tidak, ada peringatan di atas tabel.
     </p>
 </div>

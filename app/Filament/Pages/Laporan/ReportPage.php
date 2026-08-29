@@ -70,6 +70,16 @@ abstract class ReportPage extends Page
         return null;
     }
 
+    /**
+     * The control account this report's total must tie to, named in the
+     * caption under the date control. Piutang for the receivables side;
+     * the payables mirror overrides it.
+     */
+    public function akunKontrol(): string
+    {
+        return 'Piutang Usaha';
+    }
+
     public static function canAccess(): bool
     {
         return auth()->user()?->role()->canSeeReports() ?? false;
