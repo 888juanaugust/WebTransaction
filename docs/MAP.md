@@ -1583,7 +1583,10 @@ first-in-first-out reading is laid over it. See the section above.
 
 Deployment is written up in `docs/DEPLOY.md` — a bare Hostinger VPS through to
 taking real money, with the executable kit in `deploy/` (provision.sh,
-deploy.sh, Caddyfile, supervisor unit).
+deploy.sh, Caddyfile, supervisor unit) and the pipeline in
+`.github/workflows/` (every push runs the suite, pint, the Vite build and a
+deploy-kit lint; pushing `production` runs the same suite as a gate, then a
+human-approved SSH deploy that runs deploy.sh on the VPS).
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.

@@ -468,6 +468,38 @@ php artisan up
 `bash deploy/deploy.sh --first`, which builds, writes a fresh `.env`, and
 stops for you to fill it rather than migrating against an empty password.
 
+## 10b. The pipeline: push to `production`, and the rest is mechanical
+
+Promotion is a branch, not a button. Work lands on the working branch; when a
+release is ready, merge (or push) it to **`production`** and
+`.github/workflows/deploy.yml` takes over: the full test suite runs first —
+the same `tests.yml` the working branch runs, called rather than copied, so
+the gate cannot drift — and only a green suite reaches the deploy job, which
+SSHes to the VPS and runs `deploy/deploy.sh`. One deploy at a time, never
+cancelled mid-flight: a killed deploy leaves the site in maintenance mode.
+
+Set once, in the repository's Actions secrets:
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | The VPS address |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | A private key made **for this pipeline** — generate a fresh pair, put the public half in `/home/deploy/.ssh/authorized_keys`, and never reuse a person's key |
+| `DEPLOY_KNOWN_HOSTS` | `ssh-keyscan -H <host>` output — pinned, so the pipeline refuses to talk to anything that is not the VPS |
+
+Then two one-time settings:
+
+- **Repo → Settings → Environments → `production` → required reviewers.**
+  That puts a named human approval between green tests and the live server —
+  the same two-keys shape the application itself runs on.
+- **On the VPS, the clone tracks `production`:**
+  `git -C /var/www/webtransaction checkout production` after the first
+  deploy, so the pipeline's `git pull --ff-only` fast-forwards to exactly
+  what was tested and nothing else.
+
+`workflow_dispatch` on the Deploy workflow re-deploys the branch as it
+stands — for the day a deploy dies halfway and the fix is "run it again".
+
 `queue:restart` is not optional. Workers are long-lived processes holding the
 old code in memory; without it, a deploy that changes a job leaves the previous
 version running until something else restarts it.

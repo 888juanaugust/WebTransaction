@@ -6,9 +6,18 @@ name: Tests
 on:
   push:
   pull_request:
+  # Lets the deploy pipeline run this exact suite as its gate, instead of
+  # maintaining a second copy that would quietly drift.
+  workflow_call:
 
 permissions:
   contents: read
+
+# A push that supersedes another cancels its run — except on the deploy
+# gate, where a cancelled suite must never look like a passed one.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 jobs:
   tests:
@@ -110,3 +119,32 @@ jobs:
 
       - name: Check formatting
         run: vendor/bin/pint --test
+
+      - name: Lint the deploy kit
+        # bash -n catches the syntax error that would otherwise be found
+        # halfway through provisioning a production server.
+        run: |
+          bash -n deploy/provision.sh
+          bash -n deploy/deploy.sh
+
+  frontend:
+    runs-on: ubuntu-latest
+    name: Vite build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The one failure CI never caught: a blade change referencing a
+      # Tailwind class the build cannot compile only surfaced on the VPS,
+      # mid-deploy, with the site already in maintenance mode.
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build

@@ -1,0 +1,73 @@
+name: Deploy
+
+# The CD half of the pipeline. Promotion is a branch, not a button hidden in
+# a run: merging (or pushing) to `production` is the deliberate act, and
+# everything after it is mechanical — the full suite, then deploy/deploy.sh
+# on the VPS over SSH. `workflow_dispatch` re-deploys the branch as it
+# stands, for the day a deploy died halfway and the fix is "run it again".
+#
+# Secrets (repository → Settings → Secrets → Actions), documented in
+# docs/DEPLOY.md §10b:
+#
+#   DEPLOY_HOST         the VPS address
+#   DEPLOY_USER         almost always `deploy`
+#   DEPLOY_SSH_KEY      private key whose public half is in the deploy
+#                       user's authorized_keys — a key made for this, not
+#                       anyone's personal one
+#   DEPLOY_KNOWN_HOSTS  output of `ssh-keyscan -H <host>`, pinned here so
+#                       the pipeline refuses a host that is not the VPS
+#                       instead of trusting whoever answers first
+#
+# Protect the `production` environment in repo settings with a required
+# reviewer to put a human approval between green tests and the server.
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancelled mid-flight: a killed deploy
+# leaves the site in maintenance mode.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Prepare SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          if ! [ -s ~/.ssh/known_hosts ]; then
+            echo "DEPLOY_KNOWN_HOSTS is empty — refusing to connect to an unpinned host." >&2
+            echo "Generate it with: ssh-keyscan -H <vps-host>" >&2
+            exit 1
+          fi
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        # The script on the server is the one this commit shipped — git pull
+        # runs first inside deploy.sh, so the code and the procedure that
+        # deploys it always move together.
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            'cd /var/www/webtransaction && git pull --ff-only && bash deploy/deploy.sh'
