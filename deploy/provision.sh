@@ -108,6 +108,9 @@ systemctl enable --now caddy >/dev/null
 # Reload only once the app exists; a root pointing at nothing is a 502 either way.
 systemctl reload caddy || true
 
+say "Log rotation for the worker and Caddy logs"
+cp "$REPO_DIR/deploy/logrotate/webtransaction" /etc/logrotate.d/webtransaction
+
 say "Supervisor worker"
 cp "$REPO_DIR/deploy/supervisor/webtransaction-worker.conf" /etc/supervisor/conf.d/
 systemctl enable --now supervisor >/dev/null

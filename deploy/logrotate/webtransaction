@@ -1,0 +1,26 @@
+# /etc/logrotate.d/webtransaction — installed by deploy/provision.sh.
+#
+# The Laravel log is on LOG_CHANNEL=daily in production and rotates itself;
+# these are the two files nothing else rotates: the queue worker's stdout
+# and Caddy's access log. Left alone they eat the disk in silence, and the
+# disk is one of the seven things ops:check watches.
+
+/var/log/webtransaction-worker.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+
+/var/log/caddy/webtransaction.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

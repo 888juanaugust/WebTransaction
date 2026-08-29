@@ -9,6 +9,8 @@ use App\Domain\Backup\BackupCipher;
 use App\Domain\Backup\DatabaseDumper;
 use App\Domain\Backup\FileArchiver;
 use App\Domain\Launch\LaunchReadiness;
+use App\Domain\Ops\OpsAlerter;
+use App\Domain\Ops\OpsHealth;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
@@ -24,7 +26,10 @@ use App\Observers\CompanyObserver;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -158,6 +163,38 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Company::observe(CompanyObserver::class);
+
+        /*
+         * A query that takes over a second on this workload is a bug, not a
+         * load problem — twenty orders a day does not produce slow queries,
+         * missing indexes and N+1s do. Logged in production only: locally
+         * the suite and seeders would drown the log in cold-cache noise.
+         */
+        if ($this->app->isProduction()) {
+            DB::listen(function ($query): void {
+                if ($query->time > 1_000) {
+                    Log::warning('Kueri lambat', [
+                        'ms' => $query->time,
+                        'sql' => $query->sql,
+                    ]);
+                }
+            });
+        }
+
+        /*
+         * The scheduler proves it is alive by saying so. OpsHealth reads
+         * this stamp; a missing or stale heartbeat is the finding "cron is
+         * not running", which otherwise announces itself as stock quietly
+         * staying fenced.
+         */
+        Schedule::call(fn () => Cache::put(
+            OpsHealth::HEARTBEAT_KEY, time(),
+        ))->everyMinute()->name('ops-heartbeat');
+
+        // The hourly sweep that mails the Owner when the box is broken —
+        // once per incident; OpsAlerter owns the throttle.
+        Schedule::call(fn () => app(OpsAlerter::class)->sweep())
+            ->hourly()->name('ops-alert-sweep');
 
         Schedule::job(new ReleaseStaleReservations)->everyFifteenMinutes();
 

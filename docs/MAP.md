@@ -1186,6 +1186,16 @@ Owner only. This screen carries the before and after of everything anybody
 overrode, prices and credit limits included, so it is the one place that leaks
 every kind of data the role separation elsewhere exists to keep apart.
 
+### Ops — the box examines itself
+
+| Piece | Decides |
+|---|---|
+| `OpsHealth` | Seven checks: PostgreSQL, Redis, antrean, job gagal, scheduler heartbeat, umur cadangan, disk. Every check catches its own exceptions — a health check that throws lies by omission |
+| `ops:check` | Terminal view; exit 0/1/2 = sehat/waspada/gawat, so a prober pages on the number |
+| `KesehatanSistem` widget | Owner only, **silent when healthy** — same rule as the backup banner |
+| `OpsAlerter` | Mails the Owner once per incident (6h throttle, cleared on recovery); the mail is deliberately unqueued |
+| Heartbeat | The scheduler stamps the cache every minute; the stamp's absence *is* the "cron is dead" finding |
+
 ### Kesiapan peluncuran — the launch checklist that checks itself
 
 `php artisan launch:check` prints the same checks where the deployer already

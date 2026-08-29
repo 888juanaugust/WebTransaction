@@ -288,6 +288,7 @@ PERUSAHAAN_REKENING_NAMA=…                 # three right before the first invo
 BACKUP_ENCRYPTION_KEY=…                    # php artisan backup:key
 BACKUP_DISK=…                              # NOT this machine — see docs/BACKUP.md
 SESSION_SECURE_COOKIE=true                 # the cookie never travels plain http
+LOG_CHANNEL=daily                          # rotates itself; 14 days kept
 ```
 
 `APP_DEBUG=false` is not a style preference. A stack trace on an exception page
@@ -509,6 +510,37 @@ is safe — nothing shipped is ever edited. That rule is what makes this list th
 short, and it is worth keeping.
 
 ---
+
+## Watching it run
+
+The box examines itself. `App\Domain\Ops\OpsHealth` runs seven checks —
+PostgreSQL, Redis, queue backlog, failed jobs, a scheduler heartbeat, backup
+age, disk space — and three things read them:
+
+- **`php artisan ops:check`** — the terminal view. Exit code 0 healthy,
+  1 degraded, 2 broken, so a cron line or an external prober can page on
+  the number without parsing Indonesian.
+- **The Owner's dashboard** shows a Kesehatan sistem banner **only when a
+  check is not green** — same rule as the backup banner: a permanent tick
+  stops being read within a week.
+- **An email to the Owner** when anything goes GAWAT — once per incident,
+  not hourly; the throttle clears on recovery so the next incident mails
+  immediately. The mail is deliberately not queued: an alert about a dead
+  worker that waits for a worker is a punchline.
+
+Two findings only a human can arrange:
+
+- **External uptime.** This box cannot see itself vanish from the internet.
+  Point a free prober (UptimeRobot or similar) at `https://<domain>/up`
+  every 5 minutes — that endpoint is intentionally bare and safe to expose.
+  Everything richer stays in `ops:check`, which never leaves the server.
+- **Where the alert email lands.** It goes to the Owner accounts' addresses;
+  make sure at least one is a mailbox somebody reads on a Saturday.
+
+Slow queries (over one second) are logged as warnings in production —
+on twenty orders a day a slow query is a missing index, not load. The
+worker and Caddy logs rotate weekly via `deploy/logrotate/webtransaction`;
+the Laravel log rotates itself on the `daily` channel.
 
 ## When something is wrong
 
