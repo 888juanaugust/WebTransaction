@@ -155,6 +155,7 @@ The scheduler's data-integrity job:
 | Job | Interval | Consequence if it never runs |
 |---|---|---|
 | `ReleaseStaleReservations` | 15 min | Stock stays fenced by orders that were never paid, and the warehouse looks emptier than it is. |
+| `PruneAbandonedCarts` | Daily | Dead baskets accumulate forever. Losing this only costs disk, not money. |
 
 Supervisor should restart workers on exit. Worker restarts are safe at any
 moment: queue jobs are idempotent by convention, so a kill mid-flight rolls

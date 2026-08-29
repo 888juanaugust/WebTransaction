@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Audit\AuditLogger;
 use App\Domain\Backup\BackupCipher;
 use App\Domain\Backup\DatabaseDumper;
 use App\Domain\Backup\FileArchiver;
@@ -13,13 +14,17 @@ use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
+use App\Jobs\PruneAbandonedCarts;
 use App\Jobs\PurgeVisitPhotos;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepDebtAging;
 use App\Models\Company;
+use App\Models\CustomerUser;
 use App\Observers\CompanyObserver;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -120,6 +125,25 @@ class AppServiceProvider extends ServiceProvider
         // drop a money field on the floor.
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
+        /*
+         * A buyer resetting their own password leaves a trail. No actor —
+         * the buyer is not a staff user and the audit log's actor column
+         * means staff — but the subject names the account, which is what an
+         * incident review needs: when did this login's credential change.
+         */
+        Event::listen(
+            PasswordReset::class,
+            function (PasswordReset $event): void {
+                if ($event->user instanceof CustomerUser) {
+                    app(AuditLogger::class)->log(
+                        action: 'customer_password_reset',
+                        subject: $event->user,
+                        actor: null,
+                    );
+                }
+            },
+        );
+
         Company::observe(CompanyObserver::class);
 
         Schedule::job(new ReleaseStaleReservations)->everyFifteenMinutes();
@@ -138,6 +162,10 @@ class AppServiceProvider extends ServiceProvider
          * archive a month as a zip before its photos reach this line.
          */
         Schedule::job(new PurgeVisitPhotos)->dailyAt('00:45');
+
+        // Baskets untouched for three months. A cart holds quantities and
+        // never money, so this deletes a shopping list, not a record.
+        Schedule::job(new PruneAbandonedCarts)->dailyAt('01:00');
 
         /*
          * Nightly backup, at an hour when nobody is ordering.

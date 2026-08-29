@@ -10,6 +10,7 @@ use App\Domain\Orders\OrderStatus;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Uom\Unit;
+use App\Jobs\PruneAbandonedCarts;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Company;
@@ -451,5 +452,42 @@ class CartTest extends TestCase
         );
 
         $this->assertLessThanOrEqual(2, count($pricing));
+    }
+
+    // --- abandoned carts ----------------------------------------------------
+
+    public function test_the_prune_deletes_a_basket_nobody_touched_for_three_months(): void
+    {
+        $stale = Cart::factory()->create();
+        CartItem::factory()->create(['cart_id' => $stale->id, 'sku' => 'YH-CART-1']);
+        // Backdate below the model so `$touches` cannot refresh it.
+        Cart::query()->whereKey($stale->id)->update(['updated_at' => now()->subDays(91)]);
+
+        $fresh = Cart::factory()->create();
+
+        (new PruneAbandonedCarts)->handle();
+
+        $this->assertDatabaseMissing('carts', ['id' => $stale->id]);
+        $this->assertDatabaseMissing('cart_items', ['cart_id' => $stale->id]);
+        $this->assertDatabaseHas('carts', ['id' => $fresh->id]);
+    }
+
+    public function test_editing_an_item_keeps_the_basket_alive(): void
+    {
+        /*
+         * The retention clock is the last time anyone worked the basket, not
+         * the day it was created — CartItem touches its cart. A buyer who
+         * kept adding to a January basket in March must not lose it in April.
+         */
+        $cart = Cart::factory()->create();
+        Product::factory()->create(['kode' => 'YH-CART-9', 'aktif' => true]);
+        $item = CartItem::factory()->create(['cart_id' => $cart->id, 'sku' => 'YH-CART-9']);
+        Cart::query()->whereKey($cart->id)->update(['updated_at' => now()->subDays(120)]);
+
+        $item->forceFill(['ordered_qty' => 9])->save();
+
+        (new PruneAbandonedCarts)->handle();
+
+        $this->assertDatabaseHas('carts', ['id' => $cart->id]);
     }
 }

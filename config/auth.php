@@ -112,6 +112,18 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        /*
+         * Buyers reset against their own table, same as they authenticate
+         * against their own table — a buyer and a staff member sharing an
+         * email address must never share a reset token.
+         */
+        'customer_users' => [
+            'provider' => 'customer_users',
+            'table' => 'customer_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 
     /*

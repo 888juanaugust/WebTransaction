@@ -1502,6 +1502,17 @@ Neither happens here.
 Columns are mapped by **position**, never by header text — rows 872 and 884 of
 the real file have headers that disagree with the data below them.
 
+### Access — and the buyer's own reset
+
+| Piece | Decides |
+|---|---|
+| `PortalPanelProvider ->passwordReset()` | Self-service reset on the portal — request link, mailed token, reset form |
+| `customer_users` broker | Buyers reset against **their own token table** (`customer_password_reset_tokens`): a buyer and a staff member sharing an email can never share a token |
+| `PasswordReset` listener | A buyer's own reset lands in the audit log — no actor, but the subject names the account |
+
+Staff deliberately have no such flow: their passwords are reset by the Owner
+on the staff screen, where the change is audited to a person.
+
 ### Access
 
 `Role::canSeePrices`, `canSeeCreditData`, `canCreateOrders`, `canConfirmPayment`,
@@ -1528,6 +1539,7 @@ if a portal resource over a company-owned table lacks the scope.
 |---|---|---|
 | `ParsePriceListImport` | On upload | Parses the workbook into staging |
 | `ReleaseStaleReservations` | Every 15 min | Frees stock on stale unpaid orders |
+| `PruneAbandonedCarts` | Daily 01:00 | Baskets untouched for 90 days — quantities only, never money |
 
 All idempotent — assume they run twice.
 
@@ -1554,12 +1566,6 @@ All idempotent — assume they run twice.
   floating unallocated credit an unmatched payment currently becomes
 - More than one bank account — see the reconciliation section above
 - Importing a statement file; every line is ticked by hand
-- Supplier credits with no goods behind them — a price correction on a bill
-- Statement of account — one customer's invoices, credits and payments on a page
-- Reorder points, the question the stock report deliberately does not answer
-- Buyer self-service password reset
-- `releaseForOrder()` has no deterministic lock ordering (`reserveForOrder` does)
-- Nothing prunes abandoned carts
 - Seeder ships `password` as the staff password
 
 Landed cost has one approximation worth knowing about rather than a gap: which

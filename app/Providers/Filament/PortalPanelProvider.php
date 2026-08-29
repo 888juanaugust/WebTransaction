@@ -49,6 +49,15 @@ class PortalPanelProvider extends PanelProvider
             ->brandLogo(fn () => Branding::logoUrl())
             ->brandLogoHeight('1.75rem')
             ->login()
+            /*
+             * Self-service reset, on the buyer's own broker — its own token
+             * table, so a buyer and a staff member sharing an email can never
+             * share a token. The admin panel deliberately has no such link:
+             * staff passwords are reset by the Owner through the staff
+             * screen, where the change is audited to a person.
+             */
+            ->passwordReset()
+            ->authPasswordBroker('customer_users')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors(BrandColors::panel())
             ->discoverResources(in: app_path('Filament/Portal/Resources'), for: 'App\Filament\Portal\Resources')

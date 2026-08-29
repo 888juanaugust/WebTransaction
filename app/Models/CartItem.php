@@ -22,6 +22,16 @@ class CartItem extends Model
 {
     use HasFactory;
 
+    /**
+     * Touching an item touches the cart, so `carts.updated_at` is the last
+     * moment anyone worked the basket — which is what the abandoned-cart
+     * prune measures. Without this, a buyer edited items for a week while
+     * the cart row's own timestamp never moved.
+     *
+     * @var list<string>
+     */
+    protected $touches = ['cart'];
+
     protected function casts(): array
     {
         return [

@@ -674,13 +674,16 @@ final class DataInventory
             'backup_runs',
 
             /*
-             * Framework tables that do hold personal data but are not ours to
-             * describe row by row: `sessions` carries an IP address and user
-             * agent, and `password_reset_tokens` an email address. Both are
-             * covered by the notice under activity and account data, and both
-             * are short-lived by construction.
+             * Framework-shaped tables that do hold personal data but are not
+             * ours to describe row by row: `sessions` carries an IP address
+             * and user agent, and the two reset-token tables an email
+             * address (`customer_password_reset_tokens` is the buyers' own —
+             * same shape, separate so a buyer and a staff member sharing an
+             * email can never share a token). All are covered by the notice
+             * under activity and account data, and all are short-lived by
+             * construction.
              */
-            'sessions', 'password_reset_tokens',
+            'sessions', 'password_reset_tokens', 'customer_password_reset_tokens',
         ];
     }
 

@@ -370,8 +370,13 @@ class StockLedger
     public function releaseForOrder(Order $order, string $resolutionReason): int
     {
         return DB::transaction(function () use ($order, $resolutionReason) {
+            // Same lock order as reserveForOrder — by SKU — so a release and
+            // a confirmation running at the same moment walk the stock rows
+            // in one direction instead of meeting in the middle.
             $held = $order->reservations()
                 ->where('status', StockReservation::STATUS_HELD)
+                ->orderBy('sku')
+                ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
