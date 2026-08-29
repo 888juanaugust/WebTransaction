@@ -20,6 +20,7 @@ use App\Domain\Reporting\Period;
 use App\Domain\Reporting\ReceivablesAgeing;
 use App\Domain\Reporting\ReportColumn;
 use App\Domain\Reporting\ReportCsv;
+use App\Domain\Reporting\RingkasanBulanan;
 use App\Domain\Reporting\SalesDimension;
 use App\Domain\Reporting\SalesReport;
 use App\Domain\Reporting\StockAgeing;
@@ -765,6 +766,88 @@ class ReportingTest extends TestCase
     }
 
     // --- helpers ------------------------------------------------------------
+
+    // --- ringkasan bulanan --------------------------------------------------
+
+    /**
+     * The summary must agree with the reports it summarises — that is its
+     * whole design (it composes them rather than querying) — and this test
+     * pins the composition: sales from the invoiced month, cash from the
+     * payment ledger, the receivable position from today.
+     */
+    public function test_the_monthly_summary_composes_the_reports_it_summarises(): void
+    {
+        $a = $this->customer('Bengkel Ringkasan A');
+        $b = $this->customer('Toko Ringkasan B');
+
+        // A: invoiced, paid through the ledger, and shipped — so it has cost.
+        $orderA = $this->paidOrder($a, self::SKU_A, 100);
+        app(OrderStateMachine::class)->ship($orderA->refresh(), $this->warehouse);
+
+        // B: invoiced and nothing else — the open receivable.
+        $orderB = $this->invoicedOrder($b, self::SKU_B, 50);
+
+        $r = app(RingkasanBulanan::class)
+            ->build(Period::month(now()->format('Y-m')));
+
+        // Flow: both invoices' lines, at the 100k list price.
+        $this->assertSame(2, $r->faktur);
+        $this->assertSame(15_000_000, $r->penjualan);
+
+        // Cost exists only for the shipped order; the caveat owns the rest.
+        $this->assertSame(100 * 60_000, $r->hpp);
+        $this->assertSame(15_000_000 - 6_000_000, $r->margin);
+        $this->assertNotEmpty($r->catatan);
+
+        // Cash is the payment ledger, gross of PPN — a different measure
+        // from penjualan on purpose, because it is a different question.
+        $this->assertSame((int) $orderA->refresh()->invoice->total_rupiah, $r->uangMasuk);
+
+        // Position: what is still owed, sitting in the not-yet-due band.
+        $totalB = (int) $orderB->refresh()->invoice->total_rupiah;
+        $this->assertSame($totalB, $r->piutang);
+        $this->assertContains($totalB, array_column($r->umurPiutang, 'nilai'));
+
+        // The buckets are signed so they add up to the balance beside them —
+        // the whole reason the summary reads bucketTotals, not the chart.
+        $this->assertSame($r->piutang, array_sum(array_column($r->umurPiutang, 'nilai')));
+
+        // Who and what mattered.
+        $this->assertSame('Bengkel Ringkasan A', $r->topPelanggan[0]['dimensi']);
+        $this->assertSame(10_000_000, $r->topPelanggan[0]['penjualan']);
+        $this->assertSame(
+            ['YUHOLI' => 10_000_000, 'OSBORN' => 5_000_000],
+            array_column($r->topMerk, 'penjualan', 'dimensi'),
+        );
+    }
+
+    public function test_the_summary_separates_the_months_flow_from_todays_position(): void
+    {
+        $b = $this->customer('Toko Posisi');
+        $this->invoicedOrder($b, self::SKU_B, 10);
+
+        // Last month saw none of this month's trade…
+        $lalu = app(RingkasanBulanan::class)
+            ->build(Period::month(now()->subMonthNoOverflow()->format('Y-m')));
+
+        $this->assertSame(0, $lalu->penjualan);
+        $this->assertSame(0, $lalu->uangMasuk);
+
+        // …but the receivable is a position, and the position is today's.
+        $this->assertGreaterThan(0, $lalu->piutang);
+    }
+
+    public function test_only_the_owner_opens_the_monthly_summary(): void
+    {
+        $this->actingAs(User::factory()->owner()->create(), 'web')
+            ->get('/admin/laporan/ringkasan')->assertOk();
+
+        // Finance sees money and Sales sees sales — this page is the one
+        // place margin, cash and every debt sit together, so it is the
+        // owner's alone.
+        $this->actingAs($this->finance, 'web')
+            ->get('/admin/laporan/ringkasan')->assertForbidden();
+    }
 
     private function customer(string $nama): Company
     {

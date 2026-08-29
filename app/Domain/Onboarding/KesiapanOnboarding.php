@@ -6,6 +6,7 @@ namespace App\Domain\Onboarding;
 
 use App\Models\Company;
 use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,6 +25,31 @@ use Illuminate\Support\Carbon;
  */
 class KesiapanOnboarding
 {
+    /**
+     * Attach the answers the three query-backed steps need as aggregate
+     * columns, so a list screen runs no queries per row.
+     *
+     * Lives here, next to the methods that read the aliases, because the two
+     * halves are one contract: rename an alias in one place only and the
+     * steps silently fall back to per-row queries — correct answers, wrong
+     * cost, and nothing fails. The equivalence test pins both paths.
+     *
+     * The order exists-check drops the region scope for the same reason the
+     * fallback query does: a split books a customer's orders elsewhere.
+     *
+     * @param  Builder<Company>  $query
+     * @return Builder<Company>
+     */
+    public static function preload($query)
+    {
+        return $query
+            ->withCount(['customerUsers as akun_portal_aktif_count' => fn ($q) => $q->where('is_active', true)])
+            ->withMax(['customerUsers as login_terakhir'], 'last_login_at')
+            ->withExists(['orders as ada_order' => fn ($q) => $q
+                ->withoutGlobalScope('region')
+                ->where('status', '!=', 'draft')]);
+    }
+
     /** @return list<LangkahOnboarding> */
     public function langkah(Company $company): array
     {
@@ -131,9 +157,21 @@ class KesiapanOnboarding
                 .'harga untuk pelanggan ini.');
     }
 
+    /*
+     * The three steps below each need something a plain Company row does not
+     * carry. Asked one customer at a time — an edit screen, a test — the
+     * queries are fine; the worklist would run them per row, so it preloads
+     * the same answers as aggregate columns (see OnboardingPelanggan) and
+     * these methods prefer the loaded value when it is there. Same
+     * definitions on both paths, or the worklist and the detail would tick
+     * differently.
+     */
+
     private function akunPortal(Company $company): LangkahOnboarding
     {
-        $aktif = $company->customerUsers()->where('is_active', true)->count();
+        $aktif = array_key_exists('akun_portal_aktif_count', $company->getAttributes())
+            ? (int) $company->akun_portal_aktif_count
+            : $company->customerUsers()->where('is_active', true)->count();
 
         return $aktif > 0
             ? LangkahOnboarding::selesai('akun_portal', 'Akun portal dibuat',
@@ -145,9 +183,9 @@ class KesiapanOnboarding
 
     private function masukPertama(Company $company): LangkahOnboarding
     {
-        $terakhir = $company->customerUsers()
-            ->whereNotNull('last_login_at')
-            ->max('last_login_at');
+        $terakhir = array_key_exists('login_terakhir', $company->getAttributes())
+            ? $company->login_terakhir
+            : $company->customerUsers()->whereNotNull('last_login_at')->max('last_login_at');
 
         return $terakhir !== null
             ? LangkahOnboarding::selesai('masuk_pertama', 'Pembeli sudah masuk',
@@ -164,11 +202,13 @@ class KesiapanOnboarding
      */
     private function orderPertama(Company $company): LangkahOnboarding
     {
-        $ada = Order::query()
-            ->withoutGlobalScope('region')
-            ->where('company_id', $company->id)
-            ->where('status', '!=', 'draft')
-            ->exists();
+        $ada = array_key_exists('ada_order', $company->getAttributes())
+            ? (bool) $company->ada_order
+            : Order::query()
+                ->withoutGlobalScope('region')
+                ->where('company_id', $company->id)
+                ->where('status', '!=', 'draft')
+                ->exists();
 
         return $ada
             ? LangkahOnboarding::selesai('order_pertama', 'Order pertama diajukan',

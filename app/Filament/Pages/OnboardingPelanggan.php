@@ -59,8 +59,9 @@ class OnboardingPelanggan extends Page
     {
         $kesiapan = app(KesiapanOnboarding::class);
 
-        return Company::query()
-            ->where('status', '!=', Company::STATUS_SUSPENDED)
+        return KesiapanOnboarding::preload(
+            Company::query()->where('status', '!=', Company::STATUS_SUSPENDED)
+        )
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (Company $company) => [

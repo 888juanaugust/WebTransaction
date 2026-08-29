@@ -154,27 +154,49 @@ class ReceivablesAgeing
      */
     public function chart(ReportTable $table): ReportChart
     {
+        $buckets = $this->bucketTotals($table);
+
+        return new ReportChart(
+            judul: 'Piutang per umur',
+            labels: array_column($buckets, 'label'),
+            // Clamped for the bars only — a bar cannot point downward. The
+            // signed figures live in bucketTotals(), and any reader that
+            // must add up to the ledger balance reads those instead.
+            values: array_map(fn ($b) => max(0, $b['nilai']), $buckets),
+            catatan: 'Pembayaran belum dicocokkan dan giro belum cair ditampilkan positif.',
+        );
+    }
+
+    /**
+     * The totals row's buckets, **signed**, labelled by their columns.
+     *
+     * Unmatched payments and giro in hand are negative here because that is
+     * how they carry: they reduce the receivable without belonging to an age
+     * band. Summing these values gives exactly the table's total — which is
+     * exactly Piutang Usaha — so a screen that shows them beside the balance
+     * adds up in front of the reader instead of appearing to contradict it.
+     *
+     * @return list<array{label: string, nilai: int}>
+     */
+    public function bucketTotals(ReportTable $table): array
+    {
         $buckets = [
             'belum_jatuh_tempo', 'b1', 'b2', 'b3', 'b4',
             'belum_dicocokkan', 'dijamin_giro',
         ];
 
-        $labels = [];
-        $values = [];
+        $rows = [];
 
         foreach ($table->columns as $column) {
             if (in_array($column->key, $buckets, true)) {
-                $labels[] = $column->label;
-                $values[] = max(0, (int) ($table->totals[$column->key] ?? 0));
+                $rows[] = [
+                    'label' => $column->label,
+                    'nilai' => (int) ($table->totals[$column->key] ?? 0),
+                ];
             }
         }
 
-        return new ReportChart(
-            judul: 'Piutang per umur',
-            labels: $labels,
-            values: $values,
-            catatan: 'Pembayaran belum dicocokkan dan giro belum cair ditampilkan positif.',
-        );
+        return $rows;
     }
 
     /**

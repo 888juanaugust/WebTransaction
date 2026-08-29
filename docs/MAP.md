@@ -788,6 +788,8 @@ return.
 | `ReportChart` | A report's picture: labelled bars, drawn server-side as one Blade partial — no script, so the chart prints with the report |
 | `SalesReport::chart` / `regionChart` | Top rows of the table (calendar order by month); sales per wilayah for viewers who already see all regions |
 | `ReceivablesAgeing::chart` / `LapsedCustomers::chart` / `StockAgeing::chart` | Buckets from the totals row · monthly value going quiet · shelf value by idle band |
+| `ReceivablesAgeing::bucketTotals` | The totals row's buckets **signed** — unmatched payments and giro negative, so the seven values sum to Piutang Usaha. The chart clamps them for bars; anything shown beside the balance reads these |
+| `RingkasanBulanan::build` | The owner's month on one sheet, **composed from the reports above** — never its own SUM, so the summary cannot contradict its detail pages. Flow (penjualan, margin, uang masuk from the payment ledger net of reversals) is the chosen month; position (piutang, umur) is today's, and the screen says so. Owner-only page `laporan/ringkasan`, defaults to last month, prints without panel chrome |
 
 Each chart **derives from the ReportTable already built** — same rows, same
 filters — so the bars can never disagree with the figures under them. The one

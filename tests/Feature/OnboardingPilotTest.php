@@ -196,6 +196,26 @@ class OnboardingPilotTest extends TestCase
             ->get('/admin/onboarding-pelanggan')->assertForbidden();
     }
 
+    public function test_the_preloaded_aggregates_answer_exactly_like_the_queries(): void
+    {
+        // A customer whose three query-backed steps are all true…
+        CustomerUser::factory()->for($this->company)->create(['last_login_at' => now()]);
+        Order::factory()->for($this->company)->create(['status' => 'submitted']);
+
+        $kesiapan = app(KesiapanOnboarding::class);
+        $jawaban = fn (Company $c) => array_map(
+            fn ($l) => [$l->kunci, $l->selesai],
+            $kesiapan->langkah($c),
+        );
+
+        // …must tick identically whether the checklist queries per step
+        // (a bare model) or reads the worklist's preloaded aggregates.
+        $this->assertSame(
+            $jawaban(Company::query()->findOrFail($this->company->id)),
+            $jawaban(KesiapanOnboarding::preload(Company::query())->findOrFail($this->company->id)),
+        );
+    }
+
     public function test_the_worklist_puts_the_least_ready_customer_first(): void
     {
         $this->company->forceFill(['nama' => 'Bengkel Hampir Siap'])->save();
