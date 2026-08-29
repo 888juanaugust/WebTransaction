@@ -537,6 +537,34 @@ final class DataInventory
                 ],
             ],
 
+            // The uploaded mutasi file's bookkeeping row. The file itself
+            // stays on disk under source_file_path and is full of the bank's
+            // own wording — the lines table below is where that is classified.
+            'bank_statement_imports' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'created_by'],
+                'bukan' => [
+                    'bank_reconciliation_id', 'source_file_path', 'original_name',
+                    'status', 'jumlah_baris', 'jumlah_error',
+                ],
+            ],
+
+            /*
+             * Statement lines verbatim from the bank. `uraian` is the bank's
+             * own description and routinely names the counterparty — same
+             * reasoning as reconciliation items' keterangan — and our own
+             * `keterangan` (ignore reasons, error notes) is free text too.
+             */
+            'bank_statement_lines' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['uraian', 'keterangan', 'matched_by'],
+                'bukan' => [
+                    'bank_statement_import_id', 'urutan', 'tanggal', 'arah',
+                    'amount_rupiah', 'saldo_rupiah', 'status',
+                    'journal_line_id', 'payment_entry_id', 'matched_at',
+                ],
+            ],
+
             /*
              * Purchase returns — goods going back to a supplier. `alasan` is
              * mandatory free text saying why, and free text on a dispute names

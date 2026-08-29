@@ -266,6 +266,8 @@ class LogAudit extends Page implements HasTable
             'bank_reconciliation_opened' => 'Rekonsiliasi dibuka',
             'bank_reconciliation_finalised' => 'Rekonsiliasi diselesaikan',
             'bank_statement_item_recorded' => 'Item rekening koran dicatat',
+            'bank_statement_imported' => 'Mutasi bank diimpor',
+            'bank_statement_auto_matched' => 'Mutasi dicocokkan otomatis',
             'price_list_published' => 'Daftar harga diterbitkan',
             'faktur_exported' => 'Faktur pajak diekspor',
             'nsfp_recorded' => 'NSFP dicatat',

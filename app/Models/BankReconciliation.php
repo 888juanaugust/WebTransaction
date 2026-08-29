@@ -56,6 +56,11 @@ class BankReconciliation extends Model
         return $this->hasMany(BankReconciliationItem::class)->orderBy('tanggal')->orderBy('id');
     }
 
+    public function statementImports(): HasMany
+    {
+        return $this->hasMany(BankStatementImport::class)->orderBy('id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

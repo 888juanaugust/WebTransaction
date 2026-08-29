@@ -1541,6 +1541,10 @@ mentioned it.
 | `BankReconciler::summarise` | The statement, recomputed live — never stored until finalised |
 | `BankReconciler::finalise` | Signs it off. **Refused while any difference remains** |
 | `BankReconciler::daysSinceLastReconciled` | `null` means never, which is worse than a big number |
+| `StatementParser::parse` | The bank's CSV, read tolerantly: columns by meaning not position, `1.234.567,89` and `1,234,567.89` both, debit/kredit pairs or one amount + DB/CR flag. Unreadable rows become error rows, never silence; dateless footers are noise, not errors |
+| `StatementImporter::import` | The uploaded mutasi into the draft reconciliation. Raw file kept forever; rows dated after the closing date are flagged — wrong file. A headerless file leaves a `gagal` import, not nothing |
+| `StatementMatcher::suggestions` / `confirm` / `autoMatch` | Same amount, same direction, ≤7 days apart = a candidate. Confirm **is** the tick, through the reconciler. Auto-match applies only a line's *sole* candidate — identical twins wait for a human |
+| `StatementMatcher::recordPayment` | Money in the books never saw, posted through `PaymentLedger`'s one door with the statement's amount and date, then its Bank leg ticked. Undoing it is the ledger's reversal, never `reset` |
 
 ```
 saldo per buku besar
@@ -1672,7 +1676,6 @@ All idempotent — assume they run twice.
 - Uang muka pelanggan — a deposit against a specific order rather than the
   floating unallocated credit an unmatched payment currently becomes
 - More than one bank account — see the reconciliation section above
-- Importing a statement file; every line is ticked by hand
 - Seeder ships `password` as the staff password
 
 Landed cost has one approximation worth knowing about rather than a gap: which

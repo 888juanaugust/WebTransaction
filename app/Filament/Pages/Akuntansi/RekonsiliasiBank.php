@@ -8,13 +8,20 @@ use App\Domain\Accounting\AccountCode;
 use App\Domain\Banking\BankReconciler;
 use App\Domain\Banking\ReconciliationSummary;
 use App\Domain\Banking\StatementDirection;
+use App\Domain\Banking\StatementImporter;
+use App\Domain\Banking\StatementMatcher;
 use App\Domain\Money;
 use App\Models\Account;
 use App\Models\BankReconciliation;
+use App\Models\BankStatementImport;
+use App\Models\BankStatementLine;
+use App\Models\Company;
+use App\Models\Invoice;
 use App\Models\JournalLine;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -174,11 +181,274 @@ class RekonsiliasiBank extends Page
     {
         return [
             $this->mulaiAction(),
+            $this->imporMutasiAction(),
+            $this->cocokkanOtomatisAction(),
             $this->centangSemuaAction(),
             $this->tambahItemAction(),
             $this->selesaikanAction(),
             $this->batalkanAction(),
         ];
+    }
+
+    /**
+     * The statement's own rows, with what the matcher proposes for each.
+     *
+     * @return Collection<int, array{line: BankStatementLine, candidates: Collection<int, JournalLine>}>
+     */
+    public function mutasi(): Collection
+    {
+        $current = $this->currentReconciliation();
+
+        if ($current === null) {
+            return collect();
+        }
+
+        $matcher = app(StatementMatcher::class);
+
+        return $current->statementImports()->with('lines.journalLine.entry')->get()
+            ->flatMap(function (BankStatementImport $import) use ($matcher) {
+                $suggestions = $import->status === BankStatementImport::STATUS_SELESAI
+                    ? $matcher->suggestions($import)
+                    : [];
+
+                return $import->lines->map(fn (BankStatementLine $line) => [
+                    'line' => $line,
+                    'candidates' => $suggestions[$line->id] ?? collect(),
+                ]);
+            });
+    }
+
+    /** @return Collection<int, BankStatementImport> */
+    public function mutasiImports(): Collection
+    {
+        $current = $this->currentReconciliation();
+
+        return $current === null
+            ? collect()
+            : $current->statementImports()->with('creator')->get();
+    }
+
+    /** Confirm one proposed match. Reversible with "lepas" while the draft lives. */
+    public function cocokkan(int $lineId, int $journalLineId): void
+    {
+        $line = BankStatementLine::query()->find($lineId);
+        $journalLine = JournalLine::query()->find($journalLineId);
+
+        if ($line === null || $journalLine === null) {
+            return;
+        }
+
+        $this->run(
+            fn () => app(StatementMatcher::class)->confirm($line, $journalLine, auth()->user()),
+            'Baris dicocokkan',
+            'Baris jurnalnya ikut tercentang.',
+        );
+    }
+
+    /** Take a match or an ignore back. */
+    public function lepas(int $lineId): void
+    {
+        $line = BankStatementLine::query()->find($lineId);
+
+        if ($line === null) {
+            return;
+        }
+
+        $this->run(
+            fn () => app(StatementMatcher::class)->reset($line, auth()->user()),
+            'Cocokan dilepas',
+            'Barisnya kembali menunggu.',
+        );
+    }
+
+    /** Upload the statement file into the draft reconciliation. */
+    private function imporMutasiAction(): Action
+    {
+        return Action::make('imporMutasi')
+            ->label('Impor mutasi')
+            ->icon(Heroicon::OutlinedArrowUpTray)
+            ->color('gray')
+            ->visible(fn () => $this->currentReconciliation() !== null)
+            ->modalDescription(
+                'CSV yang diekspor portal bank: kolom tanggal, uraian, dan mutasi '
+                .'(debit/kredit terpisah, atau satu kolom jumlah dengan penanda DB/CR). '
+                .'Berkas asli disimpan permanen.'
+            )
+            ->schema([
+                FileUpload::make('berkas')
+                    ->label('Berkas mutasi (CSV)')
+                    ->required()
+                    ->disk('local')
+                    ->directory('mutasi-bank')
+                    ->preserveFilenames()
+                    ->acceptedFileTypes([
+                        'text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel',
+                    ]),
+            ])
+            ->action(function (array $data) {
+                $current = $this->currentReconciliation();
+                $path = $data['berkas'];
+
+                $this->run(
+                    function () use ($current, $path) {
+                        $import = app(StatementImporter::class)->import(
+                            $current,
+                            $path,
+                            basename((string) $path),
+                            auth()->user(),
+                        );
+
+                        if ($import->status === BankStatementImport::STATUS_GAGAL) {
+                            throw new \DomainException($import->catatan ?? 'Berkas tidak terbaca.');
+                        }
+                    },
+                    'Mutasi terbaca',
+                    'Cocokkan otomatis dulu, lalu selesaikan sisanya satu per satu.',
+                );
+            });
+    }
+
+    /** Apply every unambiguous suggestion in one pass. */
+    private function cocokkanOtomatisAction(): Action
+    {
+        return Action::make('cocokkanOtomatis')
+            ->label('Cocokkan otomatis')
+            ->icon(Heroicon::OutlinedSparkles)
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Cocokkan otomatis')
+            ->modalDescription(
+                'Hanya baris yang calon pasangannya persis satu — nilai sama, arah sama, '
+                .'selisih tanggal paling jauh tujuh hari. Yang punya dua kandidat dibiarkan '
+                .'untuk dilihat orang.'
+            )
+            ->visible(fn () => $this->mutasiImports()
+                ->where('status', BankStatementImport::STATUS_SELESAI)->isNotEmpty())
+            ->action(function () {
+                $current = $this->currentReconciliation();
+                $matcher = app(StatementMatcher::class);
+
+                $this->run(
+                    function () use ($current, $matcher) {
+                        $total = 0;
+
+                        foreach ($current->statementImports()->get() as $import) {
+                            if ($import->status === BankStatementImport::STATUS_SELESAI) {
+                                $total += $matcher->autoMatch($import, auth()->user());
+                            }
+                        }
+
+                        Notification::make()
+                            ->title("{$total} baris tercocok otomatis")
+                            ->body($total === 0
+                                ? 'Tidak ada pasangan yang tegas — sisanya perlu mata orang.'
+                                : 'Sisanya menunggu dilihat orang.')
+                            ->info()
+                            ->send();
+                    },
+                    'Pencocokan otomatis selesai',
+                    'Baris dengan pasangan tegas sudah tercentang.',
+                );
+            });
+    }
+
+    /** Set a statement line aside, with the reason kept on it. */
+    public function abaikanAction(): Action
+    {
+        return Action::make('abaikan')
+            ->label('Abaikan')
+            ->color('gray')
+            ->size('xs')
+            ->schema([
+                TextInput::make('alasan')
+                    ->label('Alasan')
+                    ->placeholder('mis. sudah beres di rekonsiliasi manual')
+                    ->maxLength(255),
+            ])
+            ->action(function (array $data, array $arguments) {
+                $line = BankStatementLine::query()->find($arguments['line'] ?? 0);
+
+                if ($line === null) {
+                    return;
+                }
+
+                $this->run(
+                    fn () => app(StatementMatcher::class)->ignore($line, auth()->user(), $data['alasan'] ?? null),
+                    'Baris diabaikan',
+                    'Alasannya tersimpan di baris itu.',
+                );
+            });
+    }
+
+    /**
+     * Money in the books never saw: record the payment straight off the line.
+     *
+     * The amount and date come from the statement and cannot be typed — the
+     * one thing the person supplies is *whose* money it was.
+     */
+    public function catatPembayaranAction(): Action
+    {
+        return Action::make('catatPembayaran')
+            ->label('Catat pembayaran')
+            ->color('primary')
+            ->size('xs')
+            ->modalHeading('Catat pembayaran dari mutasi')
+            ->modalDescription(function (array $arguments) {
+                $line = BankStatementLine::query()->find($arguments['line'] ?? 0);
+
+                return $line === null ? '' : sprintf(
+                    '%s — %s, %s. Nilai dan tanggal diambil dari mutasi; tinggal sebutkan uang siapa.',
+                    $line->tanggal?->format('d/m/Y'),
+                    $line->uraian,
+                    Money::format((int) $line->amount_rupiah),
+                );
+            })
+            ->schema([
+                Select::make('invoice_id')
+                    ->label('Faktur yang dibayar')
+                    ->options(fn () => Invoice::query()
+                        ->where('status', Invoice::STATUS_OPEN)
+                        ->with('company')
+                        ->orderByDesc('issued_on')
+                        ->limit(200)
+                        ->get()
+                        ->mapWithKeys(fn (Invoice $i) => [
+                            $i->id => "{$i->nomor} — {$i->company?->nama} — sisa "
+                                .Money::format($i->amountOutstanding()),
+                        ]))
+                    ->searchable()
+                    ->helperText('Kosongkan bila belum jelas fakturnya — pembayaran masuk sebagai belum terkait.'),
+
+                Select::make('company_id')
+                    ->label('Atau pelanggan yang membayar')
+                    ->options(fn () => Company::query()->orderBy('nama')->pluck('nama', 'id'))
+                    ->searchable(),
+            ])
+            ->action(function (array $data, array $arguments) {
+                $line = BankStatementLine::query()->find($arguments['line'] ?? 0);
+
+                if ($line === null) {
+                    return;
+                }
+
+                $invoice = isset($data['invoice_id']) && $data['invoice_id']
+                    ? Invoice::query()->find($data['invoice_id'])
+                    : null;
+                $company = isset($data['company_id']) && $data['company_id']
+                    ? Company::query()->find($data['company_id'])
+                    : null;
+
+                $this->run(
+                    fn () => app(StatementMatcher::class)->recordPayment(
+                        $line,
+                        auth()->user(),
+                        $invoice,
+                        $company,
+                    ),
+                    'Pembayaran dicatat dari mutasi',
+                    'Jurnalnya diposting dan baris mutasinya tercocok.',
+                );
+            });
     }
 
     /** Start one. Two questions: which statement, and what it closes at. */

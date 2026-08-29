@@ -148,6 +148,140 @@
             </div>
         @endif
 
+        {{-- The statement itself, once its file has been imported. Each row is
+             the bank's word for a movement; the buttons decide what the books
+             say it was. Above the ticking list because once the mutasi is in,
+             this is the working surface and the long table is its result. --}}
+        @php
+            $mutasiImports = $this->mutasiImports();
+            $mutasi = $this->mutasi();
+        @endphp
+
+        @if ($mutasiImports->isNotEmpty())
+            <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900">
+                <div class="flex flex-wrap items-baseline justify-between gap-2 border-b
+                            border-gray-200 px-4 py-3 dark:border-white/10">
+                    <h2 class="text-sm font-semibold">Mutasi dari rekening koran</h2>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                        @foreach ($mutasiImports as $import)
+                            {{ $import->original_name }}
+                            ({{ $import->status === 'gagal' ? 'gagal: '.$import->catatan : $import->jumlah_baris.' baris' }})@if (! $loop->last), @endif
+                        @endforeach
+                    </span>
+                </div>
+
+                @if ($mutasi->isEmpty())
+                    <p class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        Berkas tidak menghasilkan baris mutasi.
+                    </p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-xs uppercase tracking-wide
+                                           text-gray-500 dark:border-white/10 dark:text-gray-400">
+                                    <th class="px-3 py-2 text-left">Tanggal</th>
+                                    <th class="px-3 py-2 text-left">Uraian</th>
+                                    <th class="px-3 py-2 text-right">Masuk</th>
+                                    <th class="px-3 py-2 text-right">Keluar</th>
+                                    <th class="px-3 py-2 text-left">Status</th>
+                                    <th class="px-3 py-2 text-left">Cocokan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($mutasi as $row)
+                                    @php
+                                        $baris = $row['line'];
+                                        $calon = $row['candidates'];
+                                    @endphp
+                                    <tr @class([
+                                        'border-b border-gray-100 last:border-0 dark:border-white/5',
+                                        'bg-success-50/40 dark:bg-success-500/5' => $baris->status === 'tercocok',
+                                        'opacity-60' => $baris->status === 'diabaikan',
+                                    ])>
+                                        <td class="px-3 py-2 whitespace-nowrap align-top">
+                                            {{ $baris->tanggal?->format('d/m/Y') ?? '—' }}
+                                        </td>
+                                        <td class="px-3 py-2 align-top">
+                                            {{ $baris->uraian }}
+                                            @if ($baris->keterangan)
+                                                <span class="block text-xs text-warning-700 dark:text-warning-400">
+                                                    {{ $baris->keterangan }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-2 text-right font-mono whitespace-nowrap align-top">
+                                            {{ $baris->arah === 'masuk' && $baris->amount_rupiah ? Money::format((int) $baris->amount_rupiah) : '' }}
+                                        </td>
+                                        <td class="px-3 py-2 text-right font-mono whitespace-nowrap align-top">
+                                            {{ $baris->arah === 'keluar' && $baris->amount_rupiah ? Money::format((int) $baris->amount_rupiah) : '' }}
+                                        </td>
+                                        <td class="px-3 py-2 align-top">
+                                            <span @class([
+                                                'inline-flex rounded-md px-2 py-0.5 text-xs font-medium',
+                                                'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300' => $baris->status === 'belum',
+                                                'bg-success-100 text-success-800 dark:bg-success-500/20 dark:text-success-300' => $baris->status === 'tercocok',
+                                                'bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-300' => $baris->status === 'diabaikan',
+                                                'bg-danger-100 text-danger-800 dark:bg-danger-500/20 dark:text-danger-300' => $baris->status === 'error',
+                                            ])>
+                                                {{ $baris->status }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2 align-top">
+                                            @if ($baris->status === 'tercocok')
+                                                <span class="text-xs text-gray-600 dark:text-gray-300">
+                                                    {{ $baris->journalLine?->entry?->keterangan ?? '—' }}
+                                                    @if ($baris->payment_entry_id)
+                                                        <em class="text-gray-400">(pembayaran dari mutasi)</em>
+                                                    @endif
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    class="ms-2 text-xs text-danger-600 underline dark:text-danger-400"
+                                                    wire:click="lepas({{ $baris->id }})"
+                                                    wire:key="lepas-{{ $baris->id }}"
+                                                >lepas</button>
+                                            @elseif ($baris->status === 'belum')
+                                                @if ($calon->isNotEmpty())
+                                                    <div class="space-y-1">
+                                                        @foreach ($calon as $kandidat)
+                                                            <button
+                                                                type="button"
+                                                                class="block text-left text-xs text-primary-700 underline dark:text-primary-400"
+                                                                wire:click="cocokkan({{ $baris->id }}, {{ $kandidat->id }})"
+                                                                wire:key="cocok-{{ $baris->id }}-{{ $kandidat->id }}"
+                                                            >
+                                                                {{ $kandidat->entry?->tanggal?->format('d/m') }} ·
+                                                                {{ \Illuminate\Support\Str::limit($kandidat->entry?->keterangan ?? '', 60) }}
+                                                            </button>
+                                                        @endforeach
+                                                        @if ($calon->count() > 1)
+                                                            <span class="block text-xs text-warning-700 dark:text-warning-400">
+                                                                {{ $calon->count() }} kandidat — pilih yang benar
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    <span class="text-xs text-gray-400">tidak ada di buku</span>
+                                                @endif
+
+                                                <div class="mt-1 flex gap-2">
+                                                    @if ($baris->arah === 'masuk')
+                                                        {{ ($this->catatPembayaranAction)(['line' => $baris->id]) }}
+                                                    @endif
+                                                    {{ ($this->abaikanAction)(['line' => $baris->id]) }}
+                                                </div>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- The ticking list, in the order a statement is printed in. --}}
         <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900">
             <h2 class="border-b border-gray-200 px-4 py-3 text-sm font-semibold dark:border-white/10">
