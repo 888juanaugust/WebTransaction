@@ -1582,7 +1582,8 @@ cartons the sold ones came from is unknowable under average costing, so a
 first-in-first-out reading is laid over it. See the section above.
 
 Deployment is written up in `docs/DEPLOY.md` — a bare Hostinger VPS through to
-taking real money.
+taking real money, with the executable kit in `deploy/` (provision.sh,
+deploy.sh, Caddyfile, supervisor unit).
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.

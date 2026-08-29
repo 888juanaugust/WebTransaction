@@ -164,6 +164,18 @@ and do not let the presence of one excuse skipping the other.
 
 Ubuntu 24.04 LTS. Everything below as root unless it says otherwise.
 
+**The executable version of §2–§6 is `deploy/provision.sh`** — idempotent,
+run as root with the domain as its argument:
+
+```bash
+bash deploy/provision.sh portal.example.co.id
+```
+
+It stops before anything it cannot decide for you (SSH hardening, the DB
+password, `.env`) and prints what is next. The sections below remain the
+explanation of *why* each step is what it is; the script is the *how*, and
+when they disagree, the disagreement is the bug.
+
 ### A user that is not root
 
 ```bash
@@ -302,34 +314,19 @@ out — but do not go looking for a way around that refusal.
 
 ## 5. Caddy
 
-`/etc/caddy/Caddyfile`:
+The file lives in the repo as **`deploy/Caddyfile`**; `provision.sh` installs
+it with the real domain substituted. Two decisions in it worth knowing:
 
-```
-portal.example.co.id {
-    root * /var/www/webtransaction/public
-    encode zstd gzip
-
-    php_fastcgi unix//run/php/php8.4-fpm.sock
-    file_server
-
-    # The panel and the importer both move real files: a 1,400-row price list
-    # and the faktur pajak export. The default cap rejects them.
-    request_body {
-        max_size 32MB
-    }
-
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        Referrer-Policy "strict-origin-when-cross-origin"
-    }
-
-    log {
-        output file /var/log/caddy/webtransaction.log
-    }
-}
-```
+- `request_body max_size 32MB` — the panel and the importer both move real
+  files (the supplier workbook, the faktur pajak export), and the default cap
+  rejects them.
+- **HSTS is the only header Caddy sets.** nosniff, frame-options and
+  referrer-policy come from the application's own SecurityHeaders middleware,
+  where the test suite asserts them per surface. An earlier revision set them
+  in both places with different values — two `X-Frame-Options` headers on
+  every response, and which one a browser honours is not a bet worth making.
+  The TLS terminator owns exactly the one header the app cannot honestly send
+  for itself.
 
 Point the domain's A record at the VPS first — Caddy obtains the certificate on
 first request and cannot do so until DNS resolves. Then
@@ -344,30 +341,12 @@ the table of what breaks without them. The short version: without the queue, no
 payment is ever posted; without the scheduler, stock stays fenced by orders
 nobody paid for, and a payment whose worker died is never recovered.
 
-`/etc/supervisor/conf.d/webtransaction-worker.conf`:
-
-```ini
-[program:webtransaction-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/webtransaction/artisan queue:work --queue=default --tries=5 --max-time=3600
-directory=/var/www/webtransaction
-autostart=true
-autorestart=true
-user=deploy
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/var/log/webtransaction-worker.log
-stopwaitsecs=3600
-```
-
-`stopwaitsecs=3600` matters more than it looks: it lets a worker finish the job
-in its hands before supervisor kills it. The callback job is crash-safe either
-way — it commits the payment entry and the done-marker in one transaction — but
-there is no reason to make the sweeper do work a graceful stop avoids.
-
-Two processes, not ten. Twenty orders a day does not need a worker pool; two
-means one can be busy with a slow price-list import while the other still picks
-up a payment callback.
+The unit file is **`deploy/supervisor/webtransaction-worker.conf`** in the
+repo; `provision.sh` installs it. Two settings in it carry the reasoning:
+`numprocs=2` (one worker can be busy with a slow price-list import while the
+other still picks up the next job — twenty orders a day needs no pool), and
+`stopwaitsecs=3600`, which lets a worker finish the job in its hands before
+supervisor kills it.
 
 ```bash
 supervisorctl reread && supervisorctl update && supervisorctl start webtransaction-worker:*
@@ -469,18 +448,25 @@ Everything below is a launch blocker, and only the first two are code.
 ## 10. Routine deploys after that
 
 ```bash
-cd /var/www/webtransaction
-php artisan down --render="errors::503"
+cd /var/www/webtransaction && bash deploy/deploy.sh
+```
 
+Which is exactly:
+
+```bash
+php artisan down --render="errors::503"
 git pull
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
 php artisan optimize && php artisan filament:optimize
 php artisan queue:restart
-
 php artisan up
 ```
+
+— followed by an informational `launch:check`. The first deploy uses
+`bash deploy/deploy.sh --first`, which builds, writes a fresh `.env`, and
+stops for you to fill it rather than migrating against an empty password.
 
 `queue:restart` is not optional. Workers are long-lived processes holding the
 old code in memory; without it, a deploy that changes a job leaves the previous

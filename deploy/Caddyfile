@@ -1,0 +1,30 @@
+# /etc/caddy/Caddyfile — installed by deploy/provision.sh, which replaces
+# __DOMAIN__ with the real hostname.
+#
+# TLS is automatic once the domain's A record points here; Caddy obtains the
+# certificate on first request and cannot do so before DNS resolves.
+
+__DOMAIN__ {
+    root * /var/www/webtransaction/public
+    encode zstd gzip
+
+    php_fastcgi unix//run/php/php8.4-fpm.sock
+    file_server
+
+    # The panel and the importer both move real files: a 1,400-row price
+    # list workbook and the faktur pajak export. The default cap rejects them.
+    request_body {
+        max_size 32MB
+    }
+
+    # HSTS only. Everything else — nosniff, frame-options, referrer-policy —
+    # is sent by the application's SecurityHeaders middleware and asserted by
+    # its test suite; setting them here too would mean two headers that can
+    # disagree, and for a while they did. The TLS terminator owns exactly the
+    # one header the application cannot honestly send for itself.
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    log {
+        output file /var/log/caddy/webtransaction.log
+    }
+}
