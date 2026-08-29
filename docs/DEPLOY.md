@@ -275,6 +275,7 @@ PERUSAHAAN_REKENING=…                      # transfer destination — get thes
 PERUSAHAAN_REKENING_NAMA=…                 # three right before the first invoice
 BACKUP_ENCRYPTION_KEY=…                    # php artisan backup:key
 BACKUP_DISK=…                              # NOT this machine — see docs/BACKUP.md
+SESSION_SECURE_COOKIE=true                 # the cookie never travels plain http
 ```
 
 `APP_DEBUG=false` is not a style preference. A stack trace on an exception page
@@ -429,8 +430,19 @@ recorded there as a statement with a name and a date against them.
 The list stays here because the server steps below have no screen, and because
 a runbook somebody can read before touching the machine is worth having.
 
+Run the whole list from the terminal you are already in:
+
+```bash
+php artisan launch:check
+```
+
+Same checks as the screen, one exit code — non-zero while anything blocks, so
+a deploy script can gate on it. Attestations are still signed on the screen,
+by the Owner, with evidence.
+
 Everything below is a launch blocker, and only the first two are code.
 
+- [ ] `php artisan launch:check` exits 0
 - [ ] The payment block on a printed faktur shows the real company account
 - [ ] `php artisan backup:restore --into=scratch` — actually restored, not just written
 - [ ] Real company details replacing the placeholders in `config/perusahaan.php`

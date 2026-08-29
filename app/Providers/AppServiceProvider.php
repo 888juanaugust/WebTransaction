@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 
@@ -124,6 +125,18 @@ class AppServiceProvider extends ServiceProvider
         // Catch "$model->undefined_column = x" typos before they silently
         // drop a money field on the floor.
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+
+        /*
+         * Behind Caddy every request arrives over TLS, but PHP sees the
+         * proxied hop. Forcing the scheme keeps every generated URL — panel
+         * redirects, the faktur link in a reset email — on https, so a
+         * session cookie marked Secure never gets a plain-http URL to leak
+         * on. Production only: local `php artisan serve` is http and should
+         * stay usable.
+         */
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
 
         /*
          * A buyer resetting their own password leaves a trail. No actor —

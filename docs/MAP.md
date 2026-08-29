@@ -1188,6 +1188,15 @@ every kind of data the role separation elsewhere exists to keep apart.
 
 ### Kesiapan peluncuran — the launch checklist that checks itself
 
+`php artisan launch:check` prints the same checks where the deployer already
+is and exits non-zero while anything blocks — the screen stays the only place
+attestations are signed. Every surface carries `nosniff`, `X-Frame-Options:
+DENY` and `Referrer-Policy: same-origin` (SecurityHeaders middleware, asserted
+per surface); both logins throttle after five attempts, asserted so an
+upgrade cannot quietly lose the limiter; production forces https on every
+generated URL, and `SESSION_SECURE_COOKIE=true` is part of the deploy env.
+
+
 | Function | Decides |
 |---|---|
 | `LaunchReadiness::checks` | Every item, and whether it passes |
