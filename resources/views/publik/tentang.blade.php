@@ -5,14 +5,11 @@
 
 @section('konten')
 
-    <section class="border-b border-slate-200 bg-slate-50">
-        <div class="mx-auto max-w-6xl px-4 py-16">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Tentang Kami</h1>
-            <p class="mt-4 max-w-2xl text-lg text-slate-600">
-                {{ \App\Support\Perusahaan::text('tagline') }}
-            </p>
-        </div>
-    </section>
+    @include('publik.partials.hero-halaman', [
+        'kicker' => 'Perusahaan',
+        'judul' => 'Tentang Kami',
+        'lede' => \App\Support\Perusahaan::text('tagline'),
+    ])
 
     <section class="mx-auto max-w-6xl px-4 py-16">
         <div class="grid gap-12 lg:grid-cols-3">
@@ -33,7 +30,7 @@
                         ['Toko sparepart', 'Pasokan rutin untuk kebutuhan penjualan kembali.'],
                         ['Distributor', 'Volume besar dengan skema harga dan termin khusus.'],
                     ] as [$judul, $isi])
-                        <div class="rounded-xl border border-slate-200 p-5">
+                        <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-900/5">
                             <h3 class="font-semibold text-brand-700">{{ $judul }}</h3>
                             <p class="mt-2 text-sm leading-relaxed text-slate-600">{{ $isi }}</p>
                         </div>
@@ -58,7 +55,7 @@
             </div>
 
             <aside class="lg:col-span-1">
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+                <div class="rounded-2xl bg-slate-50 p-6 ring-1 ring-slate-900/5">
                     <h2 class="font-semibold text-slate-900">Identitas perusahaan</h2>
 
                     <dl class="mt-4 space-y-3 text-sm">

@@ -27,14 +27,18 @@
 
 @section('konten')
 
-    <section class="border-b border-slate-200 bg-slate-50">
+    <section class="bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700">
         <div class="mx-auto max-w-3xl px-4 py-16">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Syarat Penjualan</h1>
-            <p class="mt-4 text-lg text-slate-600">
+            <p class="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
+                <span class="h-px w-8 bg-accent-600" aria-hidden="true"></span>
+                Ketentuan
+            </p>
+            <h1 class="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Syarat Penjualan</h1>
+            <p class="mt-4 text-lg leading-relaxed text-brand-100">
                 Ketentuan yang berlaku atas setiap penjualan grosir dari
                 {{ config('perusahaan.nama') }} kepada pelanggan terdaftar.
             </p>
-            <p class="mt-6 text-sm text-slate-500">
+            <p class="mt-6 text-sm text-brand-200">
                 Berlaku sejak {{ $berlaku->translatedFormat('j F Y') }} · Versi {{ config('legal.syarat.versi') }}
             </p>
         </div>

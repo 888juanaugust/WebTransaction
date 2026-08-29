@@ -27,9 +27,11 @@
      * 0.012: no feedback at all. Filament reached the same conclusion for the
      * panel and lightens; the public site now matches it.
      */
+    --color-brand-300: #9dbdf7;
     --color-brand-500: #3169d7;
     --color-brand-600: #073185;
     --color-brand-700: #00247b;
+    --color-brand-800: #021c60;
     --color-brand-900: #011547;
 
     --color-accent-50: #fef2f2;

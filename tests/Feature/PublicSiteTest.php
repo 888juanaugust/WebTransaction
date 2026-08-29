@@ -69,7 +69,7 @@ class PublicSiteTest extends TestCase
         $response->assertSee('Tentang perusahaan kami');
         $response->assertSee('Merk yang kami bawa');
         $response->assertSee('Kategori produk');
-        $response->assertSee('Mitra usaha patungan');
+        $response->assertSee('Menjadi pelanggan dalam tiga langkah');
         $response->assertSee('Masuk ke akun Anda');
     }
 
@@ -199,5 +199,52 @@ class PublicSiteTest extends TestCase
             $this->assertStringNotContainsString('987654', $body, "Price leaked on {$path}");
             $this->assertStringNotContainsString('Rp ', $body, "Rupiah figure rendered on {$path}");
         }
+    }
+
+    // --- launch plumbing: what crawlers are told ---------------------------
+
+    public function test_robots_txt_blocks_the_panels_and_names_the_sitemap(): void
+    {
+        $this->get('/robots.txt')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertSee('Disallow: /admin')
+            ->assertSee('Disallow: /portal')
+            // The sitemap protocol requires an absolute URL, which is the
+            // whole reason robots.txt is a route and not a static file.
+            ->assertSee('Sitemap: '.route('sitemap'), escape: false);
+    }
+
+    public function test_the_sitemap_lists_every_public_page_and_nothing_else(): void
+    {
+        $response = $this->get('/sitemap.xml')->assertOk();
+
+        $this->assertStringStartsWith('application/xml', $response->headers->get('Content-Type'));
+
+        foreach (['/', '/tentang-kami', '/mitra', '/rencana-pengembangan',
+            '/kontak', '/masuk', '/kebijakan-privasi', '/syarat-penjualan'] as $path) {
+            $response->assertSee('<loc>'.url($path).'</loc>', escape: false);
+        }
+
+        $response->assertDontSee('/admin');
+        $response->assertDontSee('/portal');
+    }
+
+    public function test_every_page_carries_canonical_and_organization_schema(): void
+    {
+        $this->get('/tentang-kami')
+            ->assertOk()
+            ->assertSee('<link rel="canonical"', escape: false)
+            ->assertSee('application/ld+json', escape: false)
+            ->assertSee('"@type":"Organization"', escape: false);
+    }
+
+    public function test_the_mobile_menu_button_is_wired_to_its_panel(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('id="tombol-menu"', escape: false)
+            ->assertSee('aria-controls="menu-seluler"', escape: false)
+            ->assertSee('id="menu-seluler"', escape: false);
     }
 }

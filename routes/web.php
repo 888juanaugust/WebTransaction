@@ -168,3 +168,48 @@ Route::middleware(['web', 'auth:web'])
 Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/faktur-pajak/{fakturExport}', FakturExportController::class)
     ->name('faktur-pajak.unduh');
+
+/*
+|--------------------------------------------------------------------------
+| Untuk mesin pencari
+|--------------------------------------------------------------------------
+|
+| Both served from routes rather than static files because both need the
+| application's own URL: the sitemap protocol requires absolute locations,
+| and robots.txt points crawlers at the sitemap. A static file would carry
+| whatever hostname somebody hard-coded on the day it was written.
+|
+| The panels are disallowed not as a security measure — they sit behind
+| logins — but because a crawler knocking on /admin is pure log noise.
+|
+*/
+Route::get('/robots.txt', function () {
+    return response(implode("\n", [
+        'User-agent: *',
+        'Disallow: /admin',
+        'Disallow: /portal',
+        'Disallow: /dokumen',
+        'Allow: /',
+        '',
+        'Sitemap: '.route('sitemap'),
+        '',
+    ]))->header('Content-Type', 'text/plain');
+});
+
+Route::get('/sitemap.xml', function () {
+    $halaman = [
+        'publik.beranda', 'publik.tentang', 'publik.mitra', 'publik.rencana',
+        'publik.kontak', 'masuk', 'publik.privasi', 'publik.syarat',
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+        .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+
+    foreach ($halaman as $rute) {
+        $xml .= '  <url><loc>'.e(route($rute)).'</loc></url>'."\n";
+    }
+
+    $xml .= '</urlset>'."\n";
+
+    return response($xml)->header('Content-Type', 'application/xml');
+})->name('sitemap');

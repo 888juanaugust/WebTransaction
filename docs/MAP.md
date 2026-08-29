@@ -23,14 +23,23 @@ computes a price, moves stock, or writes an order status.
 | `/syarat-penjualan` | Syarat Penjualan | B2B terms: credit, late payment, delivery, returns |
 | `/rencana-pengembangan` | Rencana | Roadmap |
 | `/masuk` | Chooser | Pick staff login or buyer login |
+| `/robots.txt` | — | Route, not a file: disallows `/admin`, `/portal`, `/dokumen`; names the sitemap by absolute URL |
+| `/sitemap.xml` | — | The eight public pages, absolute URLs from `route()` |
 
 All content comes from `config/perusahaan.php` through `App\Support\Perusahaan`.
 **The shipped text is placeholder** — especially the partners, since naming a
 company in public is a claim about a real business relationship.
 
-Colours: white surfaces, company blue `#1D4ED8`, company red `#DC2626` kept
-scarce. The logo shows when `PERUSAHAAN_LOGO` points at a file that exists;
-otherwise every surface falls back to the wordmark.
+The visual language (2026-08 refurbishment): navy carries the weight — the
+hero and footer are dark gradient panels, so every page opens and closes on
+the brand — red is only the small kicker line every section header repeats
+(`publik/partials/kicker`, `hero-halaman`), and content sits in soft-shadow
+`ring-1` cards, never hairline boxes. Mobile gets a real hamburger (plain
+button + hidden panel, five lines of inline JS). The head carries canonical,
+og:, and an Organization JSON-LD from the same config the footer prints.
+System font stack, zero external assets — the page renders instantly on a
+phone in a workshop. The logo shows when `PERUSAHAAN_LOGO` points at a file
+that exists; otherwise every surface falls back to the wordmark.
 
 ### Admin panel — staff, `web` guard against `users`
 

@@ -5,14 +5,11 @@
 
 @section('konten')
 
-    <section class="border-b border-slate-200 bg-slate-50">
-        <div class="mx-auto max-w-6xl px-4 py-16">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Kontak</h1>
-            <p class="mt-4 max-w-2xl text-lg text-slate-600">
-                Hubungi kami untuk pemesanan, pembukaan akun pelanggan, atau kerja sama.
-            </p>
-        </div>
-    </section>
+    @include('publik.partials.hero-halaman', [
+        'kicker' => 'Hubungi kami',
+        'judul' => 'Kontak',
+        'lede' => 'Hubungi kami untuk pemesanan, pembukaan akun pelanggan, atau kerja sama.',
+    ])
 
     <section class="mx-auto max-w-6xl px-4 py-16">
         <div class="grid gap-10 lg:grid-cols-2">
@@ -68,7 +65,7 @@
             </div>
 
             <div class="space-y-6">
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-7">
+                <div class="rounded-2xl bg-brand-50/60 p-7 ring-1 ring-brand-100">
                     <h2 class="text-lg font-semibold text-slate-900">Ingin membuka akun pelanggan?</h2>
                     <p class="mt-3 leading-relaxed text-slate-600">
                         Akun pelanggan grosir dibuka setelah verifikasi data usaha. Hubungi kami melalui
@@ -76,19 +73,19 @@
                     </p>
                     <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', config('perusahaan.kontak.whatsapp')) }}"
                        target="_blank" rel="noopener"
-                       class="mt-6 inline-block rounded-md bg-brand-600 px-6 py-3 text-sm font-semibold text-white
-                              transition hover:bg-brand-500">
+                       class="mt-6 inline-block rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white
+                              shadow-sm transition hover:bg-brand-500">
                         Hubungi via WhatsApp
                     </a>
                 </div>
 
-                <div class="rounded-xl border border-slate-200 p-7">
+                <div class="rounded-2xl bg-white p-7 shadow-sm ring-1 ring-slate-900/5">
                     <h2 class="text-lg font-semibold text-slate-900">Sudah punya akun?</h2>
                     <p class="mt-3 leading-relaxed text-slate-600">
                         Masuk untuk melihat harga Anda, sisa limit kredit, dan faktur.
                     </p>
                     <a href="{{ route('masuk') }}"
-                       class="mt-6 inline-block rounded-md border border-slate-300 bg-white px-6 py-3 text-sm
+                       class="mt-6 inline-block rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm
                               font-semibold text-slate-700 transition hover:border-brand-600 hover:text-brand-700">
                         Masuk ke akun
                     </a>
