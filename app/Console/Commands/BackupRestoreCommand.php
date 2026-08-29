@@ -7,8 +7,10 @@ namespace App\Console\Commands;
 use App\Domain\Backup\BackupRunner;
 use App\Domain\Backup\DatabaseDumper;
 use App\Domain\Backup\FileArchiver;
+use App\Domain\Pengaturan\PengaturanPerusahaan;
 use App\Models\BackupRun;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -105,6 +107,16 @@ class BackupRestoreCommand extends Command
         if ($practice) {
             $this->line('That was a practice run — the live database was not touched.');
         } else {
+            /*
+             * The Pengaturan overlay caches the settings rows in Redis, and
+             * Redis was not restored — so without this, the faktur keeps
+             * printing the pre-restore bank account until something happens
+             * to bust the cache. Found during the go-live rehearsal, where
+             * the cache from one database answered for another.
+             */
+            Cache::forget(PengaturanPerusahaan::CACHE_KEY);
+            $this->line('Cache pengaturan dibuang — nilai hasil pemulihan yang berlaku.');
+
             $this->line('Check the figures before letting anybody back in:');
             $this->line('  php artisan tinker --execute="echo App\\\\Models\\\\Order::count();"');
         }

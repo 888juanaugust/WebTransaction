@@ -32,7 +32,16 @@ class PengaturanTest extends TestCase
     {
         $service = app(PengaturanPerusahaan::class);
 
-        // Before anything is saved, the config/env default answers.
+        /*
+         * The test pins its own baseline instead of trusting the ambient
+         * .env: locally the key is absent (config default answers), while
+         * CI copies .env.example where it is present-but-empty — and env()
+         * returns '' for a declared empty var, not the default. Seven pushes
+         * ran red on exactly that drift before anyone looked.
+         */
+        config(['perusahaan.rekening.nomor' => '000-000-0000']);
+
+        // Before anything is saved, the install's default answers.
         $this->assertSame('000-000-0000', config('perusahaan.rekening.nomor'));
 
         $service->simpan(['rekening_nomor' => '512-034-9911'], $this->owner());

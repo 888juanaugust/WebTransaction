@@ -6,9 +6,22 @@ Buyers are bengkel, toko sparepart and distributors — not retail consumers. Th
 over one shared domain core: a public site (open, no prices), a buyer portal (authenticated,
 per-customer prices), and an admin panel (staff, role-scoped).
 
-This repository currently contains **build phase 1**: the domain core and the admin panel. No
-buyer login exists yet, by design — phase 1 has to run the real business before anyone outside
-the company gets an account.
+All five build phases are code-complete: the admin panel and domain core, payment recording
+and AR, the buyer portal with pilot onboarding, the public site, and reporting — plus the
+post-build hardening (security audit, volume pass, go-live rehearsal). What separates the
+code from a launch is the business's own checklist, visible on `php artisan launch:check`.
+
+The deep documentation lives in `docs/`:
+
+| Doc | What it answers |
+|---|---|
+| [docs/MAP.md](docs/MAP.md) | Every screen, domain class and decision — the codebase's own map |
+| [docs/DEPLOY.md](docs/DEPLOY.md) + `deploy/` | A bare VPS to a running system, with the executable kit |
+| [docs/GO-LIVE.md](docs/GO-LIVE.md) | The cutover sequence, rehearsed before it was written down |
+| [docs/UAT.md](docs/UAT.md) | Per-role acceptance script |
+| [docs/PILOT.md](docs/PILOT.md) | Running 3–4 friendly customers for two weeks |
+| [docs/DEMO.md](docs/DEMO.md) | Seeding and walking through the demo data |
+| [docs/BACKUP.md](docs/BACKUP.md) | Encrypted nightly backups, and the restore drill |
 
 ## Stack
 
@@ -707,14 +720,9 @@ obeys, and a test asserts the two agree.
 
 ## Before launch
 
-- PSE Lingkup Privat registration with Komdigi via OSS → PB-UMKU.
-- **Have a lawyer review both legal pages.**
-- **Decide the two values marked `>>> PUTUSKAN` in `config/legal.php`** — the
-  late-payment rate and the claim window. They default to ordinary Indonesian
-  practice; a rate nobody intends to enforce makes the whole document look
-  decorative.
-- Set a real address for privacy requests (`LEGAL_PRIVASI_EMAIL`) and confirm
-  with counsel whether a DPO is required under UU PDP Pasal 53.
-- Fill in the real company address, phone, NPWP and NIB — the legal pages print
-  them, and a privacy policy giving `Jl. Contoh No. 1` is worse than none.
-- Nightly encrypted `pg_dump`, off-box. Test the restore.
+The launch checklist is not this file — it is `php artisan launch:check` and the
+Owner-only **Kesiapan peluncuran** screen, where most items check themselves
+against the live system and the rest (PSE registration, the lawyer's reading,
+the accountant's confirmation, a rehearsed restore) are attested by name and
+date. The full cutover sequence is [docs/GO-LIVE.md](docs/GO-LIVE.md), executed
+end-to-end against an empty database before it was written down.
