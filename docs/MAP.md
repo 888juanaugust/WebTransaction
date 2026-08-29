@@ -1250,6 +1250,24 @@ generated URL, and `SESSION_SECURE_COOKIE=true` is part of the deploy env.
 | `LaunchCheck::checked` / `::attested` | Which of the two kinds an item is |
 | `AttestationRecorder::attest` | Records somebody's word, with evidence |
 
+**Security audit (2026-08, pre-pilot).** A pass over the whole application's
+attack surfaces, each outcome pinned in `SecurityAuditTest`. Held without
+change: raw-SQL report groupings (enum-match literals only), the document
+controllers (named guards, buyer-side 404-not-403 anti-enumeration,
+company_id checks), `ScopedToBuyer` (unconditional, build-enforced by
+`PortalScopingTest`), upload handling (typed, private disks). Fixed: CSV
+formula injection in `ReportCsv` (supplier-workbook merk labels reached
+Excel as live formulas; now apostrophe-neutralised — the price-list export
+is deliberately not, because it round-trips as the import format and the
+same staff open the supplier's raw file anyway); `FakturExportController`
+moved off the bare default guard; the public JSON-LD gained HEX escaping
+against Owner-typed values — and writing that test found a real bug: Blade
+had been compiling the literal `@context` key as its own directive,
+shipping mangled JSON-LD to every crawler since the block existed. The
+block now emits through raw PHP tags, which Blade never scans. The
+credit-limit form field's "disabled means not saved" is now a pinned test,
+not just framework behaviour.
+
 The same list as `docs/DEPLOY.md`, with the difference that makes it worth
 having as a screen: **most of it checks itself.** A checklist of tickboxes is a
 worse version of the file, because a box nobody can verify gets ticked on a

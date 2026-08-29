@@ -20,7 +20,10 @@ class FakturExportController extends Controller
 {
     public function __invoke(FakturExport $fakturExport, FakturExporter $exporter): StreamedResponse
     {
-        abort_unless(auth()->user()?->role()->canExportFaktur() ?? false, 403);
+        // Named guard, matching the route — `auth()` alone means "the default
+        // guard", and this application has two. Same rule as every other
+        // document controller.
+        abort_unless(auth('web')->user()?->role()->canExportFaktur() ?? false, 403);
 
         $contents = $exporter->contents($fakturExport);
 

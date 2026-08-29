@@ -61,6 +61,15 @@ class PriceListExporter
 
         try {
             foreach ($this->rows($version) as $row) {
+                /*
+                 * Deliberately NOT formula-neutralised, unlike ReportCsv.
+                 * This export IS the import format — a leading apostrophe
+                 * added to a KODE or DESCRIPTION would round-trip back in as
+                 * data on the next import. The threat it would defend
+                 * against is also already accepted: every value here came
+                 * from the supplier's own workbook, which the same staff
+                 * open in Excel directly.
+                 */
                 fputcsv($handle, $row, ',', '"', '\\');
             }
         } finally {

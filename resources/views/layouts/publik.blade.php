@@ -42,8 +42,20 @@
         Organization schema, from the same config the footer prints. Search
         engines get the legal name, the city and the phone number — nothing
         that is not already on the page in prose.
+
+        HEX_TAG and friends because these values are typed by the Owner into
+        Pengaturan: an address containing `</script>` must not be able to
+        close this block and run on the public page. The Owner is trusted,
+        but a text field is not a place to store that trust.
+
+        Raw PHP tags, not a Blade echo, and that is load-bearing: Blade
+        compiles `@context` — schema.org's required key — as its own
+        \@context directive when it appears in template text, which mangled
+        this block's first key into compiled-PHP soup. Content inside real
+        `<?php ?>` tags is never scanned for directives. The audit test
+        pins the key surviving intact.
     --}}
-    <script type="application/ld+json">{!! json_encode([
+    <script type="application/ld+json"><?php echo json_encode([
         '@context' => 'https://schema.org',
         '@type' => 'Organization',
         'name' => config('perusahaan.nama'),
@@ -56,7 +68,7 @@
             'addressLocality' => config('perusahaan.kontak.kota'),
             'addressCountry' => 'ID',
         ],
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

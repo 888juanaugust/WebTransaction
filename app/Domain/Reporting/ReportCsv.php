@@ -67,6 +67,20 @@ class ReportCsv
                 return $field;
             }
 
+            /*
+             * A cell that starts with =, +, -, @ or a control character is a
+             * formula to Excel, quotes or no quotes — and merk and category
+             * labels arrive from the supplier's workbook, which is not ours.
+             * A leading apostrophe is Excel's own "this is text" marker; it
+             * does not display. These files are exports only, never
+             * re-imported, so nothing round-trips the marker back into data
+             * (the price list export, which IS an import format, is handled
+             * differently — see PriceListExporter).
+             */
+            if (preg_match('/^[=+\-@\t\r]/', $field) === 1) {
+                $field = "'".$field;
+            }
+
             return '"'.str_replace('"', '""', $field).'"';
         }, $fields));
     }
