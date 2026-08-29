@@ -21,7 +21,6 @@ use App\Models\PriceListItem;
 use App\Models\PriceListVersion;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\VirtualAccount;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -61,9 +60,6 @@ class FakturDocumentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // No secret key, so VAs are minted locally rather than over the wire.
-        config()->set('xendit.secret_key', '');
 
         $this->warehouse = Warehouse::factory()->create(['nama' => 'Gudang Pusat']);
         $this->sales = User::factory()->sales()->create();
@@ -237,16 +233,18 @@ class FakturDocumentTest extends TestCase
 
     // --- where to pay -------------------------------------------------------
 
-    public function test_an_unpaid_faktur_shows_the_virtual_account_and_what_is_owed(): void
+    public function test_an_unpaid_faktur_shows_the_bank_account_and_what_is_owed(): void
     {
-        $va = VirtualAccount::query()
-            ->where('company_id', $this->company->id)
-            ->where('status', 'active')
-            ->firstOrFail();
+        config(['perusahaan.rekening' => [
+            'bank' => 'BCA', 'nomor' => '512-034-9911', 'atas_nama' => 'PT Java Indo',
+        ]]);
 
         $this->actingAs($this->sales)->get($this->staffUrl())
             ->assertOk()
-            ->assertSee($va->account_number)
+            ->assertSee('512-034-9911')
+            // The transfer must carry the invoice number, or finance cannot
+            // match it on the statement.
+            ->assertSee($this->invoice->nomor)
             ->assertSee('Jumlah yang harus dibayar')
             ->assertSee(number_format($this->invoice->total_rupiah, 0, ',', '.'));
     }

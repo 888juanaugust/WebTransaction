@@ -63,7 +63,6 @@ class FakturExportTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('xendit.secret_key', '');
         Storage::fake('local');
 
         $this->gudang = Warehouse::factory()->create();

@@ -26,10 +26,10 @@ use Symfony\Component\HttpFoundation\Response;
  * - **A buyer** — the region of the company they belong to. They never choose;
  *   a customer belongs to one region by construction.
  *
- * Anything else — the public site, the webhook, an artisan command — is left
- * unbound and therefore unfiltered. That is safe because none of them renders
- * one person's data to another: the public site shows no prices at all, and the
- * webhook has to find a virtual account without knowing whose it is yet.
+ * Anything else — the public site, an artisan command — is left unbound and
+ * therefore unfiltered. That is safe because neither renders one person's
+ * data to another: the public site shows no prices at all, and a command
+ * that creates scoped rows must pin itself first.
  */
 class BindRegionContext
 {

@@ -82,6 +82,24 @@ return [
         'tahun_berdiri' => env('PERUSAHAAN_TAHUN', '2020'),
     ],
 
+    /*
+     | Rekening perusahaan — where customers send their transfers.
+     |
+     | There is no payment gateway: the business sells on credit and is paid
+     | by transfer, cash or giro, confirmed by finance against the bank
+     | statement. This block is what the faktur and the portal print as
+     | payment instructions.
+     |
+     | >>> PLACEHOLDER — replace with the real account before the first
+     | >>> faktur goes out. A wrong number here sends customer money to
+     | >>> somebody else's account.
+     */
+    'rekening' => [
+        'bank' => env('PERUSAHAAN_BANK', 'BCA'),
+        'nomor' => env('PERUSAHAAN_REKENING', '000-000-0000'),
+        'atas_nama' => env('PERUSAHAAN_REKENING_NAMA', 'PT Java Indo Intermechanika'),
+    ],
+
     'kontak' => [
         'alamat' => env('PERUSAHAAN_ALAMAT', 'Jl. Contoh No. 1, Jakarta, Indonesia'),
         'kota' => env('PERUSAHAAN_KOTA', 'Jakarta'),
@@ -165,9 +183,10 @@ return [
             'deskripsi' => 'Pencatatan order, stok, dan penagihan dijalankan langsung oleh tim kami.',
         ],
         [
-            'judul' => 'Pembayaran Virtual Account',
+            'judul' => 'Penjualan kredit dengan penagihan rapi',
             'status' => 'berjalan',
-            'deskripsi' => 'Pembayaran melalui Virtual Account tetap, terekonsiliasi otomatis.',
+            'deskripsi' => 'Pembayaran lewat transfer bank, tunai, atau giro — dikonfirmasi dan '
+                .'direkonsiliasi oleh tim keuangan kami.',
         ],
         [
             'judul' => 'Portal pelanggan',

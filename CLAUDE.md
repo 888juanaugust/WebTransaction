@@ -16,7 +16,7 @@ Three surfaces over one shared domain core:
 - Laravel + Livewire + Filament
 - PostgreSQL
 - Redis (queue, cache) + supervisor-managed workers
-- Xendit for payments (fixed Virtual Account)
+- No payment gateway — credit sales settled by transfer/tunai/giro, confirmed by Finance
 - Single VPS, Jakarta. Caddy for TLS.
 
 ## Language
@@ -51,12 +51,15 @@ not in the admin panel, not in a report, not in an export.
 At `confirmed`, copy unit price, discount, DPP, PPN, and `price_list_version_id` onto the
 line row. Never join to the live price list when rendering a historical order or invoice.
 
-### 4. `paid` is set only by the gateway webhook
+### 4. `paid` is set only by settlement in the payment ledger
 
-Never by a browser redirect. Never by a controller responding to a user action.
-Webhook handling: verify signature → insert raw payload into `webhook_events` with the
-gateway event id as a UNIQUE key → return 200 immediately → dispatch a queue job.
-Idempotency comes from that unique constraint. Never process inline.
+Never by a browser redirect. Never by a controller flipping a flag. There is **no
+payment gateway**: finance records each payment — a transfer matched on the bank
+statement, cash, a giro that cleared — as an append-only `payment_entries` row, and
+when the entries covering an invoice reach its total, settlement marks the invoice
+paid and advances the order (`awaiting_payment → paid`, or `shipped → completed`)
+with a null actor. The money is the actor. The company bank account printed on the
+faktur comes from `config/perusahaan.php` (`rekening`).
 
 ### 5. Unit of measure is modeled, not assumed
 
@@ -237,15 +240,15 @@ Generic CRUD exists behind these for corrections only.
 
 ## Not in v1 — do not build
 
-Shipping-rate API integration · Coretax API integration · mobile app · real-time
+Payment-gateway integration · shipping-rate API integration · Coretax API integration · mobile app · real-time
 notifications · multi-currency · product reviews · recommendation engine · promo/voucher
 engine · public price display.
 
 ## Build order
 
-0. Xendit sandbox, KBLI check on NIB, price tier structure on paper
+0. KBLI check on NIB, price tier structure on paper
 1. **Admin panel only** (~4–6 wk) — staff enter real orders, no buyer login at all
-2. Xendit fixed VA + webhooks + reconciliation (~2–3 wk)
+2. Payment recording, AR and reconciliation (~2–3 wk)
 3. Buyer portal, pilot with 3–4 friendly customers (~4–6 wk)
 4. Public site, privacy policy, PSE registration, launch
 5. Reporting and refinement
@@ -266,6 +269,6 @@ Phase 1 must run the real business before any buyer logs in.
 - Migrations are additive. Never edit a shipped migration.
 - Every money-affecting action writes to the audit log.
 - Queue jobs must be idempotent — assume they run twice.
-- Tests required for: price resolution, credit check, stock reservation, webhook handling,
-  tax calculation. These five are where bugs cost money.
+- Tests required for: price resolution, credit check, stock reservation, payment
+  settlement, tax calculation. These five are where bugs cost money.
 - Backups: nightly `pg_dump`, encrypted, off-box. Test restore before launch.

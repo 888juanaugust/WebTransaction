@@ -8,9 +8,6 @@ use App\Domain\Backup\BackupCipher;
 use App\Domain\Backup\DatabaseDumper;
 use App\Domain\Backup\FileArchiver;
 use App\Domain\Launch\LaunchReadiness;
-use App\Domain\Payments\LocalVirtualAccountGateway;
-use App\Domain\Payments\VirtualAccountGateway;
-use App\Domain\Payments\XenditVirtualAccountGateway;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
@@ -19,7 +16,6 @@ use App\Domain\Tax\TaxCalculator;
 use App\Jobs\PurgeVisitPhotos;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepDebtAging;
-use App\Jobs\SweepStuckWebhookEvents;
 use App\Models\Company;
 use App\Observers\CompanyObserver;
 use Illuminate\Database\Eloquent\Model;
@@ -116,19 +112,6 @@ class AppServiceProvider extends ServiceProvider
 
             return $regionId === null ? $this : $this->where("{$table}.region_id", $regionId);
         });
-
-        /*
-         * VA provisioning talks to Xendit only when there is a key to talk
-         * with. Without one — a developer's laptop, CI — accounts are minted
-         * locally so the order → invoice → payment chain still runs end to
-         * end. A flow you cannot complete locally is a flow people end up
-         * testing on production data.
-         */
-        $this->app->bind(VirtualAccountGateway::class, function () {
-            return filled(config('xendit.secret_key'))
-                ? new XenditVirtualAccountGateway
-                : new LocalVirtualAccountGateway;
-        });
     }
 
     public function boot(): void
@@ -140,10 +123,6 @@ class AppServiceProvider extends ServiceProvider
         Company::observe(CompanyObserver::class);
 
         Schedule::job(new ReleaseStaleReservations)->everyFifteenMinutes();
-
-        // Recovers money stranded by a worker that died mid-callback. Nothing
-        // else will: the gateway already got its 200 and will not redeliver.
-        Schedule::job(new SweepStuckWebhookEvents)->everyFiveMinutes();
 
         /*
          * Aging debt, checked once a day after midnight — debt ages by the

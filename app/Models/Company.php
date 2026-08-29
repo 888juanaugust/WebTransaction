@@ -98,11 +98,6 @@ class Company extends Model
         return $query->where('marketing_user_id', $marketing->getKey());
     }
 
-    public function virtualAccounts(): HasMany
-    {
-        return $this->hasMany(VirtualAccount::class);
-    }
-
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

@@ -811,7 +811,6 @@ class LandedCostTest extends TestCase
     /** The real thing: an order driven to shipped, books and all. */
     private function shipThroughOrder(string $sku, int $qty): Order
     {
-        config()->set('xendit.secret_key', '');
 
         $sales = User::factory()->sales()->create();
         $warehouseStaff = User::factory()->role(Role::Warehouse)->create();

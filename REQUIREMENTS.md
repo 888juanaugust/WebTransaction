@@ -52,7 +52,7 @@ standard `php8.4-*` distribution package.
 | `pdo_pgsql`, `pgsql` | PostgreSQL. Nothing works without these. |
 | `redis` (phpredis) | Queue and cache driver. `REDIS_CLIENT=phpredis`. |
 | `mbstring` | Framework-wide. |
-| `openssl` | `APP_KEY` encryption, TLS to the Xendit API. |
+| `openssl` | `APP_KEY` encryption, TLS outbound. |
 | `gd` | phpspreadsheet — reading the supplier workbooks. |
 | `zip` | phpspreadsheet — `.xlsx` is a zip archive. |
 | `dom`, `libxml`, `simplexml`, `xml`, `xmlreader`, `xmlwriter` | phpspreadsheet parses the OOXML inside. |
@@ -130,16 +130,11 @@ Two things about the asset build:
 
 ## 5. External services
 
-| Service | Purpose | Configuration |
-|---|---|---|
-| Xendit | Fixed Virtual Account payments | `XENDIT_SECRET_KEY`, `XENDIT_CALLBACK_TOKEN` |
-
-Xendit is the only third-party runtime dependency, and only for money in.
-
-`XENDIT_CALLBACK_TOKEN` must be set in every environment that is reachable from
-the internet. When it is empty the webhook controller **refuses all callbacks**
-rather than accepting unauthenticated ones — an unconfigured environment must
-not be able to mark orders paid.
+There are none. Payments come in by bank transfer, cash, or giro and are
+recorded by finance against the bank statement — no payment gateway, no
+callback endpoint. The company account customers transfer to is configured
+with `PERUSAHAAN_BANK`, `PERUSAHAAN_REKENING`, `PERUSAHAAN_REKENING_NAMA`
+and printed on every faktur.
 
 Coretax is deliberately *not* an integration. Faktur output is a CSV export
 matching the Coretax import format; there is no API dependency.
@@ -155,16 +150,15 @@ php artisan queue:work --queue=default --tries=5
 php artisan schedule:work        # or a system cron running schedule:run each minute
 ```
 
-The scheduler runs two jobs that protect data integrity:
+The scheduler's data-integrity job:
 
 | Job | Interval | Consequence if it never runs |
 |---|---|---|
 | `ReleaseStaleReservations` | 15 min | Stock stays fenced by orders that were never paid, and the warehouse looks emptier than it is. |
-| `SweepStuckWebhookEvents` | 5 min | A payment whose worker died mid-transaction is never posted. Nothing else recovers it — the gateway already received its 200 and will not redeliver. |
 
 Supervisor should restart workers on exit. Worker restarts are safe at any
-moment: the callback job commits its payment entry and its done-marker in one
-transaction, so a kill mid-flight rolls back cleanly and the sweep picks it up.
+moment: queue jobs are idempotent by convention, so a kill mid-flight rolls
+back cleanly and a retry does no double work.
 
 ---
 
@@ -216,7 +210,7 @@ refused`, Postgres is not up; if login returns 500, Redis is not up.
 ## 9. Production deploy checklist
 
 `docs/DEPLOY.md` is the full procedure for a bare Hostinger VPS — what to pick
-in the setup wizard, Caddy, supervisor, the Xendit dashboard side, and the
+in the setup wizard, Caddy, supervisor, and the
 launch blockers. What follows is just the command sequence.
 
 ```bash

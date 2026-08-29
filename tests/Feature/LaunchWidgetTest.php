@@ -163,8 +163,9 @@ class LaunchWidgetTest extends TestCase
             ],
             'perusahaan.mitra' => [],
             'pajak.penjual' => ['npwp' => '01.234.567.8-901.000', 'nama' => 'PT Java Indo'],
-            'xendit.secret_key' => 'xnd_production_abc123',
-            'xendit.callback_token' => 'tok',
+            'perusahaan.rekening' => [
+                'bank' => 'BCA', 'nomor' => '512-034-9911', 'atas_nama' => 'PT Java Indo',
+            ],
         ]);
 
         PriceListVersion::factory()->create(['published_at' => now()]);

@@ -122,7 +122,7 @@ class LaunchReadiness
             $this->partners(),
             $this->taxIdentity(),
             $this->priceList(),
-            $this->paymentGateway(),
+            $this->bankAccount(),
             $this->staffPasswords(),
             $this->backups(),
             $this->realOrder(),
@@ -229,40 +229,28 @@ class LaunchReadiness
         );
     }
 
-    private function paymentGateway(): LaunchCheck
+    private function bankAccount(): LaunchCheck
     {
-        $secret = (string) config('xendit.secret_key');
-        $callback = (string) config('xendit.callback_token');
-
-        $missing = [];
-
-        if (blank($secret)) {
-            $missing[] = 'XENDIT_SECRET_KEY';
-        }
-
-        if (blank($callback)) {
-            $missing[] = 'XENDIT_CALLBACK_TOKEN';
-        }
-
         /*
-         * Xendit development keys are prefixed. Launching on one means every
-         * virtual account is imaginary and no customer can actually pay — a
-         * failure that looks like success right up until the first invoice.
+         * There is no payment gateway: every faktur and the portal print
+         * this account as the place to send money. The placeholder shipping
+         * in config would send customer transfers to a number that belongs
+         * to nobody — a failure that looks like success right up until the
+         * first payment never arrives.
          */
-        $sandbox = str_starts_with($secret, 'xnd_development_');
+        $nomor = (string) config('perusahaan.rekening.nomor');
+
+        $placeholder = blank($nomor) || str_contains($nomor, '000-000');
 
         return LaunchCheck::checked(
-            kunci: 'xendit',
-            judul: 'Kunci Xendit produksi terpasang',
-            keterangan: 'Termasuk callback token, yang memverifikasi webhook. Kunci '
-                .'development terlihat berhasil sampai faktur pertama tidak pernah lunas.',
-            lulus: $missing === [] && ! $sandbox,
-            temuan: match (true) {
-                $missing !== [] => 'Belum diisi: '.implode(', ', $missing),
-                $sandbox => 'Masih memakai kunci development (xnd_development_…)',
-                default => null,
-            },
-            tindakan: 'php artisan xendit:verify',
+            kunci: 'rekening',
+            judul: 'Rekening perusahaan sudah diisi',
+            keterangan: 'Nomor rekening ini tercetak di setiap faktur dan di portal sebagai '
+                .'tujuan transfer. Placeholder berarti uang pelanggan dikirim ke nomor '
+                .'yang bukan milik siapa-siapa.',
+            lulus: ! $placeholder,
+            temuan: $placeholder ? 'Masih placeholder: '.($nomor ?: '(kosong)') : null,
+            tindakan: 'Isi PERUSAHAAN_BANK, PERUSAHAAN_REKENING, PERUSAHAAN_REKENING_NAMA di .env',
         );
     }
 

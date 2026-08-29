@@ -128,20 +128,15 @@ to a development one.
 | `/portal/katalog` | Catalogue | **This buyer's** prices, add-to-cart |
 | `/portal/keranjang` | Cart | Quantities, indicative totals, checkout |
 | `/portal/tagihan` | Invoices | Due dates, sisa tagihan |
-| `/portal/tagihan/{id}` | Invoice detail | Full breakdown + **the VA to pay into** |
+| `/portal/tagihan/{id}` | Invoice detail | Full breakdown + **the company account to transfer to** |
 | `/portal/dokumen/faktur/{id}` | Faktur | The printable invoice, **own company only** |
 
 Staff and buyers authenticate on **different guards against different tables**,
 so a buyer session carries no staff identity at all. The isolation is structural
 rather than a permission check somebody can forget to write.
 
-### Webhook
-
-| URL | What |
-|---|---|
-| `POST /webhooks/xendit` | Verify signature → insert into `webhook_events` → **200 immediately** → queue job |
-
-`paid` is reachable from here and nowhere else.
+There is no webhook and no payment gateway. `paid` is reachable only through
+settlement in the payment ledger — finance's hand against the bank statement.
 
 ---
 
@@ -288,7 +283,7 @@ draft → submitted → confirmed → awaiting_payment → paid → shipped → 
 | `OrderStateMachine::submitAndMaybeApprove` | One call from the panel: submits, and confirms in the same breath when the submitter holds the approval seat |
 | `OrderStateMachine::confirm` | **Prices snapshot, credit checked, stock reserved — one transaction.** Only the customer's assigned marketing (or the Owner) may call it |
 | `OrderStateMachine::awaitPayment` | Invoice issued + VA provisioned |
-| `OrderStateMachine::markPaid` | Settlement in the payment ledger — webhook or a finance-recorded payment, never a screen action |
+| `OrderStateMachine::markPaid` | Settlement in the payment ledger — a finance-recorded payment covering the invoice, never a screen action |
 | `OrderStateMachine::ship` | Reservations become ledger decrements. **Allowed from `awaiting_payment` too** — goods leave on credit |
 | `OrderStateMachine::complete` | Settlement calls it with a null actor: *finished means paid*, not "somebody clicked done" |
 | `OrderStateMachine::reject` / `expire` | Releases held stock; rejecting takes the same approval seat as confirming |
@@ -700,14 +695,13 @@ made it a third term computed three ways. Now there is one answer.
 
 | Function | Decides |
 |---|---|
-| `PaymentLedger::recordGatewayPayment` | Money in from Xendit |
-| `PaymentLedger::recordManualPayment` | Money in by transfer — **Finance and Owner only** |
+| `PaymentLedger::recordManualPayment` | Money in — transfer, cash, giro cair — **Finance and Owner only**, the only door |
 | `PaymentLedger::reverse` | Inserts a reversing entry. **Never mutates a row** |
 | `PaymentLedger::allocateToInvoice` | Matches money to a bill |
-| `VirtualAccountProvisioner::ensureFor` | Fixed VA per company, idempotent |
 
-Without a Xendit key, VAs are minted locally so the whole chain runs on a
-laptop. A flow you cannot complete locally is one people test on production.
+No gateway (stripped 2026-08): the business is paid by transfer to the company
+account printed on the faktur, cash, or giro — every one recorded by finance,
+and a covered invoice advances its own order through `markPaid`/`complete`.
 
 ### Billing and numbering
 
@@ -1103,8 +1097,7 @@ Three context states, and the difference is what happens on a write. **Pinned**
 filters and stamps. **Open to all** (the Owner's "Semua wilayah") reads
 everything and refuses every create — a row created in that state belongs to
 nobody's books. **Unbound** (console, queue) also reads everything, and a job
-that creates scoped rows must pin itself first — the webhook job pins to the
-paying customer's region.
+that creates scoped rows must pin itself first.
 
 `users.region_id` is the access boundary: pinned staff get a badge, the Owner
 gets the switcher, a crafted POST to the switcher endpoint is refused for
@@ -1200,8 +1193,9 @@ Nine items are **computed every time the page loads** and no button can mark
 them done: company identity and contact details (placeholder values count as
 missing — an address of "Jl. Contoh No. 1" on a PSE-registered site is worse
 than a blank one), invented partner names, the tax NPWP the faktur export
-needs, a published price list, Xendit keys (a `xnd_development_` key fails even
-though it is set — it looks fine until the first invoice is never paid), staff
+needs, a published price list, the company bank account (the shipped
+placeholder fails — it looks fine until the first transfer goes to a number
+that belongs to nobody), staff
 still on the seeded password, a verified off-box backup, one completed order,
 and every control account tying to its subledger.
 
@@ -1523,9 +1517,7 @@ if a portal resource over a company-owned table lacks the scope.
 | Job | Trigger | Does |
 |---|---|---|
 | `ParsePriceListImport` | On upload | Parses the workbook into staging |
-| `ProcessXenditCallback` | On webhook | Records payment, marks the order paid |
 | `ReleaseStaleReservations` | Every 15 min | Frees stock on stale unpaid orders |
-| `SweepStuckWebhookEvents` | Every 5 min | Recovers callbacks a dead worker claimed |
 
 All idempotent — assume they run twice.
 
@@ -1536,7 +1528,7 @@ All idempotent — assume they run twice.
 67 models, 68 migrations. The ones that carry money or stock:
 
 `orders` (`split_parent_id` threads a split) · `order_lines` (price snapshots) · `order_events` (every transition)
-`invoices` · `payment_entries` (append-only) · `webhook_events` (UNIQUE gateway event id)
+`invoices` · `payment_entries` (append-only)
 `stock_movements` (append-only) · `stock_levels` (cache) · `stock_reservations`
 `price_list_versions` · `price_list_items` (never updated, only superseded)
 `carts` · `cart_items` (**no money columns**)
@@ -1565,9 +1557,7 @@ cartons the sold ones came from is unknowable under average costing, so a
 first-in-first-out reading is laid over it. See the section above.
 
 Deployment is written up in `docs/DEPLOY.md` — a bare Hostinger VPS through to
-taking real money, plus `php artisan xendit:verify`, which checks the gateway
-keys, the container binding, the callback path and the queue worker on the
-machine they are actually deployed on.
+taking real money.
 
 Launch blockers that aren't code: PSE Lingkup Privat registration, and a
 lawyer's review of the two legal pages — those are written but are a draft.

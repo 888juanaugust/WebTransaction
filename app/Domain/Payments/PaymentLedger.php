@@ -13,7 +13,6 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\PaymentEntry;
 use App\Models\User;
-use App\Models\WebhookEvent;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -32,71 +31,9 @@ class PaymentLedger
     ) {}
 
     /**
-     * Post a payment that arrived through the gateway.
-     *
-     * Idempotent on gateway_reference: if a retried job gets this far twice,
-     * the second call returns the existing entry rather than double-crediting.
-     */
-    public function recordGatewayPayment(
-        Company $company,
-        int $amountRupiah,
-        string $gatewayReference,
-        WebhookEvent $webhookEvent,
-        ?Invoice $invoice = null,
-        ?Order $order = null,
-        ?DateTimeInterface $paidAt = null,
-    ): PaymentEntry {
-        if ($amountRupiah <= 0) {
-            throw new LogicException('A gateway payment must be positive.');
-        }
-
-        return DB::transaction(function () use (
-            $company, $amountRupiah, $gatewayReference, $webhookEvent, $invoice, $order, $paidAt
-        ) {
-            $existing = PaymentEntry::query()
-                ->where('gateway', 'xendit')
-                ->where('gateway_reference', $gatewayReference)
-                ->first();
-
-            if ($existing !== null) {
-                return $existing;
-            }
-
-            $entry = PaymentEntry::create([
-                'company_id' => $company->id,
-                'invoice_id' => $invoice?->id,
-                'order_id' => $order?->id,
-                'amount_rupiah' => $amountRupiah,
-                'kind' => PaymentEntry::KIND_PAYMENT,
-                'gateway' => 'xendit',
-                'gateway_reference' => $gatewayReference,
-                'webhook_event_id' => $webhookEvent->id,
-                'paid_at' => $paidAt ?? now(),
-            ]);
-
-            $this->settleInvoiceIfCovered($invoice, ['gateway_event_id' => $gatewayReference]);
-
-            // Dr Bank / Cr Piutang Usaha.
-            $this->poster->customerPaymentReceived($entry);
-
-            $this->audit->log(
-                action: 'payment_received',
-                subject: $entry,
-                newValue: [
-                    'amount_rupiah' => $amountRupiah,
-                    'gateway_reference' => $gatewayReference,
-                    'invoice_id' => $invoice?->id,
-                ],
-                actor: null,
-            );
-
-            return $entry;
-        });
-    }
-
-    /**
-     * Post a payment finance keyed in by hand — a bank transfer that did not
-     * come through the gateway, or a cash payment at the counter.
+     * Post a payment finance keyed in by hand — a bank transfer matched
+     * against the statement, or a cash payment at the counter. The only way
+     * money enters this ledger.
      */
     public function recordManualPayment(
         Company $company,
@@ -154,7 +91,6 @@ class PaymentLedger
                 'order_id' => $entry->order_id,
                 'amount_rupiah' => -$entry->amount_rupiah,
                 'kind' => PaymentEntry::KIND_REVERSAL,
-                'gateway' => $entry->gateway,
                 'actor_id' => $actor->id,
                 'reverses_entry_id' => $entry->id,
                 'paid_at' => now(),

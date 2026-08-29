@@ -122,13 +122,14 @@
 
         <h2 id="pembayaran">6. Pembayaran</h2>
         <p>
-            Pembayaran dilakukan melalui transfer ke <strong>Virtual Account tetap</strong> yang
-            kami terbitkan atas nama perusahaan pembeli. Nomor tersebut tidak berubah, sehingga
-            dapat dipakai untuk setiap pembayaran.
+            Pembayaran dilakukan melalui <strong>transfer ke rekening perusahaan kami</strong>
+            yang tercantum pada setiap faktur, atau secara tunai maupun bilyet giro melalui
+            perwakilan sales kami.
         </p>
         <p>
-            Pembayaran dianggap diterima pada saat dana masuk dan terkonfirmasi oleh bank atau
-            penyedia gateway pembayaran — bukan pada saat bukti transfer dikirimkan kepada kami.
+            Pembayaran dianggap diterima pada saat dana masuk dan dikonfirmasi oleh tim keuangan
+            kami — bukan pada saat bukti transfer dikirimkan. Bilyet giro dianggap lunas pada
+            saat dananya cair, bukan pada saat bilyet diserahkan.
         </p>
         <p>
             Pembayaran wajib dilakukan penuh sesuai nilai faktur, tanpa pemotongan, pengurangan,

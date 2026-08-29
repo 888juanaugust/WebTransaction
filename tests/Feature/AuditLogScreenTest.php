@@ -236,13 +236,13 @@ class AuditLogScreenTest extends TestCase
 
     public function test_a_system_action_with_no_actor_still_lists(): void
     {
-        // The webhook and the scheduler act with nobody behind them, and those
+        // The scheduler and settlement act with nobody behind them, and those
         // are exactly the rows somebody goes looking for after an incident.
-        app(AuditLogger::class)->log(action: 'payment_received', actor: null);
+        app(AuditLogger::class)->log(action: 'order_transition', actor: null);
 
         Livewire::actingAs($this->owner)
             ->test(LogAudit::class)
             ->assertOk()
-            ->assertSee('Pembayaran diterima');
+            ->assertSee('Order berpindah status');
     }
 }

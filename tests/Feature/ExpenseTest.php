@@ -76,7 +76,7 @@ class ExpenseTest extends TestCase
     public function test_recording_the_same_expense_twice_posts_it_twice(): void
     {
         /*
-         * Deliberate, and the opposite of the webhook rule. Two identical
+         * Deliberate, and the opposite of an idempotency rule. Two identical
          * payments of Rp 350.000 for fuel on the same day are two real
          * payments — the system must not decide the second one is a duplicate.
          * Idempotency here is per document row, which is what protects against

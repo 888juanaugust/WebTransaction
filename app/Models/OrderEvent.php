@@ -45,7 +45,7 @@ class OrderEvent extends Model
 
     /**
      * Who did this, in words. Three cases, and "the system" is a real answer
-     * rather than a gap: the sweep and the payment webhook have no person
+     * rather than a gap: the sweep and invoice settlement have no person
      * behind them.
      */
     public function actorLabel(): string

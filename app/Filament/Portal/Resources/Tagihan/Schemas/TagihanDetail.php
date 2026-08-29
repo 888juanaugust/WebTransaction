@@ -6,7 +6,6 @@ namespace App\Filament\Portal\Resources\Tagihan\Schemas;
 
 use App\Domain\Money;
 use App\Models\Invoice;
-use App\Models\VirtualAccount;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -23,26 +22,26 @@ class TagihanDetail
             ->components([
                 Section::make('Cara pembayaran')
                     ->description(
-                        'Transfer ke Virtual Account di bawah ini. Nomor VA bersifat tetap, '
-                        .'jadi nomor yang sama bisa dipakai untuk setiap pembayaran.'
+                        'Transfer ke rekening di bawah ini dengan berita nomor faktur, '
+                        .'atau bayar tunai/giro lewat sales Anda. Pembayaran tercatat '
+                        .'setelah dikonfirmasi oleh tim keuangan kami.'
                     )
                     ->columns(3)
                     // Only while there is something left to pay.
                     ->visible(fn (Invoice $record) => $record->amountOutstanding() > 0)
                     ->schema([
-                        TextEntry::make('va_bank')
+                        TextEntry::make('bank')
                             ->label('Bank')
-                            ->state(fn (Invoice $r) => self::virtualAccount($r)?->bank_code ?? '—'),
+                            ->state(fn () => config('perusahaan.rekening.bank')),
 
-                        TextEntry::make('va_nomor')
-                            ->label('Nomor Virtual Account')
+                        TextEntry::make('rekening')
+                            ->label('Nomor rekening — a.n. '.config('perusahaan.rekening.atas_nama'))
                             ->weight('bold')
                             ->copyable()
-                            ->copyMessage('Nomor VA disalin')
-                            ->state(fn (Invoice $r) => self::virtualAccount($r)?->account_number
-                                ?? 'Hubungi kami untuk nomor VA'),
+                            ->copyMessage('Nomor rekening disalin')
+                            ->state(fn () => config('perusahaan.rekening.nomor')),
 
-                        TextEntry::make('va_jumlah')
+                        TextEntry::make('jumlah')
                             ->label('Jumlah yang harus dibayar')
                             ->weight('bold')
                             ->state(fn (Invoice $r) => Money::format($r->amountOutstanding())),
@@ -97,21 +96,5 @@ class TagihanDetail
                         TextEntry::make('alamat_pajak')->label('Alamat pajak')->placeholder('—'),
                     ]),
             ]);
-    }
-
-    /**
-     * The company's fixed virtual account.
-     *
-     * Fixed rather than per-invoice, so a buyer paying three invoices sends
-     * three transfers to the same number and finance matches them by amount and
-     * reference.
-     */
-    private static function virtualAccount(Invoice $invoice): ?VirtualAccount
-    {
-        return $invoice->company
-            ?->virtualAccounts()
-            ->where('status', 'active')
-            ->latest('id')
-            ->first();
     }
 }

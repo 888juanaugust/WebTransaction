@@ -236,13 +236,9 @@
     @if ($outstanding > 0 && $invoice->status !== Invoice::STATUS_VOID)
         <div class="pay">
             <div class="label">Pembayaran</div>
-            @if ($virtualAccount)
-                <div>Transfer ke Virtual Account {{ $virtualAccount->bank_code }} atas nama
-                    {{ config('perusahaan.nama') }}:</div>
-                <div class="va">{{ $virtualAccount->account_number }}</div>
-            @else
-                <div>Hubungi kami untuk nomor Virtual Account pembayaran.</div>
-            @endif
+            <div>Transfer ke rekening {{ config('perusahaan.rekening.bank') }} atas nama
+                {{ config('perusahaan.rekening.atas_nama') }}, berita: {{ $invoice->nomor }}</div>
+            <div class="va">{{ config('perusahaan.rekening.nomor') }}</div>
             <div style="margin-top:6px">
                 Jumlah yang harus dibayar:
                 <strong>{{ Money::format($outstanding) }}</strong>
@@ -251,7 +247,7 @@
                 @endif
             </div>
             <div class="muted" style="margin-top:4px">
-                Nomor VA bersifat tetap dan dapat dipakai untuk setiap pembayaran.
+                Pembayaran tercatat setelah dikonfirmasi oleh bagian keuangan kami.
             </div>
         </div>
     @elseif ($invoice->status !== Invoice::STATUS_VOID)

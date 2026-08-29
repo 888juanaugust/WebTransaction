@@ -8,7 +8,7 @@ use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
-use App\Domain\Payments\VirtualAccountProvisioner;
+use App\Domain\Payments\PaymentLedger;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
 use App\Domain\Uom\Unit;
@@ -24,7 +24,6 @@ use App\Models\PriceListVersion;
 use App\Models\PriceTier;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\VirtualAccount;
 use App\Models\Warehouse;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,10 +51,6 @@ class OrderToInvoiceChainTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        config()->set('xendit.callback_token', 'test-token');
-        // No secret key, so VAs are minted locally — see AppServiceProvider.
-        config()->set('xendit.secret_key', '');
 
         $this->warehouse = Warehouse::factory()->create();
         $this->sales = User::factory()->sales()->create();
@@ -136,16 +131,14 @@ class OrderToInvoiceChainTest extends TestCase
         $this->assertNotNull($invoice, 'awaiting_payment must produce an invoice');
         $this->assertSame($order->total_rupiah, $invoice->total_rupiah);
 
-        $va = VirtualAccount::query()->where('company_id', $this->company->id)->first();
-        $this->assertNotNull($va, 'the buyer needs somewhere to pay into');
-
-        // --- money in, through the only path to `paid` ----------------------
-        $this->postJson('/webhooks/xendit', [
-            'payment_id' => 'pay_chain_1',
-            'amount' => $invoice->total_rupiah,
-            'account_number' => $va->account_number,
-            'external_id' => $order->nomor,
-        ], ['x-callback-token' => 'test-token'])->assertOk();
+        // --- money in, through the only path to `paid`: the payment ledger --
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $this->company,
+            amountRupiah: $invoice->total_rupiah,
+            actor: User::factory()->finance()->create(),
+            invoice: $invoice,
+            catatan: 'Transfer masuk, dicocokkan ke faktur.',
+        );
 
         $order->refresh();
         $this->assertSame(OrderStatus::Paid, $order->status);
@@ -256,19 +249,6 @@ class OrderToInvoiceChainTest extends TestCase
         $this->assertSame("INV-{$wilayah}-{$period}-0001", $numbers->nextInvoiceNumber());
     }
 
-    // --- virtual accounts ---------------------------------------------------
-
-    public function test_a_company_keeps_one_fixed_va_per_bank(): void
-    {
-        $provisioner = app(VirtualAccountProvisioner::class);
-
-        $first = $provisioner->ensureFor($this->company);
-        $second = $provisioner->ensureFor($this->company);
-
-        $this->assertSame($first->id, $second->id);
-        $this->assertSame(1, VirtualAccount::where('company_id', $this->company->id)->count());
-    }
-
     // --- the sweep must not bill an order it is about to cancel --------------
 
     /**
@@ -337,14 +317,13 @@ class OrderToInvoiceChainTest extends TestCase
         $order = $this->confirmedOrder();
         $this->machine()->awaitPayment($order, $this->sales);
         $invoice = $order->refresh()->invoice;
-        $va = VirtualAccount::where('company_id', $this->company->id)->firstOrFail();
 
-        $this->postJson('/webhooks/xendit', [
-            'payment_id' => 'pay_chain_2',
-            'amount' => $invoice->total_rupiah,
-            'account_number' => $va->account_number,
-            'external_id' => $order->nomor,
-        ], ['x-callback-token' => 'test-token'])->assertOk();
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $this->company,
+            amountRupiah: $invoice->total_rupiah,
+            actor: User::factory()->finance()->create(),
+            invoice: $invoice,
+        );
 
         $entry = PaymentEntry::sole();
 

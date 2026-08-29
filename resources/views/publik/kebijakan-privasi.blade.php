@@ -128,7 +128,8 @@
             Kami <strong>tidak mengolah data pribadi yang bersifat spesifik</strong> sebagaimana
             dimaksud Pasal 4 ayat (2) UU PDP — data kesehatan, biometrik, genetika, catatan
             kejahatan, atau data anak. Kami juga tidak meminta nomor kartu kredit maupun data
-            rekening pribadi Anda; pembayaran dilakukan melalui transfer ke Virtual Account.
+            rekening pribadi Anda; pembayaran dilakukan melalui transfer ke rekening perusahaan
+            kami, tunai, atau giro.
         </p>
 
         <h2 id="sumber">4. Dari mana data itu kami peroleh</h2>
@@ -136,8 +137,8 @@
             Sebagian besar berasal langsung dari Anda: saat mengajukan pembukaan akun grosir, saat
             memesan, dan saat berkomunikasi dengan tim kami. Sebagian lagi terbentuk dengan
             sendirinya saat Anda memakai sistem — catatan pesanan, jejak audit, dan waktu masuk
-            terakhir. Data pembayaran kami terima dari penyedia gateway pembayaran ketika transfer
-            Anda masuk.
+            terakhir. Data pembayaran dicatat oleh tim keuangan kami ketika transfer, tunai, atau
+            giro Anda dikonfirmasi.
         </p>
         <p>
             Kami tidak membeli data dari pihak ketiga dan tidak mengumpulkan data Anda dari sumber
@@ -147,11 +148,6 @@
         <h2 id="pihak-ketiga">5. Kepada siapa data dibagikan</h2>
         <p>Kami tidak menjual data pribadi. Data dibagikan hanya kepada pihak berikut:</p>
         <ul class="mt-4 space-y-3">
-            <li class="rounded-lg border border-slate-200 p-4">
-                <strong class="text-slate-900">Penyedia gateway pembayaran</strong> — untuk
-                menerbitkan Virtual Account atas nama perusahaan Anda dan mencocokkan pembayaran
-                yang masuk. Yang dibagikan adalah identitas perusahaan pelanggan dan nilai tagihan.
-            </li>
             <li class="rounded-lg border border-slate-200 p-4">
                 <strong class="text-slate-900">Direktorat Jenderal Pajak</strong> — identitas wajib
                 pajak dan nilai transaksi, sebatas yang wajib dilaporkan dalam rangka penerbitan

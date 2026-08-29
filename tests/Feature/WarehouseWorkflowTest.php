@@ -237,7 +237,7 @@ class WarehouseWorkflowTest extends TestCase
         $this->assertSame([], app(StockLedger::class)->reconcile());
     }
 
-    /** `paid` is webhook-only, so a test gets there the same way the job does. */
+    /** `paid` comes only from settlement, so a test gets there the same way. */
     private function payFor(Order $order): void
     {
         $machine = app(OrderStateMachine::class);

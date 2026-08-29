@@ -57,7 +57,7 @@ Every password is `password`.
 | Buyer — Toko Sparepart Makmur | `/portal` | `toko@pembeli.example` |
 
 Use the **distributor** login for the portal. They have unpaid invoices, so the
-Virtual Account and the credit figures have something to show. The toko buyer
+payment instructions and the credit figures have something to show. The toko buyer
 has paid everything and their invoice screen is empty.
 
 ---
@@ -179,8 +179,9 @@ Scroll down: their spend by month and their open invoices by age, with the
 > "A workshop reorders the same fifteen parts forever. They restock; they don't
 > shop. So the first thing on the screen is last order, one click."
 
-Then **Tagihan** → open one → the fixed Virtual Account to pay into, and
-**Cetak faktur** so they can send it to their own accountant.
+Then **Tagihan** → open one → the company account to transfer to (with the
+faktur number as the berita, which is what lets finance match the statement
+line), and **Cetak faktur** so they can send it to their own accountant.
 
 ### The buying side — 2 min
 

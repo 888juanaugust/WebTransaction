@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Domain\Access\Role;
+use App\Domain\Regions\RegionContext;
 use App\Models\PriceTier;
 use App\Models\Region;
 use App\Models\User;
@@ -23,6 +24,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        /*
+         * The console is unbound, and seeded rows need books to file
+         * themselves under. Pin to the default region the migration created
+         * — the same thing TestCase does for the suite.
+         */
+        app(RegionContext::class)->pinTo(
+            Region::query()->orderBy('id')->firstOrFail(),
+        );
+
         /*
          * Ordinary staff are pinned to the default region the migration
          * created; the Owner's blank is the grant of every region. Left

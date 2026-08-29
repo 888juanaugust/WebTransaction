@@ -803,12 +803,11 @@ class DocumentPoster
      * post their own entry with both sides the other way round — the same
      * append-only shape the payment ledger already has.
      *
-     * Always Bank, never Kas. Gateway payments are Virtual Account transfers,
-     * so those are unambiguous. A payment finance keys in by hand could be a
-     * transfer or cash over the counter and nothing on the row says which —
-     * it is booked to Bank because nearly all of them are, and reclassified
-     * with a manual journal on the rare occasion it is not. Kas exists in the
-     * chart for that journal to move it to.
+     * Always Bank, never Kas. A payment finance keys in could be a transfer
+     * or cash over the counter and nothing on the row says which — it is
+     * booked to Bank because nearly all of them are, and reclassified with a
+     * manual journal on the rare occasion it is not. Kas exists in the chart
+     * for that journal to move it to.
      */
     public function customerPaymentReceived(PaymentEntry $entry, ?User $actor = null): JournalEntry
     {
@@ -821,7 +820,7 @@ class DocumentPoster
             $this->paymentDescription($entry),
             $entry->paid_at,
         )
-            ->debitSigned(AccountCode::BANK, $amount, $entry->gateway_reference)
+            ->debitSigned(AccountCode::BANK, $amount, $entry->catatan)
             ->kreditSigned(AccountCode::PIUTANG_USAHA, $amount, $company?->nama, company: $company);
 
         return $this->ledger->post($draft, $actor);

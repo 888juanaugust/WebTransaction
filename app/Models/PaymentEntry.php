@@ -17,8 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'company_id', 'invoice_id', 'order_id', 'amount_rupiah', 'kind',
-    'gateway', 'gateway_reference', 'webhook_event_id', 'actor_id',
-    'reverses_entry_id', 'paid_at', 'catatan',
+    'actor_id', 'reverses_entry_id', 'paid_at', 'catatan',
 ])]
 class PaymentEntry extends Model
 {
@@ -64,11 +63,6 @@ class PaymentEntry extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
-    }
-
-    public function webhookEvent(): BelongsTo
-    {
-        return $this->belongsTo(WebhookEvent::class);
     }
 
     /** Money in that has not been matched to an invoice yet. */

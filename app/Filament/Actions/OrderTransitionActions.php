@@ -211,8 +211,7 @@ class OrderTransitionActions
     }
 
     /**
-     * Bill the customer: issue the invoice and make sure they have a virtual
-     * account to pay into.
+     * Bill the customer: issue the invoice.
      *
      * Gated on seeing credit data rather than on creating orders — this is the
      * step that turns a held order into money owed, which is finance's call.
@@ -227,7 +226,8 @@ class OrderTransitionActions
             ->modalHeading('Terbitkan faktur')
             ->modalDescription(fn (Order $record) => 'Faktur akan diterbitkan sebesar '
                 .Money::format($record->total_rupiah)
-                .' dan pelanggan akan diberi nomor Virtual Account untuk pembayaran.')
+                .' — pembayaran lewat transfer bank, tunai, atau giro, '
+                .'dikonfirmasi oleh finance.')
             ->visible(fn (Order $record) => $record->status === OrderStatus::Confirmed
                 && (auth()->user()?->role()->canSeeCreditData() ?? false))
             ->action(function (Order $record) {

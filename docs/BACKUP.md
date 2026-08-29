@@ -227,8 +227,8 @@ the wrong outcome, and only the numbers will tell you.
   a PITR setup nobody understands is a worse one. Revisit when the daily volume
   makes a day's loss unacceptable.
 - **No backup of Redis.** It holds the queue and the cache. A lost queue means
-  some webhook jobs are re-driven, which they are built to survive — every job
-  is idempotent.
+  some jobs are re-driven, which they are built to survive — every job is
+  idempotent.
 - **No automatic restore testing.** The test suite proves a restore works
   (`tests/Feature/BackupTest.php` dumps, encrypts, restores into a scratch
   database and reads the rows back). Doing that against production storage on a

@@ -60,8 +60,6 @@ class NotaKreditDocumentTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('xendit.secret_key', '');
-
         $this->warehouse = Warehouse::factory()->create();
         $this->sales = User::factory()->sales()->create(['region_id' => $this->currentRegion()->id]);
         $this->finance = User::factory()->role(Role::Finance)->create();

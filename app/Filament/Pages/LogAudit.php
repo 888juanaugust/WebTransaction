@@ -77,8 +77,8 @@ class LogAudit extends Page implements HasTable
                 TextColumn::make('actor.name')
                     ->label('Oleh')
                     /*
-                     * The webhook and the scheduler act with nobody behind
-                     * them. Saying "Sistem" is truer than an empty cell, which
+                     * The scheduler and invoice settlement act with nobody
+                     * behind them. "Sistem" is truer than an empty cell, which
                      * reads as data somebody failed to record.
                      */
                     ->placeholder('Sistem')
@@ -232,7 +232,6 @@ class LogAudit extends Page implements HasTable
             'order_transition' => 'Order berpindah status',
             'order_priced' => 'Order dihargai',
             'invoice_issued' => 'Faktur terbit',
-            'payment_received' => 'Pembayaran diterima',
             'payment_confirmed' => 'Pembayaran dikonfirmasi',
             'payment_allocated' => 'Pembayaran dicocokkan',
             'payment_reversed' => 'Pembayaran dibalik',
@@ -282,7 +281,6 @@ class LogAudit extends Page implements HasTable
             'visits_archived' => 'Kunjungan diarsipkan',
             'order_split' => 'Order dipecah per gudang',
             'customer_portal_access_granted' => 'Akses portal diberikan',
-            'virtual_account_provisioned' => 'Virtual account dibuat',
             /*
              * Giro. `giro_cair`, `giro_ditolak` and `giro_dibatalkan` are
              * written as 'giro_'.$status->value from the shared release path,

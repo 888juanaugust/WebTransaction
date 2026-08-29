@@ -19,7 +19,7 @@ use RuntimeException;
  * - **open** — a person is deliberately looking across every region. Queries
  *   are unfiltered; creating anything is refused, because "which region does
  *   this order belong to" has no answer in this state.
- * - **unbound** — console commands, queue workers, the webhook. Also
+ * - **unbound** — console commands and queue workers. Also
  *   unfiltered, and also refuses to stamp, but the refusal reads as the
  *   programming error it is rather than as advice to a user.
  *

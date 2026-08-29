@@ -50,8 +50,7 @@ class UnmatchedPayments extends TableWidget
                 TextColumn::make('amount_rupiah')
                     ->label('Jumlah')
                     ->formatStateUsing(fn (int $state) => Money::format($state)),
-                TextColumn::make('gateway')->label('Sumber')->placeholder('manual'),
-                TextColumn::make('gateway_reference')->label('Referensi')->limit(24),
+                TextColumn::make('catatan')->label('Catatan')->limit(40)->placeholder('—'),
             ])
             ->recordActions([
                 Action::make('cocokkan')

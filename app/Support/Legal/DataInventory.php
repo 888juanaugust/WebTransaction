@@ -162,10 +162,10 @@ final class DataInventory
 
             'payment_entries' => [
                 'kategori' => 'pajak_dan_pembayaran',
-                'personal' => ['actor_id', 'gateway_reference', 'catatan'],
+                'personal' => ['actor_id', 'catatan'],
                 'bukan' => [
                     'company_id', 'invoice_id', 'order_id', 'amount_rupiah', 'kind',
-                    'gateway', 'webhook_event_id', 'reverses_entry_id', 'paid_at',
+                    'reverses_entry_id', 'paid_at',
                 ],
             ],
 
@@ -196,28 +196,6 @@ final class DataInventory
                 'bukan' => [
                     'invoice_id', 'company_id', 'amount_rupiah', 'status',
                     'decided_at', 'payment_entry_id',
-                ],
-            ],
-
-            'virtual_accounts' => [
-                'kategori' => 'pajak_dan_pembayaran',
-                'personal' => ['account_number', 'external_id', 'gateway_id'],
-                'bukan' => ['company_id', 'bank_code', 'status'],
-            ],
-
-            /*
-             * Raw gateway callbacks, stored verbatim and permanently — that is
-             * what makes payment handling idempotent and auditable. The payload
-             * is whatever Xendit sends, which can name the payer, so the notice
-             * has to say the raw payload is kept rather than pretend we only
-             * store the amount.
-             */
-            'webhook_events' => [
-                'kategori' => 'pajak_dan_pembayaran',
-                'personal' => ['payload'],
-                'bukan' => [
-                    'gateway', 'event_id', 'event_type', 'signature_verified',
-                    'received_at', 'processed_at', 'process_error', 'attempts', 'claimed_at',
                 ],
             ],
 
@@ -787,10 +765,9 @@ final class DataInventory
             [
                 'kunci' => 'pajak_dan_pembayaran',
                 'judul' => 'Data pembayaran dan perpajakan',
-                'isi' => 'Nomor Virtual Account, referensi pembayaran dari penyedia gateway, '
-                    .'jumlah dan waktu pembayaran, identitas pajak yang disalin ke faktur, serta '
-                    .'<strong>salinan mentah setiap callback</strong> yang dikirim penyedia '
-                    .'gateway pembayaran kepada kami. Termasuk pula pembayaran yang kami '
+                'isi' => 'Jumlah dan waktu pembayaran, catatan pencocokan yang dibuat tim '
+                    .'keuangan kami saat mengonfirmasi transfer, tunai, atau giro Anda, dan '
+                    .'identitas pajak yang disalin ke faktur. Termasuk pula pembayaran yang kami '
                     .'lakukan kepada pemasok beserta referensi transfernya, dan nomor faktur '
                     .'pajak pemasok yang menjadi dasar pengkreditan pajak masukan.',
                 'dasar' => 'Pelaksanaan perjanjian dan kewajiban hukum perpajakan (UU PDP Pasal 20 '

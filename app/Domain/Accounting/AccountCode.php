@@ -253,7 +253,7 @@ final class AccountCode
             self::posting(self::KAS, 'Kas', AccountType::Aset, '1-0000',
                 'Uang tunai di tangan. Transfer masuk tidak lewat sini — lihat Bank.'),
             self::posting(self::BANK, 'Bank', AccountType::Aset, '1-0000',
-                'Rekening bank, termasuk penerimaan lewat Virtual Account.'),
+                'Rekening bank. Transfer pelanggan masuk lewat sini.'),
             self::posting(self::PIUTANG_USAHA, 'Piutang Usaha', AccountType::Aset, '1-0000',
                 'Faktur yang sudah terbit dan belum dibayar. Harus sama dengan total tagihan terbuka pelanggan.'),
             self::posting(self::PIUTANG_GIRO, 'Piutang Giro', AccountType::Aset, '1-0000',

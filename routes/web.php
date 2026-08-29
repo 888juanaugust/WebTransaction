@@ -2,16 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\GantiWilayahController;
 use App\Http\Controllers\FakturController;
 use App\Http\Controllers\FakturExportController;
+use App\Http\Controllers\GantiWilayahController;
 use App\Http\Controllers\NotaKreditController;
 use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\RekeningPelangganController;
 use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\SuratJalanController;
-use App\Http\Controllers\XenditWebhookController;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -170,17 +168,3 @@ Route::middleware(['web', 'auth:web'])
 Route::middleware(['web', 'auth:web'])
     ->get('/dokumen/faktur-pajak/{fakturExport}', FakturExportController::class)
     ->name('faktur-pajak.unduh');
-
-/*
-|--------------------------------------------------------------------------
-| Callback gateway
-|--------------------------------------------------------------------------
-|
-| Exempt from CSRF — Xendit authenticates with the x-callback-token header,
-| which the controller checks in constant time before touching anything.
-|
-*/
-
-Route::post('/webhooks/xendit', XenditWebhookController::class)
-    ->withoutMiddleware([ValidateCsrfToken::class])
-    ->name('webhooks.xendit');

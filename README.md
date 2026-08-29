@@ -12,7 +12,8 @@ the company gets an account.
 
 ## Stack
 
-Laravel 13 · Livewire · Filament 4 · PostgreSQL 16 · Redis (queue + cache) · Xendit fixed VA.
+Laravel 13 · Livewire · Filament 4 · PostgreSQL 16 · Redis (queue + cache). No payment
+gateway — payments are recorded by finance against the bank statement.
 Single VPS in Jakarta, Caddy for TLS.
 
 Full dependency list, PHP extensions and deploy steps: **[REQUIREMENTS.md](REQUIREMENTS.md)**.
@@ -260,9 +261,9 @@ selects, autofill — drawn over a white page.
 ```
 draft  →  submitted  →  confirmed  →  awaiting_payment  →  paid  →  shipped  →  completed
   ↑            ↑             ↑                ↑              ↑         ↑           ↑
-order       "Ajukan"     "Setujui"       "Tagihkan"      Xendit    "Tandai   "Selesaikan"
- form                    prices lock,     invoice +      webhook    dikirim"
-                         stock held      VA issued                 stock out
+order       "Ajukan"     "Setujui"       "Tagihkan"    pelunasan   "Tandai   "Selesaikan"
+ form                    prices lock,     invoice        di buku    dikirim"
+                         stock held       terbit        keuangan   stock out
 ```
 
 Every one of those transitions is available from the order list, the order's
@@ -276,13 +277,11 @@ a single transaction:
 
 - **confirmed** — every line snapshots its price, discount, DPP, PPN and price
   list version; credit is checked; stock is reserved under a row lock.
-- **awaiting_payment** — the invoice is issued from those snapshots and the
-  buyer is given a fixed Virtual Account to pay into.
-- **paid** — reachable *only* from the gateway webhook.
-
-Without a Xendit key, virtual accounts are minted locally so the whole chain
-runs on a laptop. A flow you cannot complete locally is one people end up
-testing on production data.
+- **awaiting_payment** — the invoice is issued from those snapshots, printing
+  the company bank account as the place to send the transfer.
+- **paid** — reachable *only* through settlement in the payment ledger: finance
+  records the transfer, cash or cleared giro, and when an invoice is covered the
+  settlement advances the order itself.
 
 ## The invariants this code is built around
 
@@ -297,9 +296,9 @@ These are load-bearing. `CLAUDE.md` is the full statement of them; the short ver
    hint, not a second code path, and `resolve()` returns the same price with or without it.
 3. **Order lines snapshot their price** at `confirmed`. Historical orders and invoices never
    join to the live price list.
-4. **`paid` is set only by the gateway webhook.** Never a browser redirect, never a controller
-   responding to a user action. Idempotency comes from a UNIQUE constraint on the gateway
-   event id.
+4. **`paid` is set only by settlement in the payment ledger.** Never a browser redirect, never
+   a controller flipping a flag. Finance records the money as an append-only entry; a covered
+   invoice advances its own order.
 5. **Unit of measure is modeled.** Order lines store both the ordered unit/quantity and the
    resolved base quantity; the ledger is always in base units.
 6. **Money is BIGINT rupiah.** Never float.
@@ -307,7 +306,7 @@ These are load-bearing. `CLAUDE.md` is the full statement of them; the short ver
    scheduled job releases reservations on stale unpaid orders.
 
 Tests exist for the five places where bugs cost money: price resolution, credit check, stock
-reservation, webhook handling, tax calculation.
+reservation, payment settlement, tax calculation.
 
 Two of those are tested in ways worth knowing about:
 
@@ -692,10 +691,9 @@ or identifies personal data, or under `bukan` if it does not.
 Adding a column is therefore a two-line change, and forgetting the second line
 is a red build rather than a false public statement.
 
-Two things the notice would have got wrong without an audit: the audit log
-stores an **IP address**, which is an identifier under UU PDP; and raw gateway
-callbacks are kept **verbatim and permanently** for idempotency, and can name
-the payer. Both are disclosed rather than filed under "technical data".
+One thing the notice would have got wrong without an audit: the audit log
+stores an **IP address**, which is an identifier under UU PDP. It is disclosed
+rather than filed under "technical data".
 
 The cookie section is also asserted — a test compares it against the cookies the
 home page actually sets, because the first draft claimed there were none and

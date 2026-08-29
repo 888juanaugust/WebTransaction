@@ -150,42 +150,35 @@ class LaunchReadinessTest extends TestCase
         $this->assertFalse($this->check('daftar_harga')->lulus);
     }
 
-    public function test_a_development_xendit_key_fails_even_though_it_is_set(): void
+    public function test_a_placeholder_bank_account_fails(): void
     {
         /*
-         * The nastiest of these to catch by eye. A development key looks
-         * completely fine — the panel works, orders reach awaiting_payment,
-         * virtual accounts appear — right up until the first invoice is never
-         * paid, because none of those accounts exists at a bank.
+         * The nastiest of these to catch by eye. The placeholder prints on
+         * every faktur looking completely fine — right up until a customer's
+         * transfer goes to a number that belongs to nobody.
          */
-        config([
-            'xendit.secret_key' => 'xnd_development_abc123',
-            'xendit.callback_token' => 'tok',
-        ]);
+        config(['perusahaan.rekening.nomor' => '000-000-0000']);
 
-        $check = $this->check('xendit');
+        $check = $this->check('rekening');
 
         $this->assertFalse($check->lulus);
-        $this->assertStringContainsString('development', (string) $check->temuan);
+        $this->assertStringContainsString('placeholder', (string) $check->temuan);
     }
 
-    public function test_a_production_key_with_a_callback_token_passes(): void
+    public function test_a_real_bank_account_passes(): void
     {
-        config([
-            'xendit.secret_key' => 'xnd_production_abc123',
-            'xendit.callback_token' => 'tok',
-        ]);
+        config(['perusahaan.rekening.nomor' => '512-034-9911']);
 
-        $this->assertTrue($this->check('xendit')->lulus);
+        $this->assertTrue($this->check('rekening')->lulus);
     }
 
-    public function test_a_missing_callback_token_fails(): void
+    public function test_an_empty_bank_account_fails(): void
     {
-        // Without it the webhook cannot be verified, and `paid` is set only by
-        // the webhook.
-        config(['xendit.secret_key' => 'xnd_production_abc123', 'xendit.callback_token' => null]);
+        // Blank is the same trap as the placeholder: a faktur with no
+        // payable destination on it.
+        config(['perusahaan.rekening.nomor' => '']);
 
-        $this->assertFalse($this->check('xendit')->lulus);
+        $this->assertFalse($this->check('rekening')->lulus);
     }
 
     public function test_it_finds_staff_still_using_the_seeded_password(): void

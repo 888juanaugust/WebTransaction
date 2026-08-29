@@ -10,7 +10,6 @@ use App\Domain\Audit\AuditLogger;
 use App\Domain\Billing\InvoiceIssuer;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Documents\DocumentNumberGenerator;
-use App\Domain\Payments\VirtualAccountProvisioner;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
 use App\Domain\Stock\InsufficientStockException;
@@ -47,7 +46,6 @@ class OrderStateMachine
         private readonly CreditChecker $credit,
         private readonly AuditLogger $audit,
         private readonly InvoiceIssuer $invoices,
-        private readonly VirtualAccountProvisioner $virtualAccounts,
         private readonly DocumentPoster $poster,
     ) {}
 
@@ -349,16 +347,15 @@ class OrderStateMachine
     }
 
     /**
-     * Bill the customer: issue the invoice and make sure they have a virtual
-     * account to pay into.
+     * Bill the customer: issue the invoice.
      *
-     * This is the moment the order becomes money owed, so both happen in the
+     * This is the moment the order becomes money owed, so it happens in the
      * same transaction as the transition — an order sitting at
      * `awaiting_payment` with no invoice would be a bill nobody can pay, and
      * it is exactly the state the AR queues and the buyer portal read from.
      *
-     * Idempotent on both counts: re-running returns the existing invoice and
-     * the existing VA rather than billing twice.
+     * Idempotent: re-running returns the existing invoice rather than
+     * billing twice.
      *
      * A null actor means the system moved it — the stale-order sweep does.
      */
@@ -368,7 +365,6 @@ class OrderStateMachine
 
         return $this->inRegion($order, fn () => DB::transaction(function () use ($order, $actor, $catatan) {
             $invoice = $this->invoices->issueFor($order, $actor);
-            $va = $this->virtualAccounts->ensureFor($order->company);
 
             return $this->transition(
                 $order,
@@ -380,7 +376,6 @@ class OrderStateMachine
                     'invoice_nomor' => $invoice->nomor,
                     'total_rupiah' => $invoice->total_rupiah,
                     'due_date' => $invoice->due_date->toDateString(),
-                    'virtual_account' => $va->account_number,
                 ],
             );
         }));
@@ -389,10 +384,10 @@ class OrderStateMachine
     /**
      * Mark an order paid.
      *
-     * Only the gateway webhook job calls this — never a controller responding
-     * to a user action, and never a browser redirect. `$actor` is null because
-     * the actor is the bank, and the webhook event id is recorded in meta so
-     * the transition is traceable back to the callback that caused it.
+     * Only invoice settlement in the payment ledger calls this — never a
+     * controller responding to a user action, and never a browser redirect.
+     * `$actor` is null because the actor is the money arriving; the invoice
+     * id in meta ties the transition to the entries that settled it.
      *
      * @param  array<string, mixed>  $meta
      */
@@ -671,7 +666,7 @@ class OrderStateMachine
      *
      * There are three kinds of actor, and the event row keeps them apart: a
      * staff user, a buyer in the portal, or nobody at all — the scheduled sweep
-     * and the payment webhook, where the actor is a clock or a bank.
+     * and invoice settlement, where the actor is a clock or the money itself.
      *
      * @param  (callable(Order): void)|null  $mutate
      * @param  array<string, mixed>  $meta

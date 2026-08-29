@@ -24,7 +24,7 @@ use Tests\TestCase;
  * Inventory costing: moving average, and the COGS a shipment freezes.
  *
  * This is the sixth money-critical area. The five in CLAUDE.md are price
- * resolution, credit, reservation, webhooks and tax; costing joins them for the
+ * resolution, credit, reservation, settlement and tax; costing joins them for the
  * same reason they are on the list — a bug here is not a wrong pixel, it is a
  * wrong gross margin, and a wrong gross margin is a business decision made on a
  * number that was never true.

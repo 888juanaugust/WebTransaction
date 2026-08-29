@@ -52,8 +52,6 @@ class ReportScreensTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('xendit.secret_key', '');
-
         $this->gudang = Warehouse::factory()->create();
         $this->sales = User::factory()->sales()->create();
         $this->finance = User::factory()->role(Role::Finance)->create();

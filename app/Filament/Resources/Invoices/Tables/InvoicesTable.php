@@ -142,9 +142,9 @@ class InvoicesTable
                     ->openUrlInNewTab(),
 
                 /*
-                 * Manual payment entry, for transfers that did not come
-                 * through the gateway. Restricted to Finance and Owner, and it
-                 * appends to the ledger — it never edits the invoice amount.
+                 * Payment entry — the transfer finance matched on the bank
+                 * statement. Restricted to Finance and Owner, and it appends
+                 * to the ledger — it never edits the invoice amount.
                  */
                 /*
                  * The claim that a debt was paid outside the system — cash

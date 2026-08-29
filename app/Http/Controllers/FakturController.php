@@ -91,18 +91,6 @@ class FakturController extends Controller
             'invoice' => $invoice,
             'lines' => $invoice->order?->lines ?? collect(),
 
-            /*
-             * The fixed VA, so the page a customer prints is also the page that
-             * tells them where to send the money. Fixed per company rather than
-             * per invoice, so paying three invoices means three transfers to
-             * one number.
-             */
-            'virtualAccount' => $invoice->company
-                ?->virtualAccounts()
-                ->where('status', 'active')
-                ->latest('id')
-                ->first(),
-
             // Summed from the append-only payment ledger, not from a flag.
             'outstanding' => $invoice->amountOutstanding(),
         ]);

@@ -270,18 +270,18 @@ DB_PASSWORD=…
 QUEUE_CONNECTION=redis
 CACHE_STORE=redis
 
-XENDIT_SECRET_KEY=xnd_production_…
-XENDIT_CALLBACK_TOKEN=…
+PERUSAHAAN_BANK=…                          # printed on every faktur as the
+PERUSAHAAN_REKENING=…                      # transfer destination — get these
+PERUSAHAAN_REKENING_NAMA=…                 # three right before the first invoice
 BACKUP_ENCRYPTION_KEY=…                    # php artisan backup:key
 BACKUP_DISK=…                              # NOT this machine — see docs/BACKUP.md
 ```
 
 `APP_DEBUG=false` is not a style preference. A stack trace on an exception page
-carries the database credentials and the Xendit secret out to whoever triggered
-it.
+carries the database credentials out to whoever triggered it.
 
-`APP_URL` must be the real https address. It is what invoice PDFs, portal links
-and `php artisan xendit:verify` all build from.
+`APP_URL` must be the real https address. It is what invoice PDFs and portal
+links build from.
 
 ```bash
 php artisan migrate --force
@@ -334,13 +334,6 @@ Point the domain's A record at the VPS first — Caddy obtains the certificate o
 first request and cannot do so until DNS resolves. Then
 `systemctl reload caddy`.
 
-**The one thing to be careful about here:** whatever you add to this file
-later, it must not touch `POST /webhooks/xendit`. That route is authenticated by
-the `x-callback-token` *header*, so any proxy layer, cache rule or WAF that
-strips unknown headers turns every payment callback into a 401 — and a 401
-there is invisible from every screen in the application. The money still lands
-in the bank; the order simply never becomes `paid`, forever.
-
 ---
 
 ## 6. Queue workers and the scheduler
@@ -387,55 +380,31 @@ The scheduler, as `deploy`'s crontab:
 
 ---
 
-## 7. Xendit
+## 7. The bank account on the faktur
 
-The code side is already done — `AppServiceProvider` swaps
-`LocalVirtualAccountGateway` for `XenditVirtualAccountGateway` as soon as
-`XENDIT_SECRET_KEY` is filled, and nothing else needs changing. What is left is
-the dashboard side and proving it.
-
-In the Xendit dashboard:
-
-1. **Settings → Developers → API keys.** Create a secret key with write access
-   to Fixed Virtual Accounts. It will start `xnd_production_`.
-2. **Settings → Developers → Callbacks.** Set the *Fixed Virtual Account paid*
-   callback URL to `https://portal.example.co.id/webhooks/xendit`, and copy the
-   callback verification token into `XENDIT_CALLBACK_TOKEN`.
-3. Activate the banks you actually want to accept. `config/xendit.php` lists
-   BCA, BNI, BRI, Mandiri and Permata; a bank that is not enabled on the
-   account is refused at provisioning time.
-
-Then, on the server:
+There is no payment gateway. Customers pay by transfer to the company account,
+by cash, or by giro through their sales; finance records each one against the
+bank statement, and a covered invoice advances its own order. The deploy-side
+work is exactly one thing: the account the faktur tells customers to pay into.
 
 ```bash
+PERUSAHAAN_BANK=BCA
+PERUSAHAAN_REKENING=…
+PERUSAHAAN_REKENING_NAMA=PT …
 php artisan config:clear && php artisan config:cache
-php artisan xendit:verify
 ```
 
-That command exists because the test suite cannot tell you any of what actually
-breaks on a first deployment. It checks, in order:
+Then open any unpaid faktur and read the payment block at the bottom. The
+number printed there is where customer money will go — verify it against the
+bank book, not against the `.env` you just typed. The launch checklist fails
+on the shipped placeholder, but it cannot tell a typo from a real account;
+only a person reading the printed faktur can.
 
-| Stage | What a failure means |
-|---|---|
-| Konfigurasi | Key missing, or you cannot tell sandbox from production by looking |
-| Binding | The key is in `.env` but not visible to the running process — nearly always a stale `config:cache` |
-| API | The key is refused, or the bank is not enabled |
-| VA lokal | A virtual account minted by the *local* gateway survived into production. No bank has ever heard of that number |
-| Callback | Xendit's callback cannot reach this box: DNS, TLS, Caddy, a stripped header |
-| Antrean | The callback arrived, was stored, and no worker picked it up |
+The transfer instruction asks the customer to quote the faktur number in the
+berita. That reference is what lets finance match a statement line to an
+invoice in the **Pembayaran belum cocok** queue instead of ringing the
+customer to ask what the money was for.
 
-The callback stage posts a **zero-amount** event to the app's own public URL. It
-goes out through DNS, TLS and Caddy and back in, which is the entire point — an
-in-process call proves nothing about the path a real callback takes. Zero
-amount because `ProcessXenditCallback` returns early on those without writing a
-payment entry: what needs proving is that the request arrives and gets picked
-up, not that we can fabricate a payment.
-
-On production keys the callback stage **refuses to run** and says so. The event
-id is the idempotency key for real money, and inventing one on a live system
-puts a row into the table that decides what has already been handled.
-
----
 
 ## 8. Backups
 
@@ -462,7 +431,7 @@ a runbook somebody can read before touching the machine is worth having.
 
 Everything below is a launch blocker, and only the first two are code.
 
-- [ ] `php artisan xendit:verify` — every stage green
+- [ ] The payment block on a printed faktur shows the real company account
 - [ ] `php artisan backup:restore --into=scratch` — actually restored, not just written
 - [ ] Real company details replacing the placeholders in `config/perusahaan.php`
       — the profile text, and above all the **partners**, which are invented
@@ -519,10 +488,9 @@ The three failures that actually happen, and what each looks like:
 path — Filament's rate limiter uses the cache. `systemctl status redis-server`.
 
 **Orders reach `awaiting_payment` and never move, but the money is in the
-bank.** The callback is not arriving or not being processed. Run
-`php artisan xendit:verify`; it distinguishes the three causes. Nothing recovers
-from this on its own, because Xendit already received a 200 for anything that
-reached the controller.
+bank.** Nobody has recorded the payment — settlement is finance's hand, not a
+callback. Check the **Pembayaran belum cocok** queue and the bank statement;
+recording the entry against the invoice moves the order the same second.
 
 **Stock looks lower than the shelf.** Reservations from unpaid orders are not
 being released — the scheduler is not running. Check the crontab, then

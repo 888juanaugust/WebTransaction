@@ -23,6 +23,7 @@ use App\Domain\Purchasing\GoodsReceiptPoster;
 use App\Domain\Purchasing\PurchaseOrderFlow;
 use App\Domain\Purchasing\SupplierBillPoster;
 use App\Domain\Purchasing\SupplierCreditNoteIssuer;
+use App\Domain\Regions\RegionContext;
 use App\Domain\Uom\Unit;
 use App\Models\Company;
 use App\Models\CustomerUser;
@@ -38,6 +39,7 @@ use App\Models\PriceTierItem;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
+use App\Models\Region;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
 use App\Models\SupplierBillLine;
@@ -86,6 +88,12 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $this->refuseInProduction();
+
+        // The console is unbound; pin to the default region like TestCase
+        // does, so every seeded document files itself in real books.
+        app(RegionContext::class)->pinTo(
+            Region::query()->orderBy('id')->firstOrFail(),
+        );
 
         $staff = $this->staff();
         $warehouse = Warehouse::query()->where('kode', 'GD-PUSAT')->firstOrFail();
@@ -462,10 +470,9 @@ class DemoSeeder extends Seeder
     /**
      * Take an order to `paid`.
      *
-     * `paid` is reachable only from the gateway webhook, so this records the
-     * money on the ledger the way a manual bank transfer would be recorded and
+     * `paid` is reachable only through invoice settlement, so this records
+     * the money on the ledger the way a bank transfer would be recorded and
      * then makes the transition with meta saying plainly that a seeder did it.
-     * Nothing here pretends to be Xendit.
      */
     private function settle(Order $order, User $finance): void
     {
@@ -481,7 +488,7 @@ class DemoSeeder extends Seeder
 
         app(OrderStateMachine::class)->markPaid($order, [
             'source' => 'demo_seeder',
-            'catatan' => 'Data demo — bukan callback gateway.',
+            'catatan' => 'Data demo — pelunasan manual.',
         ]);
     }
 
