@@ -282,9 +282,10 @@ DB_PASSWORD=…
 QUEUE_CONNECTION=redis
 CACHE_STORE=redis
 
-PERUSAHAAN_BANK=…                          # printed on every faktur as the
-PERUSAHAAN_REKENING=…                      # transfer destination — get these
-PERUSAHAAN_REKENING_NAMA=…                 # three right before the first invoice
+# PERUSAHAAN_* and PAJAK_PENJUAL_* need no .env entries any more: the Owner
+# types them into Pengaturan → Pengaturan perusahaan, audited, and the
+# faktur/portal/launch checklist read them the same second. The env keys
+# remain as fallbacks only.
 BACKUP_ENCRYPTION_KEY=…                    # php artisan backup:key
 BACKUP_DISK=…                              # NOT this machine — see docs/BACKUP.md
 SESSION_SECURE_COOKIE=true                 # the cookie never travels plain http
@@ -368,12 +369,8 @@ by cash, or by giro through their sales; finance records each one against the
 bank statement, and a covered invoice advances its own order. The deploy-side
 work is exactly one thing: the account the faktur tells customers to pay into.
 
-```bash
-PERUSAHAAN_BANK=BCA
-PERUSAHAAN_REKENING=…
-PERUSAHAAN_REKENING_NAMA=PT …
-php artisan config:clear && php artisan config:cache
-```
+The Owner enters it on **Pengaturan → Pengaturan perusahaan** — no SSH, no
+`.env`, and the change lands in the audit log with old and new values.
 
 Then open any unpaid faktur and read the payment block at the bottom. The
 number printed there is where customer money will go — verify it against the

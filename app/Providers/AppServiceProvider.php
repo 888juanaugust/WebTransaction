@@ -11,6 +11,7 @@ use App\Domain\Backup\FileArchiver;
 use App\Domain\Launch\LaunchReadiness;
 use App\Domain\Ops\OpsAlerter;
 use App\Domain\Ops\OpsHealth;
+use App\Domain\Pengaturan\PengaturanPerusahaan;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
@@ -163,6 +164,14 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Company::observe(CompanyObserver::class);
+
+        /*
+         * What the Owner typed into Pengaturan perusahaan lands on top of
+         * config here, so the faktur, the portal, the public site and the
+         * launch checklist all see it without knowing it exists. Guarded
+         * inside overlay(): booting with no database must not fatal.
+         */
+        app(PengaturanPerusahaan::class)->overlay();
 
         /*
          * A query that takes over a second on this workload is a bug, not a

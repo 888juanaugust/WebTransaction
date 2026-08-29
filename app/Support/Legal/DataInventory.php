@@ -199,6 +199,17 @@ final class DataInventory
                 ],
             ],
 
+            /*
+             * Operator-supplied company values (bank account, identity,
+             * tax seller). Corporate data, except the staff reference on
+             * who last changed a row — which is the audit point.
+             */
+            'pengaturan' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['updated_by'],
+                'bukan' => ['kunci', 'nilai'],
+            ],
+
             'carts' => [
                 'kategori' => 'aktivitas_transaksi',
                 'personal' => ['customer_user_id'],

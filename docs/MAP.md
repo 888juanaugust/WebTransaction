@@ -1196,6 +1196,19 @@ every kind of data the role separation elsewhere exists to keep apart.
 | `OpsAlerter` | Mails the Owner once per incident (6h throttle, cleared on recovery); the mail is deliberately unqueued |
 | Heartbeat | The scheduler stamps the cache every minute; the stamp's absence *is* the "cron is dead" finding |
 
+### Pengaturan perusahaan — the values only the business knows
+
+| Piece | Decides |
+|---|---|
+| `pengaturan` table + `PengaturanPerusahaan` | kunci→config map; stored rows **overlay config at boot**, so the faktur, portal, public site and launch checklist read the Owner's values without knowing the table exists. `.env` stays the fallback for a blank |
+| `PengaturanPerusahaanPage` | Owner-only form: rekening (where customer money goes — the field a fraud would edit), identitas, pajak penjual, the two `>>> PUTUSKAN` commercial values |
+| Audit | Every change is one `pengaturan_diubah` row with old → new; saving unchanged values writes nothing |
+
+This is what makes UAT scenario A possible: the admin completes setup —
+including the bank account on the faktur — without a terminal, and watches
+the launch checklist go green as they type. `docs/UAT.md` is the per-role
+acceptance script the pilot runs.
+
 ### Kesiapan peluncuran — the launch checklist that checks itself
 
 `php artisan launch:check` prints the same checks where the deployer already
