@@ -1628,6 +1628,17 @@ Landed cost has one approximation worth knowing about rather than a gap: which
 cartons the sold ones came from is unknowable under average costing, so a
 first-in-first-out reading is laid over it. See the section above.
 
+The cutover itself is `docs/GO-LIVE.md` — a rehearsed sequence, not a plan:
+empty database → `migrate --force` (the migration seeds the one region) →
+`launch:owner` (the single sanctioned bootstrap: prompts for a ≥12-char
+password, works only while no active Owner exists, audited with a null actor
+because there is no one to sign yet) → `backup:key` before any data worth
+losing → the real supplier workbook through the import screen (rehearsal:
+1,402 KODE published, 55 quirk rows correctly held for review, safety brake
+silent on a first import) → `backup:run` and a `backup:restore --into=`
+practice drill → `launch:check` exit 0. Production never runs `db:seed` —
+that is the demo's door, and the checklist flags its known passwords.
+
 Deployment is written up in `docs/DEPLOY.md` — a bare Hostinger VPS through to
 taking real money, with the executable kit in `deploy/` (provision.sh,
 deploy.sh, Caddyfile, supervisor unit) and the pipeline in
