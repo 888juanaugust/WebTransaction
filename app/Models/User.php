@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'region_id'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'region_id', 'warehouse_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -52,6 +52,12 @@ class User extends Authenticatable implements FilamentUser
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class);
+    }
+
+    /** The one gudang a Storage account works. Null for every other role. */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function isOwner(): bool

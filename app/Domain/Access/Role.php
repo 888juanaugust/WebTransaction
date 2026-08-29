@@ -27,6 +27,7 @@ enum Role: string
     case Sales = 'sales';
     case Marketing = 'marketing';
     case Warehouse = 'warehouse';
+    case Storage = 'storage';
     case Finance = 'finance';
     case Owner = 'owner';
 
@@ -36,9 +37,25 @@ enum Role: string
             self::Sales => 'Sales',
             self::Marketing => 'Marketing',
             self::Warehouse => 'Inventori',
+            self::Storage => 'Gudang',
             self::Finance => 'Keuangan',
             self::Owner => 'Pemilik',
         };
+    }
+
+    /**
+     * A packer's account, bound to exactly one warehouse.
+     *
+     * When marketing approves a transaction the goods are promised from a
+     * specific gudang, and this is the person who walks its aisles: they see
+     * that warehouse's shipping queue, print the pick list and surat jalan,
+     * and mark the boxes gone. Nothing else — no prices beyond what the
+     * pick list omits anyway, no cost, no credit, no catalogue keeping.
+     * Inventori remains the wider stock role; Gudang is the loading bay.
+     */
+    public function isWarehouseBound(): bool
+    {
+        return $this === self::Storage;
     }
 
     /**
@@ -392,7 +409,7 @@ enum Role: string
 
     public function canPickAndShip(): bool
     {
-        return in_array($this, [self::Warehouse, self::Owner], true);
+        return in_array($this, [self::Warehouse, self::Storage, self::Owner], true);
     }
 
     public function canViewAuditLog(): bool

@@ -50,6 +50,13 @@ class StaffTable
                     ->placeholder('Semua wilayah')
                     ->toggleable(),
 
+                TextColumn::make('warehouse.nama')
+                    ->label('Gudang')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->toggleable(),
+
                 TextColumn::make('role')
                     ->label('Peran')
                     ->badge()
@@ -58,6 +65,7 @@ class StaffTable
                         Role::Owner => 'danger',
                         Role::Finance => 'warning',
                         Role::Warehouse => 'gray',
+                        Role::Storage => 'gray',
                         Role::Sales => 'info',
                         Role::Marketing => 'success',
                     })

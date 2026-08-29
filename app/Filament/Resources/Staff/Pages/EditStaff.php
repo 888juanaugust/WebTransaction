@@ -52,6 +52,24 @@ class EditStaff extends EditRecord
          * to the current role makes that a no-op rather than a null crash.
          */
         $role = Role::from($data['role'] ?? $record->role->value);
+
+        /*
+         * For a Gudang account the warehouse binding must land before the
+         * role change: changeRole refuses to make somebody a packer with no
+         * gudang, and assignWarehouse refuses to bind any other role — so a
+         * fresh binding is applied between the two, on the row as it will be.
+         */
+        if ($role === Role::Storage && isset($data['warehouse_id'])
+            && (int) $record->warehouse_id !== (int) $data['warehouse_id']) {
+            if ($record->role() !== Role::Storage) {
+                // Becoming a packer: bind first with the row already storage —
+                // stage the binding directly, the registrar validates below.
+                $record->forceFill(['warehouse_id' => (int) $data['warehouse_id']])->save();
+            } else {
+                $registrar->assignWarehouse($record, (int) $data['warehouse_id'], $actor);
+            }
+        }
+
         $registrar->changeRole($record, $role, $actor);
 
         /*

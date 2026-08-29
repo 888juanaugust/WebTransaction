@@ -40,6 +40,13 @@ class SuratJalanController extends Controller
             throw new AccessDeniedHttpException('Hanya gudang yang bisa mencetak surat jalan.');
         }
 
+        // A warehouse-bound (Gudang) account prints only its own gudang's
+        // paperwork — the URL is guessable, the boundary must not be.
+        if ($user->role()->isWarehouseBound()
+            && (int) $order->warehouse_id !== (int) $user->warehouse_id) {
+            throw new AccessDeniedHttpException('Order ini milik gudang lain.');
+        }
+
         /*
          * Only for an order that has actually committed stock.
          *

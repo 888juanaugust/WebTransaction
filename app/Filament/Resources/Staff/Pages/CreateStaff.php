@@ -36,6 +36,7 @@ class CreateStaff extends CreateRecord
             password: $data['password'],
             actor: auth()->user(),
             regionId: isset($data['region_id']) ? (int) $data['region_id'] : null,
+            warehouseId: isset($data['warehouse_id']) ? (int) $data['warehouse_id'] : null,
         );
     }
 

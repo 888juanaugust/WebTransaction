@@ -272,7 +272,8 @@ class OrderTransitionActions
              * invoice stands as debt until the money arrives on terms.
              */
             ->visible(fn (Order $record) => in_array($record->status, [OrderStatus::Paid, OrderStatus::AwaitingPayment], true)
-                && (auth()->user()?->role()->canPickAndShip() ?? false))
+                && (auth()->user()?->role()->canPickAndShip() ?? false)
+                && self::gudangnyaSendiri($record))
             ->action(function (Order $record) {
                 try {
                     app(OrderStateMachine::class)->ship($record, auth()->user());
@@ -305,7 +306,8 @@ class OrderTransitionActions
             ->modalHeading('Selesaikan order')
             ->modalDescription('Tandai order ini selesai. Barang sudah diterima pelanggan.')
             ->visible(fn (Order $record) => $record->status === OrderStatus::Shipped
-                && (auth()->user()?->role()->canPickAndShip() ?? false))
+                && (auth()->user()?->role()->canPickAndShip() ?? false)
+                && self::gudangnyaSendiri($record))
             ->action(function (Order $record) {
                 try {
                     app(OrderStateMachine::class)->complete($record, auth()->user());
@@ -347,8 +349,25 @@ class OrderTransitionActions
             // enforces this regardless, but a button that 403s when clicked is
             // a bug report waiting to be filed.
             ->visible(fn (Order $record) => auth()->user()?->role()->canPickAndShip()
+                && self::gudangnyaSendiri($record)
                 && ($record->status->holdsReservation()
                     || in_array($record->status, [OrderStatus::Shipped, OrderStatus::Completed], true)));
+    }
+
+    /**
+     * A warehouse-bound (Gudang) account handles its own gudang's orders and
+     * no other's. Filament refuses to mount a hidden action server-side, so
+     * this is enforcement, not cosmetics. Every unbound role passes.
+     */
+    private static function gudangnyaSendiri(Order $record): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->role()->isWarehouseBound()) {
+            return true;
+        }
+
+        return (int) $record->warehouse_id === (int) $user->warehouse_id;
     }
 
     /**

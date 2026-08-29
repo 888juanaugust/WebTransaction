@@ -65,7 +65,10 @@ document, stays Indonesian.
 | `/admin/companies` | Customers | not Warehouse | Credit limit, terms, tax data, buyer logins |
 | `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
-| `/admin/pengiriman` | Pengiriman | Warehouse, Owner | Pick list, surat jalan, ship, complete |
+| `/admin/pengiriman` | Pengiriman | Inventori, Gudang, Owner | Approved orders land here for packing — pick list, surat jalan, ship. A Gudang account sees **only its own warehouse**, in the query itself |
+| `/admin/komisi-target` | Komisi & target | Owner | Set each seller's rate (effective-dated, append-only) and each sales seat's monthly target |
+| `/admin/laporan/komisi` | Komisi & target | Finance, Owner | Who earned what on the month's **collected** sales, vs target. Derived, never stored |
+| `/admin/laporan/rekap-ppn` | Rekap PPN masa | Finance, Owner | Keluaran − Masukan for one masa pajak, netted the way it is filed |
 | `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
 | `/admin/pemasok` | Pemasok | Finance, Owner | Who we buy from |
 | `/admin/penerimaan` | Penerimaan barang | Finance, Owner | Goods receipt. Posting raises stock and moves average cost |
@@ -954,6 +957,11 @@ itself.
 |---|---|
 | `Role::Marketing` | The approval seat: pending orders wait on them, debts report to them |
 | `Role::Warehouse` (label **Inventori**) | Stock work plus the catalogue and price list; sees cost now |
+| `Role::Storage` (label **Gudang**) | The packer's seat: bound to one warehouse via `users.warehouse_id`, one active account per warehouse (`StaffRegistrar` refuses a second). Sees its own gudang's shipping queue and nothing else — no cost, no credit, no catalogue. Region follows the warehouse |
+| `StaffRegistrar::assignWarehouse` | Move a packer to another gudang — audited, sessions ended, region re-pinned |
+| `KomisiSetter` | Owner's two levers: rate rows (append-only, effective-dated, basis points) and monthly targets — both audited |
+| `KomisiReport` | Komisi derived from **settled** invoices at the rate effective on the settlement date; base = total − PPN − credit notes. A reversal claws back by the invoice simply dropping out |
+| `RekapPpn` | Keluaran (faktur − nota kredit) − Masukan (tagihan − retur − nota kredit pemasok) per masa |
 | `Role::canApproveOrders` | Marketing and Owner — never Sales, who are paid on the sale |
 | `Role::canManagePriceList` | Inventori and Owner — pricing moved out of Sales' hands |
 | `TeamAssigner` | One sales + one marketing per customer, Owner-assigned, audited |

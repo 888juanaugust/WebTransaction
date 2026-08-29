@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Orders\OrderStatus;
 use App\Filament\Actions\OrderTransitionActions;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\Warehouse;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -26,10 +27,18 @@ use Illuminate\Database\Eloquent\Builder;
  * needs more than that — which gudang, how many lines, whether the surat jalan
  * has been printed, and what shipped yesterday when a customer rings about it.
  *
+ * Marketing's approval is what fills this screen. Under the credit operation
+ * the ordinary path is confirmed → awaiting_payment with the goods leaving on
+ * terms, so an approved order lands here *before* any money moves — the
+ * approval is the forwarding. Prepaid orders arrive the moment they settle.
+ *
+ * A Gudang (storage) account sees only its own warehouse — not as a filter it
+ * could clear, but in the query itself. One warehouse, one packer, and the
+ * packer's queue is the warehouse's queue.
+ *
  * No prices and no credit data anywhere on this page. That is not a display
  * choice: the columns are never selected, so there is nothing to leak if a
- * template changes. Warehouse staff are the one role that cannot see money, and
- * this is the screen they live on.
+ * template changes.
  */
 class Pengiriman extends Page implements HasTable
 {
@@ -55,14 +64,16 @@ class Pengiriman extends Page implements HasTable
         return auth()->user()?->role()->canPickAndShip() ?? false;
     }
 
-    /** How many orders are waiting to be picked right now. */
+    /** How many approved orders are waiting to be picked right now. */
     public static function getNavigationBadge(): ?string
     {
         if (! static::canAccess()) {
             return null;
         }
 
-        $waiting = Order::query()->where('status', OrderStatus::Paid)->count();
+        $waiting = static::scopeToOwnWarehouse(
+            Order::query()->whereIn('status', [OrderStatus::AwaitingPayment, OrderStatus::Paid]),
+        )->count();
 
         return $waiting > 0 ? (string) $waiting : null;
     }
@@ -71,22 +82,33 @@ class Pengiriman extends Page implements HasTable
     {
         return $table
             ->query(
-                fn (): Builder => Order::query()
-                    ->whereIn('status', [OrderStatus::Paid, OrderStatus::Shipped, OrderStatus::Completed])
-                    ->with(['company', 'warehouse'])
-                    ->withCount('lines')
+                fn (): Builder => static::scopeToOwnWarehouse(
+                    Order::query()
+                        ->whereIn('status', [
+                            OrderStatus::AwaitingPayment, OrderStatus::Paid,
+                            OrderStatus::Shipped, OrderStatus::Completed,
+                        ])
+                        ->with(['company', 'warehouse'])
+                        ->withCount('lines')
+                )
             )
-            // Paid first and oldest first — that is picking order. Sorting by
-            // order number would scatter the queue across the list.
-            ->defaultSort('paid_at')
+            // Oldest approval first — that is picking order. Sorting by order
+            // number would scatter the queue across the list.
+            ->defaultSort('confirmed_at')
             ->emptyStateHeading('Belum ada yang perlu dikirim')
-            ->emptyStateDescription('Order muncul di sini setelah pembayaran diterima.')
+            ->emptyStateDescription('Order muncul di sini begitu disetujui marketing — '
+                .'barangnya diteruskan ke gudang pengirim untuk dipacking.')
             ->columns([
                 TextColumn::make('nomor')->label('Nomor')->searchable()->sortable(),
 
                 TextColumn::make('company.nama')->label('Pelanggan')->searchable()->wrap(),
 
-                TextColumn::make('warehouse.nama')->label('Gudang')->sortable(),
+                TextColumn::make('warehouse.nama')
+                    ->label('Gudang')
+                    ->sortable()
+                    // A packer's whole screen is one gudang; the column would
+                    // repeat their own name down the page.
+                    ->visible(fn () => auth()->user()?->warehouse_id === null),
 
                 TextColumn::make('lines_count')->label('Baris'),
 
@@ -105,14 +127,19 @@ class Pengiriman extends Page implements HasTable
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->formatStateUsing(fn (OrderStatus $state) => $state->label())
+                    ->formatStateUsing(fn (OrderStatus $state) => match ($state) {
+                        OrderStatus::AwaitingPayment => 'Siap dikirim (kredit)',
+                        OrderStatus::Paid => 'Siap dikirim (lunas)',
+                        default => $state->label(),
+                    })
                     ->color(fn (OrderStatus $state) => match ($state) {
-                        OrderStatus::Paid => 'warning',
+                        OrderStatus::AwaitingPayment, OrderStatus::Paid => 'warning',
                         OrderStatus::Shipped => 'primary',
                         default => 'success',
                     }),
 
-                TextColumn::make('paid_at')->label('Lunas')->date('d/m/Y')->sortable()->toggleable(),
+                TextColumn::make('confirmed_at')
+                    ->label('Disetujui')->date('d/m/Y')->sortable()->toggleable(),
 
                 TextColumn::make('shipped_at')
                     ->label('Dikirim')
@@ -121,21 +148,28 @@ class Pengiriman extends Page implements HasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->label('Status')
+                SelectFilter::make('tahap')
+                    ->label('Tahap')
                     ->options([
-                        OrderStatus::Paid->value => 'Siap dipicking',
+                        'siap' => 'Siap dikirim',
                         OrderStatus::Shipped->value => 'Sudah dikirim',
                         OrderStatus::Completed->value => 'Selesai',
                     ])
-                    ->default(OrderStatus::Paid->value),
+                    ->default('siap')
+                    ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
+                        'siap' => $query->whereIn('status', [OrderStatus::AwaitingPayment, OrderStatus::Paid]),
+                        OrderStatus::Shipped->value => $query->where('status', OrderStatus::Shipped),
+                        OrderStatus::Completed->value => $query->where('status', OrderStatus::Completed),
+                        default => $query,
+                    }),
 
                 SelectFilter::make('warehouse_id')
                     ->label('Gudang')
                     ->options(fn () => Warehouse::query()->where('aktif', true)->pluck('nama', 'id'))
-                    // A packer works one gudang; only worth asking when there
-                    // is more than one.
-                    ->visible(fn () => Warehouse::query()->where('aktif', true)->count() > 1),
+                    // A packer works one gudang and it is already in the
+                    // query; only worth asking when the viewer roams.
+                    ->visible(fn () => auth()->user()?->warehouse_id === null
+                        && Warehouse::query()->where('aktif', true)->count() > 1),
             ])
             ->recordActions([
                 // Print first, then ship, then close — the order the work
@@ -145,5 +179,23 @@ class Pengiriman extends Page implements HasTable
                 OrderTransitionActions::selesaikan(),
             ])
             ->paginated([25, 50, 100]);
+    }
+
+    /**
+     * A warehouse-bound account reads its own gudang and nothing else.
+     *
+     * In the query rather than a filter: a filter is a preference, and which
+     * warehouse's goods an account may handle is not one.
+     */
+    private static function scopeToOwnWarehouse(Builder $query): Builder
+    {
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if ($user?->role()->isWarehouseBound() && $user->warehouse_id !== null) {
+            $query->where('warehouse_id', $user->warehouse_id);
+        }
+
+        return $query;
     }
 }

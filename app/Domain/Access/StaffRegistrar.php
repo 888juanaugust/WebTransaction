@@ -6,6 +6,7 @@ namespace App\Domain\Access;
 
 use App\Domain\Audit\AuditLogger;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -42,7 +43,10 @@ class StaffRegistrar
         string $password,
         ?User $actor = null,
         ?int $regionId = null,
+        ?int $warehouseId = null,
     ): User {
+        $warehouse = $this->resolveWarehouseBinding($role, $warehouseId);
+
         $staff = User::create([
             'name' => $nama,
             'email' => $email,
@@ -54,7 +58,11 @@ class StaffRegistrar
             // region, and carries no region of its own. Anyone else with
             // null is pinned to the default region by the middleware, so an
             // unassigned clerk sees one region, never all of them.
-            'region_id' => in_array($role, [Role::Owner, Role::Marketing], true) ? null : $regionId,
+            // A packer's region is not a choice at all: it is wherever their
+            // gudang stands.
+            'region_id' => $warehouse?->region_id
+                ?? (in_array($role, [Role::Owner, Role::Marketing], true) ? null : $regionId),
+            'warehouse_id' => $warehouse?->id,
         ]);
 
         $this->audit->log(
@@ -154,6 +162,21 @@ class StaffRegistrar
         $this->refuseSelf($staff, $actor, 'Peran sendiri tidak bisa diubah dari layar ini.');
         $this->refuseLastOwner($staff);
 
+        if ($role->isWarehouseBound() && $staff->warehouse_id === null) {
+            throw new RuntimeException(
+                'Peran Gudang terikat ke satu gudang — pilih gudangnya dulu lewat penugasan gudang.'
+            );
+        }
+
+        if ($role->isWarehouseBound()) {
+            $this->refuseSecondPacker((int) $staff->warehouse_id, $staff);
+
+            // A packer's region is their warehouse's region, always.
+            $staff->forceFill([
+                'region_id' => Warehouse::query()->findOrFail($staff->warehouse_id)->region_id,
+            ]);
+        }
+
         $staff->forceFill(['role' => $role])->save();
 
         $this->audit->log(
@@ -164,6 +187,84 @@ class StaffRegistrar
             actor: $actor,
             alasan: $alasan,
         );
+    }
+
+    /**
+     * Bind a Gudang account to its warehouse, or move it to another one.
+     *
+     * The region follows the warehouse — a packer's region is wherever their
+     * gudang stands, never a separate choice that could disagree with it.
+     */
+    public function assignWarehouse(User $staff, int $warehouseId, ?User $actor = null): void
+    {
+        $actor ??= auth()->user();
+
+        if (! $staff->role()->isWarehouseBound()) {
+            throw new RuntimeException('Hanya akun peran Gudang yang diikat ke satu gudang.');
+        }
+
+        if ((int) $staff->warehouse_id === $warehouseId) {
+            return;
+        }
+
+        $warehouse = Warehouse::query()->findOrFail($warehouseId);
+        $this->refuseSecondPacker($warehouseId, $staff);
+
+        $lama = $staff->warehouse_id === null ? null : (int) $staff->warehouse_id;
+
+        $staff->forceFill([
+            'warehouse_id' => $warehouse->id,
+            'region_id' => $warehouse->region_id,
+        ])->save();
+
+        $this->audit->log(
+            action: 'staff_warehouse_changed',
+            subject: $staff,
+            oldValue: ['warehouse_id' => $lama],
+            newValue: ['warehouse_id' => $warehouse->id],
+            actor: $actor,
+        );
+
+        // Their open session was showing the old warehouse's queue.
+        $this->endSessions($staff);
+    }
+
+    /**
+     * "Each warehouse has one admin which holds this role account": a second
+     * active packer on the same gudang would make "who packed this" a
+     * question with two answers.
+     */
+    private function refuseSecondPacker(int $warehouseId, ?User $except = null): void
+    {
+        $taken = User::query()
+            ->where('role', Role::Storage)
+            ->where('is_active', true)
+            ->where('warehouse_id', $warehouseId)
+            ->when($except?->exists, fn ($q) => $q->whereKeyNot($except->getKey()))
+            ->first();
+
+        if ($taken !== null) {
+            throw new RuntimeException(
+                "Gudang itu sudah dipegang {$taken->name} — satu gudang satu akun Gudang. "
+                .'Nonaktifkan akun lamanya dulu.'
+            );
+        }
+    }
+
+    /** The warehouse a new account binds to, validated for the role. */
+    private function resolveWarehouseBinding(Role $role, ?int $warehouseId): ?Warehouse
+    {
+        if (! $role->isWarehouseBound()) {
+            return null;
+        }
+
+        if ($warehouseId === null) {
+            throw new RuntimeException('Peran Gudang harus dipilihkan gudangnya.');
+        }
+
+        $this->refuseSecondPacker($warehouseId);
+
+        return Warehouse::query()->findOrFail($warehouseId);
     }
 
     /**

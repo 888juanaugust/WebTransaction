@@ -63,7 +63,27 @@ final class DataInventory
             'users' => [
                 'kategori' => 'identitas_staf',
                 'personal' => ['name', 'email', 'email_verified_at', 'password', 'remember_token'],
-                'bukan' => ['role', 'is_active'],
+                // warehouse_id is the same kind of fact as region_id: which
+                // gudang a Storage account works — employment structure.
+                'bukan' => ['role', 'is_active', 'warehouse_id'],
+            ],
+
+            /*
+             * What a seller earns per rupiah collected, effective-dated. A
+             * person's pay terms are personal data of the employment kind —
+             * the rate is about the person, not about any transaction.
+             */
+            'commission_rates' => [
+                'kategori' => 'identitas_staf',
+                'personal' => ['user_id', 'basis_poin', 'set_by'],
+                'bukan' => ['berlaku_mulai'],
+            ],
+
+            // A monthly expectation attached to a person: employment data too.
+            'sales_targets' => [
+                'kategori' => 'identitas_staf',
+                'personal' => ['user_id', 'target_rupiah', 'set_by'],
+                'bukan' => ['tahun', 'bulan'],
             ],
 
             /*

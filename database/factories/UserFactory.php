@@ -57,6 +57,12 @@ class UserFactory extends Factory
         return $this->role(Role::Warehouse);
     }
 
+    /** A packer: the Gudang role, bound to one warehouse. */
+    public function storage(int $warehouseId): static
+    {
+        return $this->role(Role::Storage)->state(['warehouse_id' => $warehouseId]);
+    }
+
     public function finance(): static
     {
         return $this->role(Role::Finance);

@@ -8,6 +8,7 @@ use App\Domain\Access\Role;
 use App\Domain\Regions\RegionContext;
 use App\Models\Region;
 use App\Models\User;
+use App\Models\Warehouse;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -108,13 +109,35 @@ class StaffForm
                                 ->all())
                             // Marketing is global like the Owner: no region
                             // field, because there is nothing to choose.
-                            ->required(fn (callable $get) => ! in_array($get('role'), [Role::Owner->value, Role::Marketing->value], true))
+                            // Storage is hidden too: a packer's region is
+                            // their warehouse's region, chosen below.
+                            ->required(fn (callable $get) => ! in_array($get('role'), [Role::Owner->value, Role::Marketing->value, Role::Storage->value], true))
                             ->native(false)
-                            ->hidden(fn (callable $get) => in_array($get('role'), [Role::Owner->value, Role::Marketing->value], true))
+                            ->hidden(fn (callable $get) => in_array($get('role'), [Role::Owner->value, Role::Marketing->value, Role::Storage->value], true))
                             ->disabled(fn (?User $record) => $record !== null
                                 && $record->getKey() === auth()->id())
                             ->helperText('Akun ini hanya melihat data wilayah tersebut: '
                                 .'stok, pelanggan, order, dan pembukuannya.'),
+
+                        /*
+                         * The Gudang role is bound to exactly one warehouse —
+                         * the region field disappears because the region
+                         * follows the warehouse, never the other way round.
+                         * The registrar refuses a second active packer on the
+                         * same gudang, so the select shows every warehouse and
+                         * lets the refusal carry the explanation.
+                         */
+                        Select::make('warehouse_id')
+                            ->label('Gudang yang dipegang')
+                            ->options(fn () => Warehouse::query()
+                                ->where('aktif', true)
+                                ->orderBy('nama')
+                                ->pluck('nama', 'id'))
+                            ->required(fn (callable $get) => $get('role') === Role::Storage->value)
+                            ->native(false)
+                            ->hidden(fn (callable $get) => $get('role') !== Role::Storage->value)
+                            ->helperText('Satu gudang satu akun Gudang. Wilayah akun ini mengikuti '
+                                .'wilayah gudangnya.'),
                     ]),
             ]);
     }
@@ -130,6 +153,7 @@ class StaffForm
         return 'Sales: kunjungan, buat order untuk pelanggan (menunggu persetujuan marketing), ajukan pelunasan tunai. '
             .'Marketing: global semua wilayah — setujui/tolak transaksi, pantau piutang pelanggannya, ajukan pelunasan. '
             .'Inventori: stok, katalog, dan daftar harga — tidak melihat piutang pelanggan. '
+            .'Gudang: satu akun per gudang — antrean packing, pick list, surat jalan gudangnya sendiri. '
             .'Keuangan: konfirmasi pembayaran, verifikasi pelunasan piutang, pembukuan. '
             .'Pemilik: semuanya, termasuk log audit, wilayah, dan pengelolaan staf.';
     }
