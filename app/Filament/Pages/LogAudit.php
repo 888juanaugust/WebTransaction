@@ -283,6 +283,7 @@ class LogAudit extends Page implements HasTable
             'visits_archived' => 'Kunjungan diarsipkan',
             'order_split' => 'Order dipecah per gudang',
             'customer_portal_access_granted' => 'Akses portal diberikan',
+            'customer_portal_invite_sent' => 'Undangan portal dikirim',
             /*
              * Giro. `giro_cair`, `giro_ditolak` and `giro_dibatalkan` are
              * written as 'giro_'.$status->value from the shared release path,

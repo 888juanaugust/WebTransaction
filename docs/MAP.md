@@ -1209,6 +1209,19 @@ including the bank account on the faktur — without a terminal, and watches
 the launch checklist go green as they type. `docs/UAT.md` is the per-role
 acceptance script the pilot runs.
 
+### Onboarding pelanggan — the pilot worklist
+
+| Piece | Decides |
+|---|---|
+| `KesiapanOnboarding` | Nine steps per customer, **derived on every read** — data kontak, data pajak (needed for a faktur pajak, not for trading), approved + credit limit, team seated, price tier, portal account, first login, first order (cross-region: a split may book it elsewhere). Un-seat the sales rep and the tim step un-ticks itself |
+| `OnboardingPelanggan` page | Least-ready customer first; suspended customers excluded — they're being collected from, not onboarded. Same gate as the customer screen (`canSeeCreditData`) |
+| `PortalInviter` | Portal access without anybody knowing the password: the account is born with a random one and the buyer gets a signed set-password link on their own broker (single-use, 60 min — leaks exactly as safely as a reset email). Re-inviting kills the old token. Both grant and invite are audit rows |
+| `CustomerUsersRelationManager` | No password field on create — the invitation is the only path; the edit-time field stays as the dead-mailbox fallback |
+
+`docs/PILOT.md` is the runbook: choosing the 3–4 customers, the onboarding
+order (the screen's nine steps), the two-week watch with one WhatsApp
+escalation line, pass criteria, and what to do when it goes wrong.
+
 ### Kesiapan peluncuran — the launch checklist that checks itself
 
 `php artisan launch:check` prints the same checks where the deployer already

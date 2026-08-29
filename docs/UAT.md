@@ -101,6 +101,7 @@ Login demo ada di `docs/DEMO.md §2`. Semua sandi `password`.
   — bukan hanya perbaikannya yang dites.
 - Pilot berikutnya (build order tahap 3): 3–4 pelanggan bersahabat memakai
   portal dengan data sungguhan selama dua minggu, dengan jalur eskalasi satu
-  nomor WhatsApp.
+  nomor WhatsApp. Panduan lengkapnya: `docs/PILOT.md`, dijalankan dari layar
+  **Onboarding pelanggan** di panel admin.
 - Setelah semua Lulus: jalankan `php artisan launch:check` — sisa item adalah
   urusan dunia nyata (PSE, pengacara, akuntan), bukan perangkat lunak.

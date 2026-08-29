@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Companies\RelationManagers;
 
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Onboarding\PortalInviter;
 use App\Models\CustomerUser;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 /**
  * Buyer logins for one customer company.
@@ -23,6 +28,12 @@ use Filament\Tables\Table;
  * Staff create these; there is no public self-registration, because a
  * wholesale account is opened only after the business is verified and a
  * credit limit agreed.
+ *
+ * There is no password field on create. The account is born with a random
+ * password nobody has seen, and the buyer receives an invitation email to
+ * set their own — see PortalInviter. Staff who could read a buyer's password
+ * could also place orders as that buyer, and "the customer's login is known
+ * to our staff" is not a sentence a pilot should start with.
  */
 class CustomerUsersRelationManager extends RelationManager
 {
@@ -58,8 +69,12 @@ class CustomerUsersRelationManager extends RelationManager
                 ->label('Kata sandi')
                 ->password()
                 ->revealable()
-                // Required when creating; left blank on edit means "unchanged".
-                ->required(fn (string $operation) => $operation === 'create')
+                /*
+                 * Edit only, as a fallback for a buyer standing at the counter
+                 * with a dead mailbox. On create the buyer sets their own via
+                 * the emailed invitation, and nobody here ever sees it.
+                 */
+                ->visible(fn (string $operation) => $operation === 'edit')
                 ->dehydrated(fn (?string $state) => filled($state))
                 ->helperText('Kosongkan bila tidak ingin mengubah kata sandi.'),
 
@@ -86,8 +101,14 @@ class CustomerUsersRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah akun portal')
+                    ->modalDescription('Pembeli akan menerima email undangan untuk '
+                        .'mengatur kata sandinya sendiri — tidak ada kata sandi yang '
+                        .'perlu diketik atau dikirim.')
                     ->mutateDataUsing(function (array $data) {
                         $data['created_by'] = auth()->id();
+                        // Born locked: a random password nobody has seen. The
+                        // buyer replaces it through the invitation link.
+                        $data['password'] = Str::password(40);
 
                         return $data;
                     })
@@ -99,9 +120,29 @@ class CustomerUsersRelationManager extends RelationManager
                             subject: $record,
                             newValue: ['email' => $record->email, 'company_id' => $record->company_id],
                         );
-                    }),
+
+                        app(PortalInviter::class)->undang($record, auth()->user());
+                    })
+                    ->successNotificationTitle('Akun dibuat — undangan terkirim ke email pembeli'),
             ])
             ->recordActions([
+                Action::make('kirimUndangan')
+                    ->label('Kirim undangan')
+                    ->icon(Heroicon::OutlinedEnvelope)
+                    ->requiresConfirmation()
+                    ->modalHeading('Kirim ulang undangan portal')
+                    ->modalDescription(fn (CustomerUser $record) => 'Email berisi tautan '
+                        ."atur-kata-sandi akan dikirim ke {$record->email}. Tautan lama, "
+                        .'bila ada, hangus.')
+                    ->visible(fn (CustomerUser $record) => $record->is_active)
+                    ->action(function (CustomerUser $record) {
+                        app(PortalInviter::class)->undang($record, auth()->user());
+
+                        Notification::make()
+                            ->title("Undangan terkirim ke {$record->email}")
+                            ->success()
+                            ->send();
+                    }),
                 EditAction::make()->label('Ubah'),
                 DeleteAction::make()->label('Hapus'),
             ]);
