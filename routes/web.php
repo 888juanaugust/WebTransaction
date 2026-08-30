@@ -11,6 +11,7 @@ use App\Http\Controllers\PesananPembelianController;
 use App\Http\Controllers\RekeningPelangganController;
 use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\SuratJalanController;
+use App\Http\Middleware\PublicContentSecurityPolicy;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,33 +26,42 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::view('/', 'publik.beranda')->name('publik.beranda');
-Route::view('/tentang-kami', 'publik.tentang')->name('publik.tentang');
-Route::view('/mitra', 'publik.mitra')->name('publik.mitra');
-Route::view('/rencana-pengembangan', 'publik.rencana')->name('publik.rencana');
-Route::view('/kontak', 'publik.kontak')->name('publik.kontak');
-
 /*
- * Legal pages. Public and indexable like the rest, but kept out of the main
- * nav — nobody navigates to a privacy policy, they follow a link to it from
- * the footer or from a form. Putting them in the nav costs a slot that a
- * customer looking for the catalogue needs.
- *
- * Kebijakan Privasi is required under UU PDP 27/2022 before the system is used
- * by real users, and is a prerequisite for PSE Lingkup Privat registration.
+ * The whole public site runs under an enforced Content-Security-Policy —
+ * the panels do not (see the middleware for why), which is exactly why it
+ * is a route group here rather than a global header.
  */
-Route::view('/kebijakan-privasi', 'publik.kebijakan-privasi')->name('publik.privasi');
-Route::view('/syarat-penjualan', 'publik.syarat-penjualan')->name('publik.syarat');
+Route::middleware(PublicContentSecurityPolicy::class)->group(function () {
 
-/*
- * Login chooser. Staff and buyers authenticate on different guards against
- * different tables, so this page routes to one of two panels rather than
- * trying to work out which kind of account an address belongs to.
- *
- *   /admin   staff   (web guard, users)
- *   /portal  buyers  (customer guard, customer_users)
- */
-Route::view('/masuk', 'publik.masuk')->name('masuk');
+    Route::view('/', 'publik.beranda')->name('publik.beranda');
+    Route::view('/tentang-kami', 'publik.tentang')->name('publik.tentang');
+    Route::view('/mitra', 'publik.mitra')->name('publik.mitra');
+    Route::view('/rencana-pengembangan', 'publik.rencana')->name('publik.rencana');
+    Route::view('/kontak', 'publik.kontak')->name('publik.kontak');
+
+    /*
+     * Legal pages. Public and indexable like the rest, but kept out of the main
+     * nav — nobody navigates to a privacy policy, they follow a link to it from
+     * the footer or from a form. Putting them in the nav costs a slot that a
+     * customer looking for the catalogue needs.
+     *
+     * Kebijakan Privasi is required under UU PDP 27/2022 before the system is used
+     * by real users, and is a prerequisite for PSE Lingkup Privat registration.
+     */
+    Route::view('/kebijakan-privasi', 'publik.kebijakan-privasi')->name('publik.privasi');
+    Route::view('/syarat-penjualan', 'publik.syarat-penjualan')->name('publik.syarat');
+
+    /*
+     * Login chooser. Staff and buyers authenticate on different guards against
+     * different tables, so this page routes to one of two panels rather than
+     * trying to work out which kind of account an address belongs to.
+     *
+     *   /admin   staff   (web guard, users)
+     *   /portal  buyers  (customer guard, customer_users)
+     */
+    Route::view('/masuk', 'publik.masuk')->name('masuk');
+
+}); // end of the public-site CSP group
 
 /*
 |--------------------------------------------------------------------------

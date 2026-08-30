@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Providers\AppServiceProvider;
 use Filament\Auth\Pages\Login;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -89,5 +90,47 @@ class SecurityHardeningTest extends TestCase
         $this->assertStringStartsWith('https://', route('publik.beranda'));
 
         URL::forceScheme('http');
+    }
+
+    public function test_the_public_site_enforces_a_nonce_based_csp(): void
+    {
+        $response = $this->get('/');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp, 'Situs publik harus mengirim CSP.');
+        $this->assertStringContainsString("default-src 'self'", $csp);
+        $this->assertStringContainsString("object-src 'none'", $csp);
+
+        // The nonce in the header is the nonce on the inline scripts — an
+        // injected script cannot know it, which is the entire point.
+        $this->assertSame(1, preg_match("/script-src 'self' 'nonce-([^']+)'/", $csp, $m));
+        $response->assertSee('nonce="'.$m[1].'"', escape: false);
+    }
+
+    public function test_the_panels_keep_their_documented_csp_deferral(): void
+    {
+        // Filament and Livewire lean on inline scripts; a CSP here without
+        // nonce plumbing would break every screen. The deferral is a
+        // decision recorded in SecurityHeaders — this pins that the public
+        // group's CSP does not leak onto the panels by accident.
+        $this->get('/admin/login')
+            ->assertHeaderMissing('Content-Security-Policy');
+    }
+
+    public function test_production_cannot_run_with_debug_on(): void
+    {
+        /*
+         * The fail-safe in AppServiceProvider: whatever .env says, a
+         * production boot forces debug off — a stack trace with SQL and
+         * file paths must never reach whoever triggered the error.
+         */
+        config(['app.debug' => true]);
+        app()->detectEnvironment(fn () => 'production');
+
+        app(AppServiceProvider::class, ['app' => app()])->boot();
+
+        $this->assertFalse(config('app.debug'));
+
+        app()->detectEnvironment(fn () => 'testing');
     }
 }

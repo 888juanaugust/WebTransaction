@@ -128,6 +128,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /*
+         * Debug mode in production leaks stack traces — file paths, SQL,
+         * and often credentials — to whoever triggers an error. The .env is
+         * supposed to say APP_DEBUG=false, and this line makes the leak
+         * impossible even on the day someone forgets: production forces
+         * debug off, whatever the file says. Fail safe, not fail loud.
+         */
+        if ($this->app->isProduction() && config('app.debug')) {
+            config(['app.debug' => false]);
+        }
+
         // Catch "$model->undefined_column = x" typos before they silently
         // drop a money field on the floor.
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());

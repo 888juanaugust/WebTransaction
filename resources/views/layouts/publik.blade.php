@@ -80,7 +80,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Marks the document as scripted so .reveal only ever hides with JS present. --}}
-    <script>document.documentElement.classList.add('js')</script>
+    <script nonce="{{ $cspNonce ?? '' }}">document.documentElement.classList.add('js')</script>
 </head>
 <body class="flex min-h-dvh flex-col bg-ground text-ink antialiased">
 
@@ -226,7 +226,7 @@
         </div>
     </footer>
 
-    <script>
+    <script nonce="{{ $cspNonce ?? '' }}">
         (() => {
             const tombol = document.getElementById('tombol-menu');
             const panel = document.getElementById('menu-seluler');

@@ -1,0 +1,21 @@
+# Continuous dependency-CVE watch, complementing the `composer audit` step
+# that already runs in CI on every push: audit catches known advisories at
+# build time, Dependabot opens the PR that actually fixes them.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
