@@ -133,7 +133,12 @@ class GudangRoleTest extends TestCase
     {
         $packer = User::factory()->storage($this->gudang->id)->create();
 
-        $this->actingAs($packer, 'web')->get('/admin/pengiriman')->assertOk();
+        // The brand corner names the role and, for a packer, their gudang —
+        // the answer to "which account is this open on", always in view.
+        $this->actingAs($packer, 'web')->get('/admin/pengiriman')
+            ->assertOk()
+            ->assertSee(Role::Storage->label())
+            ->assertSee($this->gudang->nama);
         $this->actingAs($packer, 'web')->get('/admin/invoices')->assertForbidden();
         $this->actingAs($packer, 'web')->get('/admin/laporan/komisi')->assertForbidden();
     }

@@ -22,7 +22,6 @@ use App\Filament\Widgets\ReturnsAwaitingVerification;
 use App\Filament\Widgets\UnmatchedPayments;
 use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
-use App\Support\Branding;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -49,13 +48,14 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->brandName(config('perusahaan.nama_singkat'))
-            // Null until the logo file is committed; Filament then falls back
-            // to the brand name, so a missing file is a wordmark rather than a
-            // broken image.
-            ->brandLogo(fn () => Branding::logoUrl())
-            // The same mark in a lighter blue once the panel is switched to
-            // dark; without it the navy mark sinks into the dark sidebar.
-            ->darkModeBrandLogo(fn () => Branding::darkLogoUrl())
+            /*
+             * A view rather than a URL: the mark plus the signed-in account's
+             * role beside it (and the warehouse, for a Gudang account), so
+             * "which account is this open on" is answered in the corner every
+             * eye already visits. The view handles the dark-mode mark and
+             * falls back to the wordmark when no logo file is committed.
+             */
+            ->brandLogo(fn () => view('filament.brand'))
             ->brandLogoHeight('1.75rem')
             /*
              * Geist, served from public/fonts: the shopfront's typeface, so
