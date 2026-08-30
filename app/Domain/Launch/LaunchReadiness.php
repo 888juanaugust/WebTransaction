@@ -160,7 +160,7 @@ class LaunchReadiness
                 .'adalah masalah tersendiri.',
             lulus: $missing === [],
             temuan: $missing === [] ? null : 'Belum diisi atau masih contoh: '.implode(', ', $missing),
-            tindakan: 'Isi di .env (PERUSAHAAN_*), lalu php artisan config:cache',
+            tindakan: 'Isi di Pengaturan → Pengaturan perusahaan',
         );
     }
 
@@ -187,7 +187,7 @@ class LaunchReadiness
             temuan: $placeholders === []
                 ? null
                 : count($placeholders).' mitra masih bernama contoh',
-            tindakan: 'Ubah daftar mitra di config/perusahaan.php',
+            tindakan: 'Ubah daftar mitra di Pengaturan → Pengaturan perusahaan',
         );
     }
 
@@ -207,7 +207,7 @@ class LaunchReadiness
                 .'faktur pajak tidak bisa jalan tanpa keduanya.',
             lulus: $missing === [],
             temuan: $missing === [] ? null : 'Belum diisi: '.implode(', ', $missing),
-            tindakan: 'Isi PAJAK_PENJUAL_NPWP dan PAJAK_PENJUAL_NAMA di .env',
+            tindakan: 'Isi di Pengaturan → Pengaturan perusahaan (Identitas penjual)',
         );
     }
 
@@ -253,7 +253,7 @@ class LaunchReadiness
                 .'yang bukan milik siapa-siapa.',
             lulus: ! $placeholder,
             temuan: $placeholder ? 'Masih placeholder: '.($nomor ?: '(kosong)') : null,
-            tindakan: 'Isi PERUSAHAAN_BANK, PERUSAHAAN_REKENING, PERUSAHAAN_REKENING_NAMA di .env',
+            tindakan: 'Isi di Pengaturan → Pengaturan perusahaan (Rekening)',
         );
     }
 

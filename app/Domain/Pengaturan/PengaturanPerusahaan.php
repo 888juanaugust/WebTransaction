@@ -54,7 +54,17 @@ class PengaturanPerusahaan
         // The two >>> PUTUSKAN commercial values in the terms of sale.
         'legal_denda_persen' => 'legal.syarat.denda_persen_per_bulan',
         'legal_batas_klaim_hari' => 'legal.syarat.batas_klaim_hari',
+
+        // The partner list on the public site, stored as a JSON array of
+        // {nama, negara, sejak, bidang, deskripsi}. The one non-scalar key:
+        // naming a company as a partner is a claim about a real business
+        // relationship, and the Owner must be able to make — or retract —
+        // that claim from the screen, not from a config file over SSH.
+        'mitra_json' => 'perusahaan.mitra',
     ];
+
+    /** Keys whose stored value is a JSON document, not a scalar string. */
+    private const KUNCI_JSON = ['mitra_json'];
 
     /**
      * Lay stored values over config. Called at boot, before any request
@@ -77,9 +87,28 @@ class PengaturanPerusahaan
 
             // A blank is "never filled in", not "override with nothing":
             // the config/env fallback keeps answering.
-            if ($path !== null && $nilai !== null && trim((string) $nilai) !== '') {
-                config([$path => $nilai]);
+            if ($path === null || $nilai === null || trim((string) $nilai) === '') {
+                continue;
             }
+
+            /*
+             * A JSON key decodes before it lands, and an empty array is a
+             * real answer, not a blank: "no partners" is a choice the Owner
+             * makes on purpose, distinct from never having opened the screen
+             * — which stays on the config placeholder the launch checklist
+             * flags.
+             */
+            if (in_array($kunci, self::KUNCI_JSON, true)) {
+                $decoded = json_decode((string) $nilai, true);
+
+                if (is_array($decoded)) {
+                    config([$path => $decoded]);
+                }
+
+                continue;
+            }
+
+            config([$path => $nilai]);
         }
     }
 
@@ -110,7 +139,15 @@ class PengaturanPerusahaan
                     throw new InvalidArgumentException("Kunci pengaturan tidak dikenal: {$kunci}");
                 }
 
-                $nilai = $nilai === null ? null : trim((string) $nilai);
+                // A JSON key arrives from its Repeater as an array; it is
+                // stored encoded, and `[]` survives — see overlay().
+                if (in_array($kunci, self::KUNCI_JSON, true)) {
+                    $nilai = $nilai === null
+                        ? null
+                        : json_encode(array_values((array) $nilai), JSON_UNESCAPED_UNICODE);
+                } else {
+                    $nilai = $nilai === null ? null : trim((string) $nilai);
+                }
 
                 $row = Pengaturan::query()->firstWhere('kunci', $kunci);
                 $sebelum = $row?->nilai;

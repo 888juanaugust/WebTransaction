@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Launch\LaunchCheck;
 use App\Domain\Launch\LaunchReadiness;
 use App\Domain\Pengaturan\PengaturanPerusahaan;
 use App\Filament\Pages\PengaturanPerusahaanPage;
@@ -153,5 +154,53 @@ class PengaturanTest extends TestCase
         // a whole invoice: the same config key the blade interpolates.
         $this->assertSame('512-034-9911', config('perusahaan.rekening.nomor'));
         $this->assertSame('PT Java Indo Intermechanika', config('perusahaan.rekening.atas_nama'));
+    }
+
+    public function test_the_owner_replaces_the_example_partners_from_the_screen(): void
+    {
+        $service = app(PengaturanPerusahaan::class);
+
+        // The shipped placeholders block the launch check.
+        $this->assertFalse($this->launchCheck('mitra_bukan_contoh')->lulus);
+
+        // The Owner types a real partner on the screen — an array, because
+        // the field is a Repeater, stored as JSON, overlaid as config.
+        $service->simpan(['mitra_json' => [[
+            'nama' => 'PT Mitra Sungguhan',
+            'negara' => 'Indonesia',
+            'sejak' => '2020',
+            'bidang' => 'Distribusi',
+            'deskripsi' => 'Mitra distribusi wilayah timur.',
+        ]]], $this->owner());
+
+        $mitra = config('perusahaan.mitra');
+        $this->assertCount(1, $mitra);
+        $this->assertSame('PT Mitra Sungguhan', $mitra[0]['nama']);
+        $this->assertTrue($this->launchCheck('mitra_bukan_contoh')->lulus);
+    }
+
+    public function test_deleting_every_partner_is_a_choice_the_screen_can_express(): void
+    {
+        // "No partners" must beat the shipped placeholders — an empty
+        // Repeater is a deliberate answer, not an unfilled blank.
+        app(PengaturanPerusahaan::class)
+            ->simpan(['mitra_json' => []], $this->owner());
+
+        $this->assertSame([], config('perusahaan.mitra'));
+        $this->assertTrue($this->launchCheck('mitra_bukan_contoh')->lulus);
+    }
+
+    private function launchCheck(string $kunci): LaunchCheck
+    {
+        $readiness = app(LaunchReadiness::class);
+        $readiness->forget();
+
+        foreach ($readiness->checks() as $check) {
+            if ($check->kunci === $kunci) {
+                return $check;
+            }
+        }
+
+        $this->fail("Launch check {$kunci} tidak ditemukan.");
     }
 }

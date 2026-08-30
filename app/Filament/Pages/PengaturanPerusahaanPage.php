@@ -6,6 +6,8 @@ namespace App\Filament\Pages;
 
 use App\Domain\Pengaturan\PengaturanPerusahaan;
 use BackedEnum;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -116,6 +118,31 @@ class PengaturanPerusahaanPage extends Page
                         TextInput::make('legal_batas_klaim_hari')
                             ->label('Batas klaim barang (hari setelah terima)')
                             ->numeric()->minValue(1)->maxValue(30),
+                    ]),
+
+                Section::make('Mitra di situs publik')
+                    ->description(
+                        'Nama yang tampil di halaman Partners situs publik. Menyebut '
+                        .'perusahaan sebagai mitra adalah klaim tentang hubungan bisnis '
+                        .'yang nyata — cantumkan hanya yang benar-benar setuju tampil. '
+                        .'Hapus semua baris bila belum ada yang mau dicantumkan; '
+                        .'halaman itu sah tanpa mitra.'
+                    )
+                    ->schema([
+                        Repeater::make('mitra_json')
+                            ->label('Daftar mitra')
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah mitra')
+                            ->schema([
+                                TextInput::make('nama')->label('Nama perusahaan')
+                                    ->required()->maxLength(120),
+                                TextInput::make('negara')->label('Negara')->maxLength(60),
+                                TextInput::make('sejak')->label('Sejak (tahun)')->maxLength(10),
+                                TextInput::make('bidang')->label('Bidang')->maxLength(80),
+                                Textarea::make('deskripsi')->label('Deskripsi singkat')
+                                    ->rows(2)->maxLength(300)->columnSpanFull(),
+                            ]),
                     ]),
             ]);
     }
