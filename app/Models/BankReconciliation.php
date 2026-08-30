@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Accounting\AccountCode;
 use App\Domain\Regions\HasRegion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * whose totals could be typed would prove nothing at all.
  */
 #[Fillable([
-    'nomor', 'tanggal_rekening', 'saldo_rekening_rupiah', 'catatan', 'created_by',
+    'nomor', 'tanggal_rekening', 'saldo_rekening_rupiah', 'catatan', 'created_by', 'bank_account_id',
 ])]
 class BankReconciliation extends Model
 {
@@ -44,6 +45,22 @@ class BankReconciliation extends Model
             'selisih_rupiah' => 'integer',
             'finalised_at' => 'datetime',
         ];
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
+    }
+
+    /**
+     * The GL account this reconciliation proves. Rows from before multi-bank
+     * were backfilled onto the default rekening; the fallback answers only
+     * for a row created mid-migration.
+     */
+    public function glAccount(): Account
+    {
+        return $this->bankAccount?->account
+            ?? Account::byCode(AccountCode::BANK);
     }
 
     public function ticks(): HasMany

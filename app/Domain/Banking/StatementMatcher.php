@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Banking;
 
-use App\Domain\Accounting\AccountCode;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Payments\PaymentLedger;
 use App\Models\Account;
@@ -225,9 +224,12 @@ class StatementMatcher
                 invoice: $invoice,
                 catatan: mb_substr("Mutasi bank: {$line->uraian}", 0, 255),
                 paidAt: $line->tanggal,
+                // The statement being matched IS this rekening's — the money
+                // provably arrived there, not on the default.
+                rekening: $line->import->reconciliation->bankAccount,
             );
 
-            $bankLine = $this->bankLegOf($entry);
+            $bankLine = $this->bankLegOf($entry, $line->import->reconciliation->glAccount());
 
             $this->reconciler->tick($line->import->reconciliation, $bankLine, $actor);
 
@@ -249,15 +251,13 @@ class StatementMatcher
      * Found through the journal's own source link rather than remembered by
      * the ledger, so this cannot drift from what was actually posted.
      */
-    private function bankLegOf(PaymentEntry $entry): JournalLine
+    private function bankLegOf(PaymentEntry $entry, Account $bank): JournalLine
     {
         $journal = JournalEntry::query()
             ->where('source_type', PaymentEntry::class)
             ->where('source_id', (string) $entry->id)
             ->orderByDesc('id')
             ->firstOrFail();
-
-        $bank = Account::byCode(AccountCode::BANK);
 
         return $journal->lines()->where('account_id', $bank->id)->firstOrFail();
     }

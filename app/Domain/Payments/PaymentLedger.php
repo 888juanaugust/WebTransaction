@@ -6,8 +6,10 @@ namespace App\Domain\Payments;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Banking\BankAccounts;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
+use App\Models\BankAccount;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -42,12 +44,18 @@ class PaymentLedger
         ?Invoice $invoice = null,
         ?string $catatan = null,
         ?DateTimeInterface $paidAt = null,
+        ?BankAccount $rekening = null,
     ): PaymentEntry {
         if (! $actor->role()->canConfirmPayment()) {
             throw new LogicException("Role {$actor->role()->value} tidak boleh mengonfirmasi pembayaran.");
         }
 
-        return DB::transaction(function () use ($company, $amountRupiah, $actor, $invoice, $catatan, $paidAt) {
+        // Resolved and STORED now, not looked up later: which rekening the
+        // money hit is a fact about this payment, and the default moving next
+        // year must not rewrite it.
+        $rekening ??= app(BankAccounts::class)->default();
+
+        return DB::transaction(function () use ($company, $amountRupiah, $actor, $invoice, $catatan, $paidAt, $rekening) {
             $entry = PaymentEntry::create([
                 'company_id' => $company->id,
                 'invoice_id' => $invoice?->id,
@@ -55,6 +63,7 @@ class PaymentLedger
                 'kind' => PaymentEntry::KIND_PAYMENT,
                 'actor_id' => $actor->id,
                 'paid_at' => $paidAt ?? now(),
+                'bank_account_id' => $rekening->id,
                 'catatan' => $catatan,
             ]);
 
@@ -94,6 +103,8 @@ class PaymentLedger
                 'actor_id' => $actor->id,
                 'reverses_entry_id' => $entry->id,
                 'paid_at' => now(),
+                // The undo leaves the same rekening the money entered.
+                'bank_account_id' => $entry->bank_account_id,
                 'catatan' => $alasan,
             ]);
 

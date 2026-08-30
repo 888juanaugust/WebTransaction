@@ -195,7 +195,7 @@ final class DataInventory
                 'personal' => ['actor_id', 'catatan'],
                 'bukan' => [
                     'company_id', 'invoice_id', 'order_id', 'amount_rupiah', 'kind',
-                    'reverses_entry_id', 'paid_at',
+                    'reverses_entry_id', 'paid_at', 'bank_account_id',
                 ],
             ],
 
@@ -317,7 +317,7 @@ final class DataInventory
                 'personal' => ['actor_id', 'referensi', 'catatan'],
                 'bukan' => [
                     'supplier_id', 'supplier_bill_id', 'amount_rupiah', 'kind',
-                    'reverses_entry_id', 'paid_at',
+                    'reverses_entry_id', 'paid_at', 'bank_account_id',
                 ],
             ],
 
@@ -531,7 +531,7 @@ final class DataInventory
                 'bukan' => [
                     'nomor', 'tanggal_rekening', 'saldo_rekening_rupiah', 'saldo_buku_rupiah',
                     'setoran_beredar_rupiah', 'penarikan_beredar_rupiah', 'selisih_rupiah',
-                    'status', 'finalised_at',
+                    'status', 'finalised_at', 'bank_account_id',
                 ],
             ],
 
@@ -554,6 +554,20 @@ final class DataInventory
                 'bukan' => [
                     'bank_reconciliation_id', 'tanggal', 'account_id', 'arah',
                     'amount_rupiah', 'journal_entry_id',
+                ],
+            ],
+
+            /*
+             * Our own rekening register. Everything here describes the
+             * company's bank accounts, not a person — atas_nama is the
+             * PT's own account name. Only who opened it is personal.
+             */
+            'bank_accounts' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['created_by'],
+                'bukan' => [
+                    'nama', 'bank', 'nomor', 'atas_nama', 'account_id',
+                    'is_default', 'aktif',
                 ],
             ],
 

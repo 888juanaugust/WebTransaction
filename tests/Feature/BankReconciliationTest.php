@@ -339,7 +339,7 @@ class BankReconciliationTest extends TestCase
         $rec = $this->open('2026-08-31', 0);
 
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('tidak boleh Bank');
+        $this->expectExceptionMessage('tidak boleh rekening ini sendiri');
 
         app(BankReconciler::class)->recordStatementItem(
             $rec, 'Salah akun', 1_000, StatementDirection::Masuk,
@@ -566,7 +566,7 @@ class BankReconciliationTest extends TestCase
         $rec = $this->open('2026-08-31', 0);
 
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('akun Bank');
+        $this->expectExceptionMessage('bukan milik rekening');
 
         app(BankReconciler::class)->tick($rec, $line, $this->finance);
     }

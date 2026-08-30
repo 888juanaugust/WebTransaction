@@ -88,6 +88,7 @@ document, stays Indonesian.
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
 | `/admin/wilayah` | Wilayah | **Owner only** | Each region a complete separate set of books. Create, deactivate — never delete |
 | `/admin/staf` | Staf | **Owner only** | Hire, change a role, set a password, pin to a region, switch a leaver off. Nothing here deletes |
+| `/admin/rekening-bank` | Rekening bank | **Owner only** | Open a rekening (mints its GL account), move the default. Never deletes — an account with history is history |
 | `/admin/log-audit` | Log audit | **Owner only** | Who did what, and what it used to be. Read-only, with no resource behind it |
 | `/admin/profile` | Profil | all staff | Name, email, and the only way to change your own password |
 | `/admin/akuntansi/neraca` | Neraca | Finance, Owner | Aset, kewajiban, modal at a date. Balances or says why not |
@@ -95,7 +96,7 @@ document, stays Indonesian.
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
-| `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick the Bank account against a statement. Badge counts days since the last one |
+| `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick each rekening's GL account against its own statement — a picker chooses which. Badge shows the worst of all accounts |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
@@ -1600,10 +1601,26 @@ The summary is frozen onto the record at finalisation. A reconciliation is a
 claim about a moment, and recomputing it later against a ledger that has moved
 would rewrite what was signed off.
 
-**One bank account.** The chart has a single Bank account and every payment rule
-posts to it. Two real accounts would need a bank dimension on those rules first
-— the reconciliation tables are the last thing that would change, not the first.
-Neither happens here.
+**More than one bank account.** Each rekening in the `bank_accounts` register
+owns a GL account in the 1-11xx block beside the original Bank (1-1100), so the
+neraca shows each balance on its own line with no new report plumbing. The
+migration backfilled a default rekening onto 1-1100 itself, which keeps every
+line ever posted true without touching one.
+
+The rule that makes it safe: **the entry stores which rekening the money
+touched at the moment it is recorded** (`bank_account_id` on
+`payment_entries` and `supplier_payment_entries`; null means the pre-multi-bank
+era and reads as 1-1100 forever). Moving the default later never rewrites where
+money already went, and a reversal posts to the *entry's* rekening, not
+today's default. Customer and supplier payment forms offer a rekening select
+only when more than one is active; the low-volume flows (beban, uang muka,
+aktiva) always pay from the default until they earn a selector.
+
+Reconciliation is per rekening: the desk carries an account picker, drafts and
+`daysSinceLastReconciled` are scoped to one account, candidate lines come from
+that rekening's GL account only, and ticking another account's line is refused.
+A payment recorded off an imported statement lands in the rekening whose
+statement it is — the money provably arrived there.
 
 ### Cart
 
@@ -1678,7 +1695,7 @@ All idempotent — assume they run twice.
 
 ## 4. Data
 
-67 models, 68 migrations. The ones that carry money or stock:
+73 models, 76 migrations. The ones that carry money or stock:
 
 `orders` (`split_parent_id` threads a split) · `order_lines` (price snapshots) · `order_events` (every transition)
 `invoices` · `payment_entries` (append-only)
@@ -1695,7 +1712,6 @@ All idempotent — assume they run twice.
 - Revaluation and impairment of fixed assets
 - Uang muka pelanggan — a deposit against a specific order rather than the
   floating unallocated credit an unmatched payment currently becomes
-- More than one bank account — see the reconciliation section above
 - Seeder ships `password` as the staff password
 
 Landed cost has one approximation worth knowing about rather than a gap: which

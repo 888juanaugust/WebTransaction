@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Akuntansi;
 
 use App\Domain\Accounting\AccountCode;
+use App\Domain\Banking\BankAccounts;
 use App\Domain\Banking\BankReconciler;
 use App\Domain\Banking\ReconciliationSummary;
 use App\Domain\Banking\StatementDirection;
@@ -12,6 +13,7 @@ use App\Domain\Banking\StatementImporter;
 use App\Domain\Banking\StatementMatcher;
 use App\Domain\Money;
 use App\Models\Account;
+use App\Models\BankAccount;
 use App\Models\BankReconciliation;
 use App\Models\BankStatementImport;
 use App\Models\BankStatementLine;
@@ -64,6 +66,28 @@ class RekonsiliasiBank extends Page
 
     protected string $view = 'filament.pages.akuntansi.rekonsiliasi-bank';
 
+    /** Which rekening's desk is open. Defaults to the default account. */
+    public ?int $rekeningId = null;
+
+    public function mount(): void
+    {
+        $this->rekeningId ??= app(BankAccounts::class)->default()->id;
+    }
+
+    public function rekeningAktif(): BankAccount
+    {
+        return BankAccount::query()->find($this->rekeningId)
+            ?? app(BankAccounts::class)->default();
+    }
+
+    /** @return array<int, string> */
+    public function pilihanRekening(): array
+    {
+        return BankAccount::query()->aktif()->get()
+            ->mapWithKeys(fn (BankAccount $r) => [$r->id => $r->label()])
+            ->all();
+    }
+
     public function getTitle(): string
     {
         return 'Rekonsiliasi bank';
@@ -89,13 +113,27 @@ class RekonsiliasiBank extends Page
             return null;
         }
 
-        $days = app(BankReconciler::class)->daysSinceLastReconciled();
+        // The WORST account is the badge: one proven rekening must not hide
+        // another that has never been looked at.
+        $reconciler = app(BankReconciler::class);
+        $worst = null;
+        $never = false;
 
-        if ($days === null) {
+        foreach (BankAccount::query()->aktif()->get() as $rekening) {
+            $days = $reconciler->daysSinceLastReconciled($rekening);
+
+            if ($days === null) {
+                $never = true;
+            } else {
+                $worst = max($worst ?? 0, $days);
+            }
+        }
+
+        if ($never) {
             return 'belum pernah';
         }
 
-        return $days > 35 ? $days.' hari' : null;
+        return ($worst ?? 0) > 35 ? $worst.' hari' : null;
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -107,6 +145,7 @@ class RekonsiliasiBank extends Page
     {
         return BankReconciliation::query()
             ->where('status', BankReconciliation::STATUS_DRAFT)
+            ->where('bank_account_id', $this->rekeningId)
             ->orderByDesc('tanggal_rekening')
             ->first();
     }
@@ -487,6 +526,7 @@ class RekonsiliasiBank extends Page
                         (int) $data['saldo_rekening_rupiah'],
                         auth()->user(),
                         $data['catatan'] ?: null,
+                        $this->rekeningAktif(),
                     ),
                     'Rekonsiliasi dimulai',
                     'Centang setiap baris yang muncul di rekening koran.',
@@ -678,6 +718,7 @@ class RekonsiliasiBank extends Page
     {
         return BankReconciliation::query()
             ->finalised()
+            ->where('bank_account_id', $this->rekeningId)
             ->with('finalisedBy')
             ->orderByDesc('tanggal_rekening')
             ->limit(12)
@@ -686,7 +727,7 @@ class RekonsiliasiBank extends Page
 
     public function daysSince(): ?int
     {
-        return app(BankReconciler::class)->daysSinceLastReconciled();
+        return app(BankReconciler::class)->daysSinceLastReconciled($this->rekeningAktif());
     }
 
     /**

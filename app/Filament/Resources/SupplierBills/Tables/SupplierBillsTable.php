@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\SupplierBills\Tables;
 
+use App\Domain\Banking\BankAccounts;
 use App\Domain\Money;
 use App\Domain\Purchasing\SupplierBillPoster;
 use App\Domain\Purchasing\SupplierLedger;
+use App\Models\BankAccount;
 use App\Models\SupplierBill;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -151,6 +154,14 @@ class SupplierBillsTable
                         TextInput::make('referensi')
                             ->label('Referensi transfer')
                             ->maxLength(120),
+                        Select::make('bank_account_id')
+                            ->label('Rekening')
+                            ->options(fn () => BankAccount::query()->aktif()
+                                ->get()->mapWithKeys(fn ($r) => [$r->id => $r->label()]))
+                            ->default(fn () => app(BankAccounts::class)->default()->id)
+                            ->required()
+                            // With one rekening there is nothing to choose.
+                            ->visible(fn () => BankAccount::query()->aktif()->count() > 1),
                         DateTimePicker::make('paid_at')->label('Tanggal bayar')->default(now()),
                         Textarea::make('catatan')->label('Catatan')->rows(2),
                     ])
@@ -164,6 +175,9 @@ class SupplierBillsTable
                                 referensi: $data['referensi'] ?? null,
                                 catatan: $data['catatan'] ?? null,
                                 paidAt: $data['paid_at'] ? Carbon::parse($data['paid_at']) : null,
+                                rekening: isset($data['bank_account_id'])
+                                    ? BankAccount::query()->find($data['bank_account_id'])
+                                    : null,
                             );
 
                             Notification::make()->title('Pembayaran dicatat')->success()->send();

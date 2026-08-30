@@ -271,6 +271,8 @@ class LogAudit extends Page implements HasTable
             'commission_rate_set' => 'Tarif komisi dipasang',
             'sales_target_set' => 'Target penjualan dipasang',
             'bank_statement_auto_matched' => 'Mutasi dicocokkan otomatis',
+            'bank_account_opened' => 'Rekening bank dibuka',
+            'bank_account_default_changed' => 'Rekening bawaan dipindah',
             'price_list_published' => 'Daftar harga diterbitkan',
             'faktur_exported' => 'Faktur pajak diekspor',
             'nsfp_recorded' => 'NSFP dicatat',

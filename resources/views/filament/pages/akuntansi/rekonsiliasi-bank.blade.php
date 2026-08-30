@@ -15,6 +15,24 @@
 
 <x-filament-panels::page>
 
+    @php $pilihan = $this->pilihanRekening(); @endphp
+    @if (count($pilihan) > 1)
+        {{-- Which rekening's desk. Each account has its own drafts, its own
+             history, its own staleness — switching here switches all of it. --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
+            <label for="rekeningId" class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Rekening yang direkonsiliasi
+            </label>
+            <select id="rekeningId" wire:model.live="rekeningId"
+                    class="mt-1 block rounded-lg border-gray-300 text-sm shadow-sm
+                           dark:border-white/10 dark:bg-gray-800 dark:text-gray-100">
+                @foreach ($pilihan as $id => $label)
+                    <option value="{{ $id }}">{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+    @endif
+
     @if (! $rec)
         {{-- Nothing in progress. Say how long it has been, because an
              unreconciled bank account is otherwise completely invisible. --}}

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Invoices\Tables;
 
 use App\Domain\Access\Role;
+use App\Domain\Banking\BankAccounts;
 use App\Domain\Credit\DebtRemover;
 use App\Domain\Money;
 use App\Domain\Payments\PaymentLedger;
+use App\Models\BankAccount;
 use App\Models\Invoice;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -208,6 +211,14 @@ class InvoicesTable
                             ->numeric()
                             ->required()
                             ->default($record->amountOutstanding()),
+                        Select::make('bank_account_id')
+                            ->label('Rekening')
+                            ->options(fn () => BankAccount::query()->aktif()
+                                ->get()->mapWithKeys(fn ($r) => [$r->id => $r->label()]))
+                            ->default(fn () => app(BankAccounts::class)->default()->id)
+                            ->required()
+                            // With one rekening there is nothing to choose.
+                            ->visible(fn () => BankAccount::query()->aktif()->count() > 1),
                         DateTimePicker::make('paid_at')
                             ->label('Tanggal terima')
                             ->default(now()),
@@ -221,6 +232,9 @@ class InvoicesTable
                             invoice: $record,
                             catatan: $data['catatan'] ?? null,
                             paidAt: $data['paid_at'] ? Carbon::parse($data['paid_at']) : null,
+                            rekening: isset($data['bank_account_id'])
+                                ? BankAccount::query()->find($data['bank_account_id'])
+                                : null,
                         );
 
                         Notification::make()->title('Pembayaran dicatat')->success()->send();

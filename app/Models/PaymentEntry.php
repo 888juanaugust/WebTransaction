@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'company_id', 'invoice_id', 'order_id', 'amount_rupiah', 'kind',
-    'actor_id', 'reverses_entry_id', 'paid_at', 'catatan',
+    'actor_id', 'reverses_entry_id', 'paid_at', 'bank_account_id', 'catatan',
 ])]
 class PaymentEntry extends Model
 {
@@ -69,5 +69,10 @@ class PaymentEntry extends Model
     public function scopeUnmatched(Builder $query): Builder
     {
         return $query->whereNull('invoice_id')->where('kind', self::KIND_PAYMENT);
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 }

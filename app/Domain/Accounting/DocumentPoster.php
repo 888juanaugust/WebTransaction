@@ -6,6 +6,7 @@ namespace App\Domain\Accounting;
 
 use App\Domain\Expenses\PaidFrom;
 use App\Domain\Money;
+use App\Models\BankAccount;
 use App\Models\CreditNote;
 use App\Models\CustomerDeposit;
 use App\Models\CustomerDepositMovement;
@@ -820,7 +821,7 @@ class DocumentPoster
             $this->paymentDescription($entry),
             $entry->paid_at,
         )
-            ->debitSigned(AccountCode::BANK, $amount, $entry->catatan)
+            ->debitSigned($this->bankCodeFor($entry->bankAccount), $amount, $entry->catatan)
             ->kreditSigned(AccountCode::PIUTANG_USAHA, $amount, $company?->nama, company: $company);
 
         return $this->ledger->post($draft, $actor);
@@ -942,7 +943,7 @@ class DocumentPoster
             $entry->paid_at,
         )
             ->debitSigned(AccountCode::UTANG_USAHA, $amount, $entry->referensi, supplier: $supplier)
-            ->kreditSigned(AccountCode::BANK, $amount, supplier: $supplier);
+            ->kreditSigned($this->bankCodeFor($entry->bankAccount), $amount, supplier: $supplier);
 
         return $this->ledger->post($draft, $actor);
     }
@@ -999,5 +1000,16 @@ class DocumentPoster
         return $invoice !== null
             ? "Pembayaran faktur {$invoice->nomor}"
             : 'Pembayaran pelanggan belum dicocokkan';
+    }
+
+    /**
+     * Which GL account a payment's money actually touched.
+     *
+     * Null is a row from before multi-bank existed: those all posted to the
+     * original Bank account, and so do their reversals.
+     */
+    private function bankCodeFor(?BankAccount $rekening): string
+    {
+        return $rekening?->account?->kode ?? AccountCode::BANK;
     }
 }

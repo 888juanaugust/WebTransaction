@@ -6,6 +6,8 @@ namespace App\Domain\Purchasing;
 
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Banking\BankAccounts;
+use App\Models\BankAccount;
 use App\Models\Giro;
 use App\Models\PurchaseReturn;
 use App\Models\Supplier;
@@ -48,6 +50,7 @@ class SupplierLedger
         ?string $referensi = null,
         ?string $catatan = null,
         ?DateTimeInterface $paidAt = null,
+        ?BankAccount $rekening = null,
     ): SupplierPaymentEntry {
         if ($amountRupiah <= 0) {
             throw new LogicException('A supplier payment must be positive.');
@@ -61,8 +64,12 @@ class SupplierLedger
             throw new LogicException('That bill belongs to a different supplier.');
         }
 
+        // Stored at record time — see PaymentLedger for why the default
+        // moving later must never rewrite where this money actually left.
+        $rekening ??= app(BankAccounts::class)->default();
+
         return DB::transaction(function () use (
-            $supplier, $amountRupiah, $actor, $bill, $referensi, $catatan, $paidAt
+            $supplier, $amountRupiah, $actor, $bill, $referensi, $catatan, $paidAt, $rekening
         ) {
             $entry = SupplierPaymentEntry::create([
                 'supplier_id' => $supplier->id,
@@ -72,6 +79,7 @@ class SupplierLedger
                 'referensi' => $referensi,
                 'actor_id' => $actor->id,
                 'paid_at' => $paidAt ?? now(),
+                'bank_account_id' => $rekening->id,
                 'catatan' => $catatan,
             ]);
 
@@ -126,6 +134,7 @@ class SupplierLedger
                 'actor_id' => $actor->id,
                 'reverses_entry_id' => $entry->id,
                 'paid_at' => now(),
+                'bank_account_id' => $entry->bank_account_id,
                 'catatan' => $alasan,
             ]);
 

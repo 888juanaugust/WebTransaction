@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'supplier_id', 'supplier_bill_id', 'amount_rupiah', 'kind',
-    'referensi', 'actor_id', 'reverses_entry_id', 'paid_at', 'catatan',
+    'referensi', 'actor_id', 'reverses_entry_id', 'paid_at', 'bank_account_id', 'catatan',
 ])]
 class SupplierPaymentEntry extends Model
 {
@@ -52,5 +52,10 @@ class SupplierPaymentEntry extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
     }
 }

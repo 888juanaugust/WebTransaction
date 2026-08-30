@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Banking;
 
-use App\Domain\Accounting\AccountCode;
 use App\Domain\Accounting\JournalDraft;
 use App\Domain\Accounting\Ledger;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Models\Account;
+use App\Models\BankAccount;
 use App\Models\BankReconciliation;
 use App\Models\BankReconciliationItem;
 use App\Models\BankReconciliationLine;
@@ -70,9 +70,11 @@ class BankReconciler
         int $statementBalance,
         User $actor,
         ?string $catatan = null,
+        ?BankAccount $rekening = null,
     ): BankReconciliation {
         $this->assertMayReconcile($actor);
 
+        $rekening ??= app(BankAccounts::class)->default();
         $date = Carbon::parse($statementDate)->startOfDay();
 
         if ($date->isFuture()) {
@@ -80,6 +82,7 @@ class BankReconciler
         }
 
         $existing = BankReconciliation::query()
+            ->where('bank_account_id', $rekening->id)
             ->whereDate('tanggal_rekening', $date->toDateString())
             ->first();
 
@@ -99,7 +102,7 @@ class BankReconciler
          * September, which would present three seasons of already-explained
          * history as though it were outstanding.
          */
-        $last = $this->lastFinalised();
+        $last = $this->lastFinalised($rekening);
 
         if ($last !== null && $date->lessThanOrEqualTo($last->tanggal_rekening)) {
             throw new DomainException(sprintf(
@@ -115,6 +118,7 @@ class BankReconciler
             'saldo_rekening_rupiah' => $statementBalance,
             'catatan' => $catatan,
             'created_by' => $actor->id,
+            'bank_account_id' => $rekening->id,
         ]);
 
         $this->audit->log(
@@ -124,6 +128,7 @@ class BankReconciler
                 'nomor' => $reconciliation->nomor,
                 'tanggal_rekening' => $date->toDateString(),
                 'saldo_rekening_rupiah' => $statementBalance,
+                'rekening' => $rekening->label(),
             ],
             actor: $actor,
         );
@@ -143,7 +148,7 @@ class BankReconciler
      */
     public function candidateLines(BankReconciliation $reconciliation): Collection
     {
-        $bank = Account::byCode(AccountCode::BANK);
+        $bank = $reconciliation->glAccount();
 
         return JournalLine::query()
             ->with(['entry'])
@@ -252,10 +257,11 @@ class BankReconciler
         }
 
         $account = Account::byCode($accountCode);
+        $bankKode = $reconciliation->glAccount()->kode;
 
-        if ($accountCode === AccountCode::BANK) {
+        if ($accountCode === $bankKode) {
             throw new DomainException(
-                'Lawan jurnalnya tidak boleh Bank — itu akan membatalkan dirinya sendiri.'
+                'Lawan jurnalnya tidak boleh rekening ini sendiri — itu akan membatalkan dirinya sendiri.'
             );
         }
 
@@ -288,8 +294,8 @@ class BankReconciler
             );
 
             [$debit, $kredit] = $arah->debitsBank()
-                ? [AccountCode::BANK, $account->kode]
-                : [$account->kode, AccountCode::BANK];
+                ? [$reconciliation->glAccount()->kode, $account->kode]
+                : [$account->kode, $reconciliation->glAccount()->kode];
 
             $draft->debit($debit, $amountRupiah, trim($keterangan))
                 ->kredit($kredit, $amountRupiah, trim($keterangan));
@@ -299,8 +305,8 @@ class BankReconciler
             $item->forceFill(['journal_entry_id' => $entry->id])->save();
 
             // On the statement by definition, so it starts ticked.
-            $bank = Account::byCode(AccountCode::BANK);
-            $bankLine = $entry->lines()->where('account_id', $bank->id)->firstOrFail();
+            $bankLine = $entry->lines()
+                ->where('account_id', $reconciliation->glAccount()->id)->firstOrFail();
 
             BankReconciliationLine::query()->firstOrCreate([
                 'journal_line_id' => $bankLine->id,
@@ -335,7 +341,7 @@ class BankReconciler
      */
     public function summarise(BankReconciliation $reconciliation): ReconciliationSummary
     {
-        $saldoBuku = $this->ledger->balanceOf(AccountCode::BANK, $reconciliation->tanggal_rekening);
+        $saldoBuku = $this->ledger->balanceOf($reconciliation->glAccount()->kode, $reconciliation->tanggal_rekening);
 
         $ticked = $this->tickedLineIds($reconciliation);
 
@@ -434,10 +440,11 @@ class BankReconciler
     }
 
     /** The most recent statement that has been signed off, if any. */
-    public function lastFinalised(): ?BankReconciliation
+    public function lastFinalised(?BankAccount $rekening = null): ?BankReconciliation
     {
         return BankReconciliation::query()
             ->finalised()
+            ->when($rekening !== null, fn ($q) => $q->where('bank_account_id', $rekening->id))
             ->orderByDesc('tanggal_rekening')
             ->first();
     }
@@ -448,9 +455,9 @@ class BankReconciler
      * Null when it has never been reconciled at all, which is a different and
      * worse answer than a large number — and the one a new installation gives.
      */
-    public function daysSinceLastReconciled(): ?int
+    public function daysSinceLastReconciled(?BankAccount $rekening = null): ?int
     {
-        $last = $this->lastFinalised();
+        $last = $this->lastFinalised($rekening);
 
         return $last === null
             ? null
@@ -476,10 +483,8 @@ class BankReconciler
             throw new DomainException('Baris ini sudah dicentang di rekonsiliasi lain.');
         }
 
-        $bank = Account::byCode(AccountCode::BANK);
-
-        if ((int) $line->account_id !== $bank->id) {
-            throw new DomainException('Hanya baris jurnal akun Bank yang bisa dicentang.');
+        if ((int) $line->account_id !== $reconciliation->glAccount()->id) {
+            throw new DomainException('Baris ini bukan milik rekening yang sedang direkonsiliasi.');
         }
 
         $tanggal = $line->entry?->tanggal;

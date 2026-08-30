@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Expenses;
 
 use App\Domain\Accounting\AccountCode;
+use App\Domain\Banking\BankAccounts;
 
 /**
  * Which pocket the money left.
@@ -29,7 +30,16 @@ enum PaidFrom: string
     {
         return match ($this) {
             self::Kas => AccountCode::KAS,
-            self::Bank => AccountCode::BANK,
+            /*
+             * The DEFAULT rekening, now that there can be several. Expenses,
+             * deposits and asset purchases are low-volume flows and stay on
+             * the main account by design — per-rekening choice lives where
+             * the volume is, on customer and supplier payments. An expense
+             * genuinely paid from another rekening is the default-account
+             * discrepancy its reconciliation will surface, which is the
+             * honest outcome until these flows earn their own selector.
+             */
+            self::Bank => app(BankAccounts::class)->default()->account->kode,
         };
     }
 
