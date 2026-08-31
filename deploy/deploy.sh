@@ -51,19 +51,41 @@ fi
 $FIRST || php artisan down --render="errors::503"
 
 ##
-# Whatever happens next, the site comes back up.
+# A failed deploy ends in one of two honest states, never in a third.
 #
-# Without this, any failing step below left the shop showing 503 until
-# somebody noticed and ran `artisan up` by hand. A broken deploy is a bad
-# afternoon; a broken deploy nobody can end is a bad week.
+# Leaving the shop in maintenance mode until somebody notices is bad. Lifting
+# maintenance over an application that cannot serve is worse: buyers get a
+# stack trace on every page instead of a page that says come back shortly.
+#
+# So a failure asks whether the code on disk can actually serve — it boots,
+# and the built assets exist — and only then lifts the maintenance page.
+# Where it cannot, the 503 stays up and the recovery is printed.
 ##
+dapatMelayani() {
+    php artisan about --only=environment >/dev/null 2>&1 || return 1
+    [ -s public/build/manifest.json ] || return 1
+}
+
 kembalikan() {
     local kode=$?
 
     if [ "$kode" -ne 0 ]; then
         echo
-        echo "Deploy gagal (kode ${kode}). Mengembalikan situs dari mode perbaikan."
-        $FIRST || php artisan up || true
+        echo "Deploy gagal (kode ${kode})."
+
+        if $FIRST; then
+            :
+        elif dapatMelayani; then
+            echo "Kode lama masih bisa melayani — situs dibuka kembali."
+            php artisan up || true
+        else
+            echo "Aplikasi belum bisa melayani, jadi halaman perbaikan TETAP tampil."
+            echo "Buyers melihat 'sebentar lagi', bukan stack trace. Perbaiki lalu:"
+            echo
+            echo "  npm ci && npm run build     # aset yang hilang"
+            echo "  php artisan optimize"
+            echo "  php artisan up"
+        fi
     fi
 
     exit "$kode"
@@ -73,6 +95,19 @@ trap kembalikan EXIT
 git pull
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
+
+##
+# The build is the step most likely to die on a small box, and its failure is
+# silent in the worst way: nothing is missing until a page is rendered, and by
+# then maintenance mode has been lifted and every request is a 500. So the
+# artefact is checked here, while the 503 is still up.
+##
+if [ ! -s public/build/manifest.json ]; then
+    echo "Build tidak menghasilkan public/build/manifest.json."
+    echo "Biasanya kehabisan memori. Coba: NODE_OPTIONS=--max-old-space-size=1024 npm run build"
+    exit 1
+fi
+
 php artisan migrate --force
 
 ##

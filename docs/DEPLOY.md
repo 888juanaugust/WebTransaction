@@ -470,8 +470,15 @@ disk, out of memory — it leaves a truncated PHP file, and every later artisan
 command dies with `Target class [config] does not exist`, **including the ones
 that would clear it**. So the script checks for room before it starts, and
 deletes the cache files with `rm` (which needs no working application) before
-rebuilding them. It also traps failures and runs `artisan up`, so a deploy that
-dies never leaves the shop stuck behind a 503.
+rebuilding them. It also checks that the build actually produced
+`public/build/manifest.json` before going any further — a missing manifest
+breaks nothing until a page is rendered, by which time maintenance mode is
+already lifted and every request is a 500.
+
+On failure the script asks whether the code on disk can serve — it boots, and
+the assets exist. If it can, the maintenance page comes down; if it cannot,
+the 503 deliberately **stays up** and the recovery is printed. A page saying
+come back shortly is honest; a stack trace on every URL is not.
 
 — followed by an informational `launch:check`. The first deploy uses
 `bash deploy/deploy.sh --first`, which builds, writes a fresh `.env`, and
@@ -565,6 +572,33 @@ recording the entry against the invoice moves the order the same second.
 **Stock looks lower than the shelf.** Reservations from unpaid orders are not
 being released — the scheduler is not running. Check the crontab, then
 `ReleaseStaleReservations` in the queue log.
+
+**Every page 500s with `Unable to locate file in Vite manifest`.** The
+front-end assets were never built — `npm run build` died, usually out of
+memory on a small box. Nothing is wrong with the database:
+
+```bash
+cd /var/www/webtransaction
+free -m                      # if tight, add swap before retrying
+npm ci && npm run build
+# still killed? give node a ceiling it can meet:
+NODE_OPTIONS=--max-old-space-size=1024 npm run build
+ls -l public/build/manifest.json    # must exist and be non-empty
+php artisan optimize && php artisan up
+```
+
+**A stack trace is visible on a public URL.** `APP_ENV` is not `production`,
+so the debug fail-safe in `AppServiceProvider` never fires — and neither does
+any other production hardening: secure cookies, HTTPS enforcement, the strict
+headers. Fix both lines in `.env` and rebuild the cache:
+
+```bash
+APP_ENV=production
+APP_DEBUG=false
+```
+```bash
+php artisan optimize
+```
 
 **Every `php artisan` command dies with `Target class [config] does not
 exist`.** The cached config is truncated — a deploy ran out of disk or memory
