@@ -452,15 +452,26 @@ cd /var/www/webtransaction && bash deploy/deploy.sh
 Which is exactly:
 
 ```bash
+df -Pm .                      # refuses to start under 1 GB free
 php artisan down --render="errors::503"
 git pull
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
+rm -f bootstrap/cache/config.php bootstrap/cache/events.php bootstrap/cache/routes-*.php
 php artisan optimize && php artisan filament:optimize
 php artisan queue:restart
 php artisan up
 ```
+
+Two of those lines exist because of one failure mode. `artisan optimize`
+writes `bootstrap/cache/config.php` in a single pass; killed halfway — out of
+disk, out of memory — it leaves a truncated PHP file, and every later artisan
+command dies with `Target class [config] does not exist`, **including the ones
+that would clear it**. So the script checks for room before it starts, and
+deletes the cache files with `rm` (which needs no working application) before
+rebuilding them. It also traps failures and runs `artisan up`, so a deploy that
+dies never leaves the shop stuck behind a 503.
 
 — followed by an informational `launch:check`. The first deploy uses
 `bash deploy/deploy.sh --first`, which builds, writes a fresh `.env`, and
@@ -554,3 +565,16 @@ recording the entry against the invoice moves the order the same second.
 **Stock looks lower than the shelf.** Reservations from unpaid orders are not
 being released — the scheduler is not running. Check the crontab, then
 `ReleaseStaleReservations` in the queue log.
+
+**Every `php artisan` command dies with `Target class [config] does not
+exist`.** The cached config is truncated — a deploy ran out of disk or memory
+mid-write. Nothing is corrupted in the database and no data is at risk; the
+file just has to go:
+
+```bash
+cd /var/www/webtransaction
+rm -f bootstrap/cache/config.php bootstrap/cache/events.php bootstrap/cache/routes-*.php
+php artisan optimize
+php artisan up          # the failed deploy left the site in maintenance mode
+df -h /                 # and find out why it ran out
+```
