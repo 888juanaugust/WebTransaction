@@ -98,7 +98,8 @@ document, stays Indonesian.
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
 | `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick each rekening's GL account against its own statement — a picker chooses which. Badge shows the worst of all accounts |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
-| `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it. **Cost and margin columns vanish for Sales** |
+| `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it — grouped per pelanggan, **sales**, **barang**, merk, kategori or bulan. **Cost and margin columns vanish for Sales** |
+| `/admin/laporan/kpi` | Laporan KPI | Sales, Finance, Owner | Per sales / toko / barang. Carries no cost at all, so a sales seat reads the same sheet everyone else does |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
 | `/admin/laporan/umur-hutang` | Umur hutang | Finance, Owner | The payables mirror: whom **we** owe, by age, tied to Hutang Usaha |
 | `/admin/laporan/rekening-pelanggan` | Rekening pelanggan | Sales, Finance, Owner | One customer's account, and the statement to send them |
@@ -814,7 +815,9 @@ return.
 | `ReportTable` | Title, period, columns, rows, totals, notes — what every report returns |
 | `ReportColumn` | How a cell renders, **for the screen and the CSV in one place**, and who may see the column at all |
 | `ReportCsv::write` | Semicolons and a BOM, because Indonesian Excel reads comma-delimited as one column |
-| `SalesReport::build` | Revenue from **invoice line snapshots** less posted credit notes, by customer / brand / category / month |
+| `SalesReport::build` | Revenue from **invoice line snapshots** less posted credit notes, by customer / sales seat / item / brand / category / month |
+| `SalesDimension::countsUnits` | Only per barang do units add up — one SKU, one base unit. Summed across a merk, 18 PCS + 2 SET is 20 of nothing, so the Unit column exists there and nowhere else |
+| `KpiReport::build` | How well, not how much: per sales seat (omset, target, **cakupan**, kunjungan, jatuh tempo), per toko (frekuensi, jenis barang, terakhir belanja, piutang), per barang (unit, **toko pembeli**, terakhir terjual, stok). No cost column anywhere, so Sales may read it |
 | `ReceivablesAgeing::build` | 30/60/90 buckets, unmatched payments in their own column |
 | `LapsedCustomers::build` | Customers silent for more than twice **their own** median ordering interval |
 | `StockAgeing::build` | On-hand value and months of cover, never-sold first |
@@ -832,6 +835,19 @@ exception, sales per region, runs its own unscoped query on purpose and is
 shown only to a viewer who already sees every region; for anyone pinned the
 page never draws it, because a chart that leaks other regions' sales would be
 the report screen quietly undoing the region scope.
+
+Two rules run through the KPI sheet, both about *when*. **Activity is measured
+over the period; debt and stock are measured now** — what a customer owed on
+31 August is history, and the number worth acting on is what is unpaid today,
+so those columns say `kini`. And **a target only applies to a whole calendar
+month**, because that is how `sales_targets` stores it; any other range leaves
+target and capaian empty rather than comparing half a month's sales against a
+whole month's goal.
+
+`KpiReport` counts every active sales seat and every active toko, including the
+ones with no invoices at all. A sheet built from invoices alone omits exactly
+the rows worth looking at — the seat holding twelve shops that sold to none of
+them — and would look healthiest when the business is least healthy.
 
 Every report is anchored to something it must agree with, and says so when it
 does not. Sales ties to the Penjualan account; ageing ties to Piutang Usaha and
@@ -1119,7 +1135,7 @@ thin Chart.js shell over one method, role-gated like the queues above it:
 | `whereBoundRegion()` | The same filter for raw `DB::table()` reports and line-table joins |
 | `BindRegionContext` | Middleware: account pins staff, session moves the Owner, company pins a buyer. **Registered persistent** — Filament skips non-persistent panel middleware on `/livewire/update`, and unbound there means reads fall open to every region |
 | `StaffRegistrar::assignRegion` | Only the Owner moves people, audited both sides, session ended |
-| `DocumentNumberGenerator` | Numbers carry the region and count per region: `INV-PST-202608-0001` |
+| `DocumentNumberGenerator` | Numbers carry the region and count per region: `INV-SBY-202608-0001` |
 
 Each region is a **complete, separate set of books** — its own stock,
 suppliers, journals, document registers and month-ends. No inter-region

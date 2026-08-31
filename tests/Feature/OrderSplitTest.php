@@ -35,11 +35,11 @@ class OrderSplitTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Region $sby;
+    private Region $jkt;
 
     private Warehouse $gudangHome;
 
-    private Warehouse $gudangSby;
+    private Warehouse $gudangJkt;
 
     private User $owner;
 
@@ -56,12 +56,12 @@ class OrderSplitTest extends TestCase
         $this->seed(ChartOfAccountsSeeder::class);
 
         $region = $this->currentRegion();
-        $this->sby = Region::factory()->create(['kode' => 'SBY']);
+        $this->jkt = Region::factory()->create(['kode' => 'JKT']);
 
         $this->gudangHome = Warehouse::factory()->create(['kode' => 'GD-HOME']);
-        $this->gudangSby = app(RegionContext::class)->within(
-            $this->sby,
-            fn () => Warehouse::factory()->create(['kode' => 'GD-SBY']),
+        $this->gudangJkt = app(RegionContext::class)->within(
+            $this->jkt,
+            fn () => Warehouse::factory()->create(['kode' => 'GD-JKT']),
         );
 
         $this->owner = User::factory()->owner()->create();
@@ -130,7 +130,7 @@ class OrderSplitTest extends TestCase
     {
         $this->productPriced('SPL-B');
         $this->stockAt($this->gudangHome, 'SPL-B', 60);
-        $this->stockAt($this->gudangSby, 'SPL-B', 100);
+        $this->stockAt($this->gudangJkt, 'SPL-B', 100);
 
         $order = $this->submittedOrder([['SPL-B', 100]]);
         app(OrderStateMachine::class)->confirm($order, $this->marketing);
@@ -141,20 +141,20 @@ class OrderSplitTest extends TestCase
         $this->assertSame(60, (int) $order->lines()->sum('qty_base'));
         $this->assertSame($this->currentRegion()->id, (int) $order->region_id);
 
-        // One sibling carries the remaining 40 — in Surabaya's books, with
-        // Surabaya's document number, reserved at Surabaya's warehouse.
+        // One sibling carries the remaining 40 — in Jakarta's books, with
+        // Jakarta's document number, reserved at Jakarta's warehouse.
         $sibling = $order->splitChildren()->sole();
         $this->assertSame(OrderStatus::Confirmed, $sibling->status);
         $this->assertSame(40, (int) $sibling->lines()->sum('qty_base'));
-        $this->assertSame($this->sby->id, (int) $sibling->region_id);
-        $this->assertStringContainsString('-SBY-', $sibling->nomor);
-        $this->assertSame($this->gudangSby->id, (int) $sibling->warehouse_id);
+        $this->assertSame($this->jkt->id, (int) $sibling->region_id);
+        $this->assertStringContainsString('-JKT-', $sibling->nomor);
+        $this->assertSame($this->gudangJkt->id, (int) $sibling->warehouse_id);
 
         $reservation = StockReservation::query()
             ->withoutGlobalScope('region')
             ->where('order_id', $sibling->id)
             ->sole();
-        $this->assertSame($this->gudangSby->id, (int) $reservation->warehouse_id);
+        $this->assertSame($this->gudangJkt->id, (int) $reservation->warehouse_id);
 
         // Both pieces committed against one credit line.
         $committed = (int) Order::query()->withoutGlobalScope('region')
@@ -170,7 +170,7 @@ class OrderSplitTest extends TestCase
         $this->productPriced('SPL-C');
         $this->productPriced('SPL-D');
         $this->stockAt($this->gudangHome, 'SPL-C', 100);
-        $this->stockAt($this->gudangSby, 'SPL-D', 100);
+        $this->stockAt($this->gudangJkt, 'SPL-D', 100);
 
         $order = $this->submittedOrder([['SPL-C', 10], ['SPL-D', 20]]);
         app(OrderStateMachine::class)->confirm($order, $this->marketing);
@@ -185,7 +185,7 @@ class OrderSplitTest extends TestCase
     public function test_an_order_whose_home_holds_nothing_is_rehomed_not_split(): void
     {
         $this->productPriced('SPL-E');
-        $this->stockAt($this->gudangSby, 'SPL-E', 100);
+        $this->stockAt($this->gudangJkt, 'SPL-E', 100);
 
         $order = $this->submittedOrder([['SPL-E', 30]]);
         $nomorLama = $order->nomor;
@@ -197,17 +197,17 @@ class OrderSplitTest extends TestCase
         $order = Order::query()->withoutGlobalScope('region')->find($order->id);
         $this->assertSame(0, $order->splitChildren()->count());
         $this->assertSame(OrderStatus::Confirmed, $order->status);
-        $this->assertSame($this->sby->id, (int) $order->region_id);
-        $this->assertSame($this->gudangSby->id, (int) $order->warehouse_id);
+        $this->assertSame($this->jkt->id, (int) $order->region_id);
+        $this->assertSame($this->gudangJkt->id, (int) $order->warehouse_id);
         $this->assertNotSame($nomorLama, $order->nomor);
-        $this->assertStringContainsString('-SBY-', $order->nomor);
+        $this->assertStringContainsString('-JKT-', $order->nomor);
     }
 
     public function test_insufficient_everywhere_refuses_and_leaves_the_order_untouched(): void
     {
         $this->productPriced('SPL-F');
         $this->stockAt($this->gudangHome, 'SPL-F', 10);
-        $this->stockAt($this->gudangSby, 'SPL-F', 15);
+        $this->stockAt($this->gudangJkt, 'SPL-F', 15);
 
         $order = $this->submittedOrder([['SPL-F', 100]]);
 
@@ -232,7 +232,7 @@ class OrderSplitTest extends TestCase
          */
         $this->productPriced('SPL-G', harga: 1_000_000);
         $this->stockAt($this->gudangHome, 'SPL-G', 60);
-        $this->stockAt($this->gudangSby, 'SPL-G', 100);
+        $this->stockAt($this->gudangJkt, 'SPL-G', 100);
 
         $this->pelanggan->forceFill(['credit_limit_rupiah' => 70_000_000])->save();
 
@@ -260,7 +260,7 @@ class OrderSplitTest extends TestCase
         );
 
         $this->productPriced('SPL-H');
-        $this->stockAt($this->gudangSby, 'SPL-H', 20);
+        $this->stockAt($this->gudangJkt, 'SPL-H', 20);
         $this->stockAt($gudangBdg, 'SPL-H', 80);
 
         $order = $this->submittedOrder([['SPL-H', 50]]);

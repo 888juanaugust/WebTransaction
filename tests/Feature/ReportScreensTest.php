@@ -8,6 +8,7 @@ use App\Domain\Access\Role;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Payments\PaymentLedger;
 use App\Domain\Purchasing\GoodsReceiptPoster;
+use App\Filament\Pages\Laporan\Kpi;
 use App\Filament\Pages\Laporan\PelangganPasif;
 use App\Filament\Pages\Laporan\Penjualan;
 use App\Filament\Pages\Laporan\PerputaranStok;
@@ -182,6 +183,77 @@ class ReportScreensTest extends TestCase
             ->assertDontSee('CV Satu')
             ->set('dimensi', 'kategori')
             ->assertSee('SUSPENSION PART');
+    }
+
+    public function test_the_grouping_switch_reaches_the_new_seat_and_item_views(): void
+    {
+        // The two views the testers asked for, reached from the same screen
+        // rather than as two more pages in the sidebar.
+        $this->soldTo('CV Satu', 10);
+
+        // The customer has no seat assigned, which is the honest thing for
+        // this fixture to say — and the label the report must show rather
+        // than dropping the row and breaking its own total.
+        Livewire::actingAs($this->finance)
+            ->test(Penjualan::class)
+            ->set('dari', now()->subMonths(2)->toDateString())
+            ->set('sampai', now()->toDateString())
+            ->set('dimensi', 'sales')
+            ->assertOk()
+            ->assertSee('Belum ada sales')
+            ->set('dimensi', 'barang')
+            ->assertSee(self::SKU)
+            // Units only appear where they mean something: per item.
+            ->assertSee('Unit');
+    }
+
+    #[DataProvider('reportRoles')]
+    public function test_who_may_open_the_kpi_report(Role $role, bool $allowed): void
+    {
+        $response = $this->actingAs(User::factory()->role($role)->create(), 'web')
+            ->get(Kpi::getUrl());
+
+        $allowed ? $response->assertOk() : $response->assertForbidden();
+    }
+
+    public function test_the_kpi_sheet_carries_no_cost_for_anybody(): void
+    {
+        /*
+         * Sales read this one about themselves, so it must be safe for them
+         * by construction rather than by a hidden column: there is no cost
+         * query behind it at all. Finance sees exactly the same sheet, which
+         * is how you can tell nothing is being withheld rather than absent.
+         */
+        $this->soldTo('CV Satu', 10);
+
+        foreach ([$this->sales, $this->finance] as $reader) {
+            Livewire::actingAs($reader)
+                ->test(Kpi::class)
+                ->set('dari', now()->subMonths(2)->toDateString())
+                ->set('sampai', now()->toDateString())
+                ->assertOk()
+                ->assertSee('Cakupan')
+                ->assertDontSee('HPP')
+                ->assertDontSee('Margin')
+                ->assertDontSee('Rp 600.000');
+        }
+    }
+
+    public function test_the_kpi_subject_switch_changes_who_is_being_judged(): void
+    {
+        $this->soldTo('CV Satu', 10);
+
+        Livewire::actingAs($this->finance)
+            ->test(Kpi::class)
+            ->set('dari', now()->subMonths(2)->toDateString())
+            ->set('sampai', now()->toDateString())
+            ->assertSee('Cakupan')
+            ->set('subjek', 'toko')
+            ->assertSee('CV Satu')
+            ->assertSee('Terakhir belanja')
+            ->set('subjek', 'barang')
+            ->assertSee(self::SKU)
+            ->assertSee('Toko pembeli');
     }
 
     public function test_the_sales_report_opens_on_last_month(): void

@@ -27,7 +27,7 @@ class CrossRegionExposureTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Region $sby;
+    private Region $jkt;
 
     private Company $toko;
 
@@ -35,7 +35,7 @@ class CrossRegionExposureTest extends TestCase
     {
         parent::setUp();
 
-        $this->sby = Region::factory()->create(['kode' => 'SBY']);
+        $this->jkt = Region::factory()->create(['kode' => 'JKT']);
         $this->toko = Company::factory()->creditLimit(100_000_000)->create();
     }
 
@@ -53,17 +53,17 @@ class CrossRegionExposureTest extends TestCase
     public function test_exposure_sums_invoices_from_every_region(): void
     {
         $this->invoiceIn($this->currentRegion(), 10_000_000);
-        $this->invoiceIn($this->sby, 25_000_000);
+        $this->invoiceIn($this->jkt, 25_000_000);
 
         $status = app(CreditChecker::class)->status($this->toko);
 
-        // Read from the home region, the Surabaya paper still counts.
+        // Read from the home region, the Jakarta paper still counts.
         $this->assertSame(35_000_000, $status->outstanding);
     }
 
     public function test_an_aged_invoice_in_another_region_freezes_the_customer_everywhere(): void
     {
-        $this->invoiceIn($this->sby, 5_000_000, umurHari: 151);
+        $this->invoiceIn($this->jkt, 5_000_000, umurHari: 151);
 
         $this->assertTrue(app(DebtAging::class)->isFrozen($this->toko));
         $this->assertSame(
@@ -74,9 +74,9 @@ class CrossRegionExposureTest extends TestCase
 
     public function test_the_buyer_reads_their_documents_from_every_regions_books(): void
     {
-        $this->invoiceIn($this->sby, 7_000_000);
+        $this->invoiceIn($this->jkt, 7_000_000);
         app(RegionContext::class)->within(
-            $this->sby,
+            $this->jkt,
             fn () => Order::factory()->create(['company_id' => $this->toko->id]),
         );
 
@@ -95,7 +95,7 @@ class CrossRegionExposureTest extends TestCase
     public function test_staff_reads_stay_region_scoped(): void
     {
         $this->invoiceIn($this->currentRegion(), 10_000_000);
-        $this->invoiceIn($this->sby, 25_000_000);
+        $this->invoiceIn($this->jkt, 25_000_000);
 
         // No buyer in session: the scope filters as it always has, so one
         // region's AR queue never shows another's paper.

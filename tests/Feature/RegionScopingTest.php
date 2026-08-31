@@ -38,18 +38,18 @@ class RegionScopingTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Region $jakarta;
-
     private Region $surabaya;
+
+    private Region $jakarta;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->jakarta = $this->currentRegion();
-        $this->surabaya = Region::query()->create([
-            'kode' => 'SBY',
-            'nama' => 'Surabaya',
+        $this->surabaya = $this->currentRegion();
+        $this->jakarta = Region::query()->create([
+            'kode' => 'JKT',
+            'nama' => 'Jakarta',
             'aktif' => true,
         ]);
     }
@@ -96,31 +96,31 @@ class RegionScopingTest extends TestCase
     {
         $context = app(RegionContext::class);
 
-        $milikJakarta = Company::factory()->create(['nama' => 'Bengkel Jakarta']);
-        $milikSurabaya = $context->within($this->surabaya, fn () => Company::factory()->create(['nama' => 'Bengkel Surabaya']));
+        $milikSurabaya = Company::factory()->create(['nama' => 'Bengkel Surabaya']);
+        $milikJakarta = $context->within($this->jakarta, fn () => Company::factory()->create(['nama' => 'Bengkel Jakarta']));
 
-        $this->assertSame(['Bengkel Jakarta'], Company::query()->pluck('nama')->all());
+        $this->assertSame(['Bengkel Surabaya'], Company::query()->pluck('nama')->all());
 
-        $context->within($this->surabaya, function () {
-            $this->assertSame(['Bengkel Surabaya'], Company::query()->pluck('nama')->all());
+        $context->within($this->jakarta, function () {
+            $this->assertSame(['Bengkel Jakarta'], Company::query()->pluck('nama')->all());
         });
 
         // find() goes through the same scope: the id existing is not enough.
-        $this->assertNull(Company::find($milikSurabaya->id));
+        $this->assertNull(Company::find($milikJakarta->id));
     }
 
     public function test_new_rows_are_stamped_with_the_bound_region(): void
     {
         $company = Company::factory()->create();
 
-        $this->assertSame($this->jakarta->id, (int) $company->region_id);
+        $this->assertSame($this->surabaya->id, (int) $company->region_id);
 
         $lain = app(RegionContext::class)->within(
-            $this->surabaya,
+            $this->jakarta,
             fn () => Company::factory()->create(),
         );
 
-        $this->assertSame($this->surabaya->id, (int) $lain->region_id);
+        $this->assertSame($this->jakarta->id, (int) $lain->region_id);
     }
 
     public function test_creating_while_looking_across_all_regions_is_refused(): void
@@ -149,7 +149,7 @@ class RegionScopingTest extends TestCase
     public function test_unbound_reads_see_everything_because_jobs_reconcile_the_whole_company(): void
     {
         Company::factory()->create();
-        app(RegionContext::class)->within($this->surabaya, fn () => Company::factory()->create());
+        app(RegionContext::class)->within($this->jakarta, fn () => Company::factory()->create());
 
         app(RegionContext::class)->release();
 
@@ -161,12 +161,12 @@ class RegionScopingTest extends TestCase
         $context = app(RegionContext::class);
 
         try {
-            $context->within($this->surabaya, fn () => throw new RuntimeException('boom'));
+            $context->within($this->jakarta, fn () => throw new RuntimeException('boom'));
         } catch (RuntimeException) {
             // The work failing must not leave the wrong region bound.
         }
 
-        $this->assertSame($this->jakarta->id, $context->regionId());
+        $this->assertSame($this->surabaya->id, $context->regionId());
     }
 
     public function test_each_region_numbers_its_own_documents(): void
@@ -174,41 +174,41 @@ class RegionScopingTest extends TestCase
         $numbers = app(DocumentNumberGenerator::class);
         $period = now()->format('Ym');
 
-        $this->assertSame("INV-PST-{$period}-0001", $numbers->nextInvoiceNumber());
-        $this->assertSame("INV-PST-{$period}-0002", $numbers->nextInvoiceNumber());
+        $this->assertSame("INV-SBY-{$period}-0001", $numbers->nextInvoiceNumber());
+        $this->assertSame("INV-SBY-{$period}-0002", $numbers->nextInvoiceNumber());
 
         /*
-         * Surabaya starts at one, not three: its register is its own. The
+         * Jakarta starts at one, not three: its register is its own. The
          * region code in the number is what lets both INV-…-0001s exist in a
          * column that is unique across the whole database.
          */
-        app(RegionContext::class)->within($this->surabaya, function () use ($numbers, $period) {
-            $this->assertSame("INV-SBY-{$period}-0001", $numbers->nextInvoiceNumber());
+        app(RegionContext::class)->within($this->jakarta, function () use ($numbers, $period) {
+            $this->assertSame("INV-JKT-{$period}-0001", $numbers->nextInvoiceNumber());
         });
 
-        $this->assertSame("INV-PST-{$period}-0003", $numbers->nextInvoiceNumber());
+        $this->assertSame("INV-SBY-{$period}-0003", $numbers->nextInvoiceNumber());
     }
 
     public function test_stock_is_kept_apart_per_region(): void
     {
-        $gudangJkt = Warehouse::factory()->create(['kode' => 'GD-01']);
+        $gudangSby = Warehouse::factory()->create(['kode' => 'GD-01']);
 
         // The same warehouse code in another region is a different warehouse —
         // the unique key is (region_id, kode) now, so this insert succeeding is
         // itself part of the assertion.
-        $gudangSby = app(RegionContext::class)->within(
-            $this->surabaya,
+        $gudangJkt = app(RegionContext::class)->within(
+            $this->jakarta,
             fn () => Warehouse::factory()->create(['kode' => 'GD-01']),
         );
 
         StockLevel::query()->create([
-            'sku' => 'YH-1001', 'warehouse_id' => $gudangJkt->id,
+            'sku' => 'YH-1001', 'warehouse_id' => $gudangSby->id,
             'qty_on_hand' => 40, 'qty_reserved' => 0,
         ]);
 
-        app(RegionContext::class)->within($this->surabaya, function () use ($gudangSby) {
+        app(RegionContext::class)->within($this->jakarta, function () use ($gudangJkt) {
             StockLevel::query()->create([
-                'sku' => 'YH-1001', 'warehouse_id' => $gudangSby->id,
+                'sku' => 'YH-1001', 'warehouse_id' => $gudangJkt->id,
                 'qty_on_hand' => 7, 'qty_reserved' => 0,
             ]);
 
@@ -222,24 +222,24 @@ class RegionScopingTest extends TestCase
     {
         /*
          * The point of the whole feature: each region is a complete set of
-         * books. An invoice posted in Jakarta moves Jakarta's Piutang Usaha
-         * and leaves Surabaya's untouched.
+         * books. An invoice posted in Surabaya moves Surabaya's Piutang Usaha
+         * and leaves Jakarta's untouched.
          */
         $ledger = app(Ledger::class);
         $this->seed(ChartOfAccountsSeeder::class);
 
         $ledger->post(
-            JournalDraft::manual('Penjualan Jakarta')
+            JournalDraft::manual('Penjualan Surabaya')
                 ->debit(AccountCode::PIUTANG_USAHA, 1_000_000)
                 ->kredit(AccountCode::PENJUALAN, 1_000_000)
         );
 
-        $saldoJakarta = TrialBalance::asOf(now())->balanceOf(
+        $saldoSurabaya = TrialBalance::asOf(now())->balanceOf(
             AccountCode::PIUTANG_USAHA
         );
-        $this->assertSame(1_000_000, $saldoJakarta);
+        $this->assertSame(1_000_000, $saldoSurabaya);
 
-        app(RegionContext::class)->within($this->surabaya, function () {
+        app(RegionContext::class)->within($this->jakarta, function () {
             $saldo = TrialBalance::asOf(now())->balanceOf(
                 AccountCode::PIUTANG_USAHA
             );
@@ -251,13 +251,13 @@ class RegionScopingTest extends TestCase
     public function test_an_invoice_lookup_by_number_stays_inside_the_region(): void
     {
         /*
-         * The concrete leak this design prevents: a Surabaya clerk pasting a
-         * Jakarta invoice number into their own screen and reading the row.
+         * The concrete leak this design prevents: a Jakarta clerk pasting a
+         * Surabaya invoice number into their own screen and reading the row.
          */
         $company = Company::factory()->create();
         $invoice = Invoice::factory()->create(['company_id' => $company->id]);
 
-        app(RegionContext::class)->within($this->surabaya, function () use ($invoice) {
+        app(RegionContext::class)->within($this->jakarta, function () use ($invoice) {
             $this->assertNull(Invoice::query()->where('nomor', $invoice->nomor)->first());
         });
     }

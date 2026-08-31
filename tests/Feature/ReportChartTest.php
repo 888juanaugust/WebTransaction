@@ -166,16 +166,16 @@ class ReportChartTest extends TestCase
     public function test_the_region_chart_reads_every_regions_books(): void
     {
         $home = $this->currentRegion();
-        $sby = Region::factory()->create(['kode' => 'SBY']);
+        $jkt = Region::factory()->create(['kode' => 'JKT']);
 
         $this->invoiceInRegion($home, 10_000_000);
-        $this->invoiceInRegion($sby, 4_000_000);
+        $this->invoiceInRegion($jkt, 4_000_000);
 
-        // Pinned to home — the chart must still see Surabaya, because it is
+        // Pinned to home — the chart must still see Jakarta, because it is
         // only ever shown to viewers who already see all regions.
         $chart = app(SalesReport::class)->regionChart(Period::month(now()->format('Y-m')));
 
-        $this->assertSame([$home->kode, 'SBY'], $chart->labels);
+        $this->assertSame([$home->kode, 'JKT'], $chart->labels);
         $this->assertSame([10_000_000, 4_000_000], $chart->values);
     }
 
@@ -184,10 +184,10 @@ class ReportChartTest extends TestCase
     public function test_a_pinned_reader_gets_the_chart_but_never_other_regions(): void
     {
         $home = $this->currentRegion();
-        $sby = Region::factory()->create(['kode' => 'SBY']);
+        $jkt = Region::factory()->create(['kode' => 'JKT']);
 
         $this->invoiceInRegion($home, 7_000_000);
-        $this->invoiceInRegion($sby, 3_000_000);
+        $this->invoiceInRegion($jkt, 3_000_000);
 
         $finance = User::factory()->finance()->create(['region_id' => $home->id]);
 
@@ -206,10 +206,10 @@ class ReportChartTest extends TestCase
     public function test_the_owner_across_all_regions_gets_the_region_comparison(): void
     {
         $home = $this->currentRegion();
-        $sby = Region::factory()->create(['kode' => 'SBY']);
+        $jkt = Region::factory()->create(['kode' => 'JKT']);
 
         $this->invoiceInRegion($home, 7_000_000);
-        $this->invoiceInRegion($sby, 3_000_000);
+        $this->invoiceInRegion($jkt, 3_000_000);
 
         $owner = User::factory()->owner()->create(['region_id' => null]);
         app(RegionContext::class)->openToAll();
@@ -220,7 +220,7 @@ class ReportChartTest extends TestCase
             ->set('dari', now()->startOfMonth()->toDateString())
             ->assertOk()
             ->assertSee('Penjualan per wilayah')
-            ->assertSee('SBY')
+            ->assertSee('JKT')
             ->assertSee('Rp 3.000.000');
     }
 

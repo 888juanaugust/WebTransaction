@@ -52,13 +52,18 @@ class SalesReport
 
         foreach ($keys as $key) {
             $gross = (int) ($revenue[$key]['nilai'] ?? 0);
-            $credited = (int) ($credits[$key] ?? 0);
+            $credited = (int) ($credits[$key]['nilai'] ?? 0);
             $net = $gross - $credited;
             $hpp = (int) ($cost[$key] ?? 0);
 
             $rows[] = [
                 'dimensi' => (string) ($revenue[$key]['label'] ?? $key),
                 'faktur' => (int) ($revenue[$key]['jumlah'] ?? 0),
+                // Goods returned leave with their units, so the quantity nets
+                // off the same way the money does.
+                'unit' => $dimension->countsUnits()
+                    ? (int) ($revenue[$key]['unit'] ?? 0) - (int) ($credits[$key]['unit'] ?? 0)
+                    : null,
                 'penjualan' => $net,
                 'hpp' => $withCost ? $hpp : null,
                 'margin' => $withCost ? $net - $hpp : null,
@@ -70,11 +75,19 @@ class SalesReport
             ];
         }
 
-        // Biggest first, because the question is nearly always "who matters".
-        // Except by month, which only reads in order.
-        $dimension === SalesDimension::Bulan
-            ? usort($rows, fn ($a, $b) => strcmp($a['dimensi'], $b['dimensi']))
-            : usort($rows, fn ($a, $b) => $b['penjualan'] <=> $a['penjualan']);
+        /*
+         * Biggest first, because the question is nearly always "who matters".
+         * Except by month, which only reads in order — and except per barang,
+         * where the question asked is *paling laku*: that is how many left the
+         * shelf, not what they were worth. One expensive alternator outselling
+         * a hundred bearings on value is exactly the answer a restocking
+         * decision must not be given.
+         */
+        match (true) {
+            $dimension === SalesDimension::Bulan => usort($rows, fn ($a, $b) => strcmp($a['dimensi'], $b['dimensi'])),
+            $dimension->countsUnits() => usort($rows, fn ($a, $b) => [$b['unit'], $b['penjualan']] <=> [$a['unit'], $a['penjualan']]),
+            default => usort($rows, fn ($a, $b) => $b['penjualan'] <=> $a['penjualan']),
+        };
 
         return new ReportTable(
             judul: 'Penjualan per '.strtolower($dimension->label()),
@@ -101,6 +114,20 @@ class SalesReport
                 judul: 'Penjualan per bulan',
                 labels: array_column($table->rows, 'dimensi'),
                 values: array_map(fn ($r) => max(0, (int) $r['penjualan']), $table->rows),
+            );
+        }
+
+        // Per barang the picture answers the same question the table was
+        // sorted by — what moved — so it is drawn in units, not rupiah.
+        if ($dimension->countsUnits()) {
+            return ReportChart::topRows(
+                judul: 'Barang paling laku — unit',
+                rows: $table->rows,
+                labelKey: 'dimensi',
+                valueKey: 'unit',
+                // Counts, not money. "Rp 72" beside a bar of bearings is a
+                // rupiah figure that is out by six orders of magnitude.
+                rupiah: false,
             );
         }
 
@@ -150,7 +177,7 @@ class SalesReport
      * and loss are the same number, and if they ever are not, one of them is
      * a bug rather than a difference of opinion.
      *
-     * @return array<string, array{label: string, nilai: int, jumlah: int}>
+     * @return array<string, array{label: string, nilai: int, jumlah: int, unit: int}>
      */
     private function revenue(Period $period, SalesDimension $dimension): array
     {
@@ -160,6 +187,10 @@ class SalesReport
             ->join('order_lines', 'orders.id', '=', 'order_lines.order_id')
             ->join('companies', 'invoices.company_id', '=', 'companies.id')
             ->leftJoin('products', 'order_lines.sku', '=', 'products.kode')
+            // The seat that holds the customer. Left, because a customer with
+            // no sales assigned still sold something and belongs on the sheet
+            // — under a label that says so rather than vanishing.
+            ->leftJoin('users', 'companies.sales_user_id', '=', 'users.id')
             ->where('invoices.status', '!=', Invoice::STATUS_VOID)
             ->whereBetween('invoices.issued_on', [$period->from->toDateString(), $period->to->toDateString()])
             ->whereNotNull('order_lines.line_total_rupiah');
@@ -167,13 +198,17 @@ class SalesReport
         [$key, $label] = $this->grouping($dimension);
 
         return $query
-            ->selectRaw("{$key} AS k, MIN({$label}) AS l, SUM(order_lines.line_total_rupiah) AS nilai, COUNT(DISTINCT invoices.id) AS jumlah")
+            ->selectRaw(
+                "{$key} AS k, MIN({$label}) AS l, SUM(order_lines.line_total_rupiah) AS nilai, "
+                .'COUNT(DISTINCT invoices.id) AS jumlah, SUM(order_lines.qty_base) AS unit'
+            )
             ->groupByRaw($key)
             ->get()
             ->mapWithKeys(fn ($row) => [(string) $row->k => [
                 'label' => (string) ($row->l ?? $row->k),
                 'nilai' => (int) $row->nilai,
                 'jumlah' => (int) $row->jumlah,
+                'unit' => (int) $row->unit,
             ]])
             ->all();
     }
@@ -193,7 +228,7 @@ class SalesReport
      * this query means. It cannot be made to fail by any state the poster can
      * produce, which is why no test covers it.
      *
-     * @return array<string, int>
+     * @return array<string, array{nilai: int, unit: int}>
      */
     private function credits(Period $period, SalesDimension $dimension): array
     {
@@ -207,16 +242,21 @@ class SalesReport
 
         $key = match ($dimension) {
             SalesDimension::Pelanggan => 'companies.id',
+            SalesDimension::Sales => 'companies.sales_user_id',
+            SalesDimension::Barang => 'credit_note_lines.sku',
             SalesDimension::Merk => 'products.merk',
             SalesDimension::Kategori => 'products.kategori',
             SalesDimension::Bulan => "to_char(credit_notes.posted_at, 'YYYY-MM')",
         };
 
         return $query
-            ->selectRaw("{$key} AS k, SUM(credit_note_lines.line_total_rupiah) AS nilai")
+            ->selectRaw("{$key} AS k, SUM(credit_note_lines.line_total_rupiah) AS nilai, SUM(credit_note_lines.qty_base) AS unit")
             ->groupByRaw($key)
             ->get()
-            ->mapWithKeys(fn ($row) => [(string) $row->k => (int) $row->nilai])
+            ->mapWithKeys(fn ($row) => [(string) $row->k => [
+                'nilai' => (int) $row->nilai,
+                'unit' => (int) $row->unit,
+            ]])
             ->all();
     }
 
@@ -234,6 +274,8 @@ class SalesReport
     {
         $key = match ($dimension) {
             SalesDimension::Pelanggan => 'companies.id',
+            SalesDimension::Sales => 'companies.sales_user_id',
+            SalesDimension::Barang => 'stock_movements.sku',
             SalesDimension::Merk => 'products.merk',
             SalesDimension::Kategori => 'products.kategori',
             SalesDimension::Bulan => "to_char(invoices.issued_on, 'YYYY-MM')",
@@ -269,6 +311,14 @@ class SalesReport
     {
         return match ($dimension) {
             SalesDimension::Pelanggan => ['companies.id', 'companies.nama'],
+            SalesDimension::Sales => ['companies.sales_user_id', "COALESCE(users.name, 'Belum ada sales')"],
+            // The SKU is its own identity; the description is what a person
+            // reads. Falls back to the kode for an item no longer catalogued,
+            // which is exactly when the sale still needs explaining.
+            SalesDimension::Barang => [
+                'order_lines.sku',
+                "order_lines.sku || ' — ' || COALESCE(products.description, order_lines.description_snapshot, '')",
+            ],
             SalesDimension::Merk => ['products.merk', 'products.merk'],
             SalesDimension::Kategori => ['products.kategori', 'products.kategori'],
             SalesDimension::Bulan => [
@@ -286,6 +336,7 @@ class SalesReport
         return [
             ReportColumn::text('dimensi', $dimension->label()),
             ReportColumn::number('faktur', 'Faktur'),
+            ReportColumn::number('unit', 'Unit', fn () => $dimension->countsUnits()),
             ReportColumn::money('penjualan', 'Penjualan'),
             ReportColumn::money('hpp', 'HPP', $showCost),
             ReportColumn::money('margin', 'Margin', $showCost),
@@ -300,6 +351,7 @@ class SalesReport
 
         return [
             'faktur' => array_sum(array_column($rows, 'faktur')),
+            'unit' => array_sum(array_column($rows, 'unit')),
             'penjualan' => $penjualan,
             'hpp' => $withCost ? $hpp : null,
             'margin' => $withCost ? $penjualan - $hpp : null,
@@ -331,6 +383,18 @@ class SalesReport
                     $unshipped,
                 );
             }
+        }
+
+        if ($dimension === SalesDimension::Sales) {
+            $catatan[] = 'Omset dibukukan ke sales yang memegang pelanggan **saat ini** — '
+                .'memindahkan pelanggan memindahkan angkanya. Pelanggan yang belum punya '
+                .'sales muncul sebagai "Belum ada sales".';
+        }
+
+        if ($dimension->countsUnits()) {
+            $catatan[] = 'Diurutkan dari unit terbanyak, bukan rupiah terbesar: yang dicari '
+                .'adalah barang yang paling banyak keluar. Retur sudah dikurangi, '
+                .'baik unitnya maupun nilainya.';
         }
 
         if (! $dimension->canPlaceUnlinkedCredits() && $this->hasUnlinkedCredits($period)) {

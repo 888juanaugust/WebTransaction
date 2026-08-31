@@ -107,8 +107,8 @@ class TeamAssignmentTest extends TestCase
          * The scope hides this customer from them entirely, so every pending
          * order would wait on a person to whom it is invisible.
          */
-        $sby = Region::factory()->create(['kode' => 'SBY']);
-        $salesSby = User::factory()->sales()->create(['region_id' => $sby->id]);
+        $jkt = Region::factory()->create(['kode' => 'JKT']);
+        $salesSby = User::factory()->sales()->create(['region_id' => $jkt->id]);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessageMatches('/wilayah lain/');
@@ -125,9 +125,9 @@ class TeamAssignmentTest extends TestCase
          * everything — global since 2026-08. So the seat crosses regions
          * freely: one marketing, customers everywhere.
          */
-        $sby = Region::factory()->create(['kode' => 'SB2']);
+        $jkt = Region::factory()->create(['kode' => 'SB2']);
         $pelangganSby = app(RegionContext::class)->within(
-            $sby,
+            $jkt,
             fn () => Company::factory()->create(),
         );
 

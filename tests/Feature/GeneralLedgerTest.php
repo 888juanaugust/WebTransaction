@@ -703,7 +703,7 @@ class GeneralLedgerTest extends TestCase
 
         // PST is the region: numbers carry the region code and count per
         // region, so each region's register reads straight on its own.
-        $this->assertSame(['JU-PST-202607-0001', 'JU-PST-202607-0002', 'JU-PST-202608-0001'], $nomor);
+        $this->assertSame(['JU-SBY-202607-0001', 'JU-SBY-202607-0002', 'JU-SBY-202608-0001'], $nomor);
     }
 
     // ---------------------------------------------------------------- helpers

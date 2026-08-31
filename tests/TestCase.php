@@ -40,7 +40,7 @@ abstract class TestCase extends BaseTestCase
     protected function pinToDefaultRegion(): Region
     {
         $region = Region::query()->orderBy('id')->first()
-            ?? Region::query()->create(['kode' => 'PST', 'nama' => 'Pusat', 'aktif' => true]);
+            ?? Region::query()->create(['kode' => 'SBY', 'nama' => 'Surabaya', 'aktif' => true]);
 
         app(RegionContext::class)->pinTo($region);
 
