@@ -9,6 +9,7 @@ use App\Domain\Audit\AuditLogger;
 use App\Domain\Documents\DocumentNumberGenerator;
 use App\Domain\Expenses\PaidFrom;
 use App\Domain\Money;
+use App\Domain\Payments\PaymentLedger;
 use App\Models\Company;
 use App\Models\CustomerDeposit;
 use App\Models\CustomerDepositMovement;
@@ -205,6 +206,21 @@ class CustomerDepositRegister
                 'catatan' => "Uang muka {$locked->nomor}",
             ]);
 
+            /*
+             * The application itself, in the one place money-to-invoice is
+             * counted. Not audited here: `customer_deposit_applied` below
+             * records this exact fact — which deposit, which faktur, how much
+             * — and a second row would only say it again.
+             */
+            app(PaymentLedger::class)->allocate(
+                entry: $payment,
+                invoice: $invoice,
+                amountRupiah: $jumlahRupiah,
+                actor: $actor,
+                catatan: "Uang muka {$locked->nomor}",
+                audit: false,
+            );
+
             $movement = CustomerDepositMovement::create([
                 'customer_deposit_id' => $locked->id,
                 'jenis' => CustomerDepositMovement::JENIS_PAKAI,
@@ -215,8 +231,16 @@ class CustomerDepositRegister
                 'actor_id' => $actor->id,
             ]);
 
+            /*
+             * Settlement is the ledger's, not ours any more.
+             *
+             * The copy that used to live here marked the faktur paid and
+             * stopped, so a deposit that covered an invoice in full left its
+             * order sitting in `awaiting_payment` — half of what invariant 4
+             * describes. `allocate()` above goes through the one settlement
+             * path, which also advances the order with a null actor.
+             */
             $this->recacheAndClose($locked);
-            $this->settleInvoiceIfCovered($invoice);
 
             $this->poster->customerDepositApplied($movement->fresh(['deposit', 'invoice']), $actor);
 
@@ -333,15 +357,6 @@ class CustomerDepositRegister
                 ? CustomerDeposit::STATUS_CLOSED
                 : CustomerDeposit::STATUS_HELD,
         ])->save();
-    }
-
-    private function settleInvoiceIfCovered(Invoice $invoice): void
-    {
-        $invoice = $invoice->fresh();
-
-        if ($invoice->status === Invoice::STATUS_OPEN && $invoice->amountOutstanding() <= 0) {
-            $invoice->forceFill(['status' => Invoice::STATUS_PAID])->save();
-        }
     }
 
     /**

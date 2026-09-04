@@ -182,6 +182,13 @@ class LogAudit extends Page implements HasTable
             'price_override',
             'credit_limit_override',
             'payment_reversed',
+            /*
+             * Taking an application back moves a customer's faktur from paid
+             * to open again. The money never moved, which is exactly why it
+             * belongs on this list: it is a change to what somebody owes
+             * that leaves the bank statement untouched.
+             */
+            'payment_unallocated',
             'supplier_payment_reversed',
             'expense_reversed',
             'journal_reversed',
@@ -234,6 +241,7 @@ class LogAudit extends Page implements HasTable
             'invoice_issued' => 'Faktur terbit',
             'payment_confirmed' => 'Pembayaran dikonfirmasi',
             'payment_allocated' => 'Pembayaran dicocokkan',
+            'payment_unallocated' => 'Pencocokan pembayaran dibatalkan',
             'payment_reversed' => 'Pembayaran dibalik',
             'supplier_payment_recorded' => 'Pembayaran pemasok',
             'supplier_payment_reversed' => 'Pembayaran pemasok dibalik',

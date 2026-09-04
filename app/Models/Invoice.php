@@ -62,9 +62,25 @@ class Invoice extends Model
         return $this->belongsTo(Company::class)->withoutGlobalScope('region');
     }
 
+    /**
+     * Entries stamped with this invoice at the moment they were recorded.
+     *
+     * **Not what the invoice has been paid.** A transfer covering four
+     * fakturs is one entry stamped with none of them, and part of a transfer
+     * may settle this one; the money is counted from `allocations` below.
+     * This relation remains because several screens legitimately ask "which
+     * payment was keyed in against this faktur", and for the one-bill case
+     * that is still exactly true.
+     */
     public function paymentEntries(): HasMany
     {
         return $this->hasMany(PaymentEntry::class);
+    }
+
+    /** Every application of money to this invoice, reversals included. */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
     }
 
     public function creditNotes(): HasMany
@@ -72,10 +88,21 @@ class Invoice extends Model
         return $this->hasMany(CreditNote::class);
     }
 
-    /** Sum of the append-only payment ledger for this invoice. */
+    /**
+     * Sum of the append-only payment ledger for this invoice.
+     *
+     * Read from the allocations, which is where a payment says how much of
+     * itself settles which bill. Reading `payment_entries.invoice_id` instead
+     * would count a whole transfer against the first faktur it was pointed
+     * at — the reading that used to leave one invoice at a negative balance
+     * and the customer's others untouched.
+     *
+     * Reversals are negative rows in the same column, so this sum is the net
+     * position and there is no flag to remember to exclude.
+     */
     public function amountPaid(): int
     {
-        return (int) $this->paymentEntries()->sum('amount_rupiah');
+        return (int) $this->allocations()->sum('amount_rupiah');
     }
 
     /**

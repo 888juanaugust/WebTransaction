@@ -13,6 +13,7 @@ use App\Domain\Billing\CustomerDepositRegister;
 use App\Domain\Billing\OutstandingReceivables;
 use App\Domain\Credit\CreditChecker;
 use App\Domain\Expenses\PaidFrom;
+use App\Domain\Payments\PaymentLedger;
 use App\Models\Company;
 use App\Models\CustomerDeposit;
 use App\Models\CustomerDepositMovement;
@@ -276,14 +277,18 @@ class CustomerDepositTest extends TestCase
         $deposit = $this->receive(10_000_000);
         $invoice = $this->invoice(6_000_000);
 
-        PaymentEntry::create([
-            'company_id' => $this->company->id,
-            'invoice_id' => $invoice->id,
-            'amount_rupiah' => 5_000_000,
-            'kind' => PaymentEntry::KIND_PAYMENT,
-            'actor_id' => $this->finance->id,
-            'paid_at' => now(),
-        ]);
+        /*
+         * Through the ledger, not straight into the table. Money counts
+         * against a faktur through its allocation now, so an entry inserted
+         * by hand with an invoice_id is a row that looks like a payment and
+         * settles nothing — which is a fixture pretending, not a payment.
+         */
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $this->company,
+            amountRupiah: 5_000_000,
+            actor: $this->finance,
+            invoice: $invoice,
+        );
 
         $this->expectException(DomainException::class);
         $this->register->apply($deposit, $invoice, 2_000_000, $this->finance);

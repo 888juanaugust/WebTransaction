@@ -159,9 +159,20 @@ class CollectionDesk
          * money — and the promise was made precisely because that money was
          * not enough.
          */
-        $dibayar = (int) $invoice->paymentEntries()
-            ->where('paid_at', '>', $janji->dihubungi_pada)
-            ->sum('amount_rupiah');
+        /*
+         * Allocations, joined back to when the money actually arrived.
+         *
+         * The question is "did anything reach this invoice since the
+         * promise", and since a transfer can settle four fakturs at once the
+         * answer is how much of it was applied *here* — not the size of the
+         * entry. `paid_at` and not the allocation's own timestamp: money that
+         * arrived before the call and was applied afterwards did not keep a
+         * promise made after it landed.
+         */
+        $dibayar = (int) $invoice->allocations()
+            ->join('payment_entries', 'payment_entries.id', '=', 'payment_allocations.payment_entry_id')
+            ->where('payment_entries.paid_at', '>', $janji->dihubungi_pada)
+            ->sum('payment_allocations.amount_rupiah');
 
         $dijanjikan = (int) ($janji->janji_rupiah ?? $invoice->amountOutstanding());
 

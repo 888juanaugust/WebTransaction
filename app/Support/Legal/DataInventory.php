@@ -199,6 +199,20 @@ final class DataInventory
                 ],
             ],
 
+            /*
+             * How much of a payment settles which faktur. No new personal
+             * data beyond who applied it and what they wrote — the money and
+             * the bill are already accounted for on the rows either side.
+             */
+            'payment_allocations' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['actor_id', 'catatan'],
+                'bukan' => [
+                    'payment_entry_id', 'invoice_id', 'amount_rupiah',
+                    'reverses_allocation_id',
+                ],
+            ],
+
             'store_visits' => [
                 'kategori' => 'pajak_dan_pembayaran',
                 /*

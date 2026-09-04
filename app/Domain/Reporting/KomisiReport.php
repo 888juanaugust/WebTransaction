@@ -185,7 +185,17 @@ class KomisiReport
         $out = collect();
 
         foreach ($invoices as $invoice) {
-            $settledAt = $invoice->paymentEntries()->max('paid_at');
+            /*
+             * When the last money reached this faktur, read through the
+             * allocations. Asking the entries directly would miss every
+             * invoice settled as part of a transfer covering several — those
+             * entries name no single faktur — and the seller would lose the
+             * commission on exactly the payments that arrive in a lump at
+             * month end.
+             */
+            $settledAt = $invoice->allocations()
+                ->join('payment_entries', 'payment_entries.id', '=', 'payment_allocations.payment_entry_id')
+                ->max('payment_entries.paid_at');
 
             if ($settledAt === null) {
                 continue; // settled without money — a full credit note earns nothing

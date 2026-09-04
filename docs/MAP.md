@@ -78,6 +78,7 @@ document, stays Indonesian.
 | `/admin/transfer-gudang` | Transfer gudang | Warehouse, Owner | Stock between warehouses. Value-neutral, so no journal entry |
 | `/admin/titik-pesan-ulang` | Titik pesan ulang | Finance, Owner | What is running out, grouped by supplier, ending in a draft PO |
 | `/admin/stok-opname` | Stok opname | Warehouse, Finance, Owner | **Warehouse counts, Finance approves** — never the same person |
+| `/admin/terima-pembayaran` | Terima pembayaran | Finance, Owner | One transfer, spread across as many fakturs as it covers — oldest-first pre-filled and editable. Body is the queue of receipts not yet fully applied; badge counts them |
 | `/admin/uang-muka` | Uang muka | Finance, Owner | Money in before anything is owed. Badge counts deposits no invoice has claimed |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
@@ -136,7 +137,7 @@ do not see it at all. Warehouse see none of the five.
 |---|---|
 | `OrdersAwaitingApproval` | What needs approving, with credit and stock inline |
 | `AccountsAwaitingApproval` | Which customers are waiting to trade |
-| `UnmatchedPayments` | Money in that isn't allocated to an invoice |
+| `UnmatchedPayments` | Money in with some of it still applied to nothing — a partly used receipt counts, since what matters is whether every rupiah is accounted for, not whether somebody named a faktur |
 | `OrdersReadyToPick` | What the warehouse can pack today |
 | `OverdueInvoices` | Who is late, by age bucket |
 | `GiroDue` | **Silent when nothing is due.** Giro to bank today, and giro of ours that must be funded |
@@ -752,13 +753,41 @@ made it a third term computed three ways. Now there is one answer.
 
 | Function | Decides |
 |---|---|
-| `PaymentLedger::recordManualPayment` | Money in — transfer, cash, giro cair — **Finance and Owner only**, the only door |
-| `PaymentLedger::reverse` | Inserts a reversing entry. **Never mutates a row** |
-| `PaymentLedger::allocateToInvoice` | Matches money to a bill |
+| `PaymentLedger::recordManualPayment` | Money in — transfer, cash, giro cair — **Finance and Owner only**, the only door. Takes a `spread` of `[faktur, rupiah]` for one transfer covering several bills |
+| `PaymentLedger::reverse` | Inserts a reversing entry, **and a negative allocation for every application it made**. Never mutates a row |
+| `PaymentLedger::allocate` | Applies part of a payment to one bill. Refuses to over-apply either side, and refuses another customer's faktur outright |
+| `PaymentLedger::unallocate` | Takes an application back as a negative row; the faktur reopens |
+| `PaymentLedger::unallocated` | What arrived on an entry and settles nothing yet |
+| `PaymentLedger::suggestSpread` | Oldest bill first — an offer, never an act |
 
 No gateway (stripped 2026-08): the business is paid by transfer to the company
 account printed on the faktur, cash, or giro — every one recorded by finance,
 and a covered invoice advances its own order through `markPaid`/`complete`.
+
+**An entry is money arriving; an allocation is what it settles** (2026-09).
+`payment_entries.invoice_id` could name exactly one bill, which is not how a
+customer on 30-day terms pays: one figure at month end against four fakturs and
+part of a fifth. Finance had to split the transfer into four entries — which
+then no longer tie to the single line the reconciliation desk ticks against —
+or point the whole amount at one faktur, and that second option was worse than
+untidy. Allocating Rp 50.000.000 to a Rp 12.000.000 bill marked it paid, left
+it at **minus thirty-eight million**, left the customer's other fakturs at
+full, and dropped the entry out of the unmatched queue: the remainder was on no
+invoice, in no queue, and quietly netting against their exposure.
+
+So the link carries its own rupiah in `payment_allocations`, append-only like
+the entries — taking one back is a negative row, so every sum is the net
+position and no query has a validity flag to forget. `Invoice::amountPaid()`
+reads it, and **"unmatched" now means an entry with money still applied to
+nothing**, not one where nobody happened to name a faktur. Both directions are
+checked: an entry cannot give out more than arrived, an invoice cannot take
+more than it owes, and one customer's money can never settle another's bill.
+
+Two readers had to move with it, and both would have failed silently:
+`KomisiReport` asked the entries when a faktur was settled — an invoice paid
+inside a lump sum names no entry, so the seller lost the commission on exactly
+the month-end payments — and `CollectionDesk` measured a promise against the
+size of the entry rather than how much of it landed on that invoice.
 
 ### Billing and numbering
 
