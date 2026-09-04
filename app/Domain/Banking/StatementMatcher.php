@@ -217,11 +217,31 @@ class StatementMatcher
         }
 
         return DB::transaction(function () use ($line, $actor, $invoice, $company) {
+            /*
+             * What the chosen faktur can absorb, never more.
+             *
+             * A statement line is one transfer and a customer's transfer
+             * routinely covers several fakturs, so the line is often larger
+             * than whichever one the operator picks. The ledger refuses to
+             * over-apply — rightly — but refusing *here* would mean the line
+             * cannot be recorded at all, and it is money that provably
+             * arrived: the reconciliation would stay un-ticked over a
+             * transfer nobody disputes.
+             *
+             * So the faktur takes what it owes and the rest stays
+             * unallocated, where the receipts queue picks it up. The screen
+             * says so rather than leaving it to be discovered — see
+             * RekonsiliasiBank, which reads the remainder back off the entry.
+             */
+            $muat = $invoice === null
+                ? 0
+                : max(0, min((int) $line->amount_rupiah, $invoice->amountOutstanding()));
+
             $entry = $this->payments->recordManualPayment(
                 company: $company,
                 amountRupiah: (int) $line->amount_rupiah,
                 actor: $actor,
-                invoice: $invoice,
+                spread: $muat > 0 ? [[$invoice, $muat]] : [],
                 catatan: mb_substr("Mutasi bank: {$line->uraian}", 0, 255),
                 paidAt: $line->tanggal,
                 // The statement being matched IS this rekening's — the money

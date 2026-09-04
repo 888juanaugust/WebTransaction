@@ -933,7 +933,7 @@ total; re-running one on a closed period produces the same figures forever.
 |---|---|
 | `GiroRegister::receive` / `issue` | The paper changes hands. **Not a payment** |
 | `GiroRegister::markDeposited` | Banked. A date, not a state — no money, no journal |
-| `GiroRegister::clear` | It cleared: release the instrument, then take an ordinary payment |
+| `GiroRegister::clear` | It cleared: release the instrument, then take an ordinary payment — **applying to the named document only what it still owes** |
 | `GiroRegister::bounce` / `cancel` | It failed, or came back uncashed. Same release, no payment |
 | `DocumentPoster::giroIssued` / `giroReleased` | One rule read in four directions |
 
@@ -955,6 +955,26 @@ unmatched-payments queue and the reversal machinery, none of it duplicated.
 
 A bounce needs nothing undone, because nothing was ever paid. That is the whole
 payoff for the design.
+
+**Clearing applies what fits** (2026-09). A bilyet giro is written for what a
+customer owes on their account, not for one faktur, so it is routinely worth
+more than the document it was handed over against — and by the time it clears,
+that document may have been settled another way. Since the ledgers began
+refusing to over-apply, passing the whole face value at one invoice *threw on
+the day the cheque cleared*: after the bank had moved the money, which is the
+one moment the books must not refuse to record what happened. The named
+document now takes what it still owes and the remainder lands unallocated, in
+the receipts queue that already existed for it. Nothing is applied to a
+document nobody named — at clearing there is no one to ask, and guessing which
+faktur a cheque was meant for is how a disputed balance starts. The receive and
+issue forms say so as the figure is typed, rather than leaving it to be found
+out weeks later.
+
+The bank-statement matcher carries the same rule for the same reason: a
+statement line is one transfer and a customer's transfer routinely covers
+several fakturs, so the chosen one takes what it owes and the desk warns, in
+its own notification, how much of the line is still unapplied. Refusing there
+would leave real money on the statement un-tickable.
 
 **Two figures that deliberately disagree**, both in `OutstandingReceivables`:
 

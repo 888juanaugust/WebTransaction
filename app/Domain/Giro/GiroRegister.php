@@ -349,17 +349,35 @@ class GiroRegister
      * With no document behind it the payment lands unallocated, which is not a
      * gap: one giro against three months of invoices is the ordinary case, and
      * the unmatched-payments queue already exists to sort exactly that out.
+     *
+     * **It applies what fits and no more.** A bilyet giro is written for what
+     * a customer owes on their account, not for one faktur, so it very often
+     * exceeds the document it was handed over against — and by the time it
+     * clears, that document may have been settled another way entirely. The
+     * ledgers refuse to over-apply, so passing the whole face value at one
+     * invoice would throw here: on the day the cheque cleared, after the bank
+     * has already moved the money, which is the one moment the books must not
+     * refuse to record what happened.
+     *
+     * So the named document takes what it still owes and the remainder lands
+     * unallocated, in the queue built for it. Nothing is applied to a document
+     * the customer never named — at clearing there is nobody to ask, and
+     * guessing at which invoice a cheque was meant for is how a disputed
+     * balance starts.
      */
     private function recordPaymentFor(Giro $giro, User $actor, Carbon $cair): void
     {
         if ($giro->arah === GiroDirection::Masuk) {
+            $invoice = $giro->invoice;
+            $muat = $this->fitsAgainst((int) $giro->nilai_rupiah, $invoice?->amountOutstanding());
+
             $entry = $this->payments->recordManualPayment(
                 company: $giro->company,
                 amountRupiah: (int) $giro->nilai_rupiah,
                 actor: $actor,
-                invoice: $giro->invoice,
                 catatan: "Giro {$giro->bank_penerbit} {$giro->nomor_warkat} cair",
                 paidAt: $cair,
+                spread: $invoice !== null && $muat > 0 ? [[$invoice, $muat]] : [],
             );
 
             $giro->forceFill(['payment_entry_id' => $entry->id])->save();
@@ -367,17 +385,38 @@ class GiroRegister
             return;
         }
 
+        $bill = $giro->supplierBill;
+        $muat = $this->fitsAgainst((int) $giro->nilai_rupiah, $bill?->amountOutstanding());
+
         $entry = $this->suppliers->recordPayment(
             supplier: $giro->supplier,
             amountRupiah: (int) $giro->nilai_rupiah,
             actor: $actor,
-            bill: $giro->supplierBill,
             referensi: "{$giro->bank_penerbit} {$giro->nomor_warkat}",
             catatan: 'Giro dicairkan pemasok',
             paidAt: $cair,
+            spread: $bill !== null && $muat > 0 ? [[$bill, $muat]] : [],
         );
 
         $giro->forceFill(['supplier_payment_entry_id' => $entry->id])->save();
+    }
+
+    /**
+     * How much of a cheque a document can absorb: never more than it owes,
+     * never less than nothing.
+     *
+     * A null outstanding means there is no document at all. A zero or
+     * negative one means it was settled some other way while the cheque was
+     * in the drawer, which is common enough — the customer pays by transfer
+     * and the giro clears anyway.
+     */
+    private function fitsAgainst(int $nilai, ?int $sisa): int
+    {
+        if ($sisa === null) {
+            return 0;
+        }
+
+        return max(0, min($nilai, $sisa));
     }
 
     /** @param  Invoice|SupplierBill|null  $document */

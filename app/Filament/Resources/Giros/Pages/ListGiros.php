@@ -69,6 +69,7 @@ class ListGiros extends ListRecords
                     ->label('Atas faktur')
                     ->options(fn (Get $get) => static::invoiceOptions($get('company_id')))
                     ->searchable()
+                    ->live()
                     ->placeholder('Belum ditentukan')
                     ->helperText(
                         'Kosongkan kalau satu giro menutup beberapa faktur. Saat cair, '
@@ -92,7 +93,20 @@ class ListGiros extends ListRecords
                     ->numeric()
                     ->minValue(1)
                     ->required()
-                    ->prefix('Rp'),
+                    ->live(onBlur: true)
+                    ->prefix('Rp')
+                    /*
+                     * A bilyet giro is written for what a customer owes on
+                     * their account, so it is routinely worth more than the
+                     * faktur it is handed over against. Clearing applies what
+                     * that faktur still owes and queues the rest — said here,
+                     * as the figure is typed, rather than left to be
+                     * discovered weeks later when the cheque clears.
+                     */
+                    ->helperText(fn (Get $get) => static::sisaNanti(
+                        $get('invoice_id'),
+                        (int) ($get('nilai_rupiah') ?? 0),
+                    )),
 
                 DatePicker::make('tanggal_terima')
                     ->label('Tanggal diterima')
@@ -150,7 +164,12 @@ class ListGiros extends ListRecords
                     ->label('Atas tagihan')
                     ->options(fn (Get $get) => static::billOptions($get('supplier_id')))
                     ->searchable()
-                    ->placeholder('Belum ditentukan'),
+                    ->live()
+                    ->placeholder('Belum ditentukan')
+                    ->helperText(
+                        'Kosongkan kalau satu giro menutup beberapa tagihan. Saat cair, '
+                        .'pembayarannya masuk antrean pencocokan seperti transfer biasa.'
+                    ),
 
                 TextInput::make('bank_penerbit')
                     ->label('Bank kita')
@@ -168,7 +187,12 @@ class ListGiros extends ListRecords
                     ->numeric()
                     ->minValue(1)
                     ->required()
-                    ->prefix('Rp'),
+                    ->live(onBlur: true)
+                    ->prefix('Rp')
+                    ->helperText(fn (Get $get) => static::sisaNantiTagihan(
+                        $get('supplier_bill_id'),
+                        (int) ($get('nilai_rupiah') ?? 0),
+                    )),
 
                 DatePicker::make('tanggal_terima')
                     ->label('Tanggal diserahkan')
@@ -250,6 +274,59 @@ class ListGiros extends ListRecords
      *
      * @return array<int, string>
      */
+    /**
+     * What this cheque will leave over, when it is worth more than the faktur
+     * it names.
+     *
+     * Silent when there is nothing to say — no faktur chosen, no figure yet,
+     * or the cheque fits. A helper line that is always there stops being read.
+     */
+    private static function sisaNanti(mixed $invoiceId, int $nilai): ?string
+    {
+        if (! $invoiceId || $nilai <= 0) {
+            return null;
+        }
+
+        $invoice = Invoice::query()->find($invoiceId);
+
+        if ($invoice === null) {
+            return null;
+        }
+
+        $sisa = $nilai - $invoice->amountOutstanding();
+
+        if ($sisa <= 0) {
+            return null;
+        }
+
+        return 'Giro ini '.Money::format($sisa).' lebih besar dari sisa faktur tersebut. '
+            .'Saat cair, kelebihannya masuk antrean pencocokan — tidak hilang, tapi juga '
+            .'tidak otomatis menutup faktur lain.';
+    }
+
+    /** The same warning on the paying side. */
+    private static function sisaNantiTagihan(mixed $billId, int $nilai): ?string
+    {
+        if (! $billId || $nilai <= 0) {
+            return null;
+        }
+
+        $bill = SupplierBill::query()->find($billId);
+
+        if ($bill === null) {
+            return null;
+        }
+
+        $sisa = $nilai - $bill->amountOutstanding();
+
+        if ($sisa <= 0) {
+            return null;
+        }
+
+        return 'Giro ini '.Money::format($sisa).' lebih besar dari sisa tagihan tersebut. '
+            .'Saat cair, kelebihannya masuk antrean pencocokan.';
+    }
+
     private static function invoiceOptions(mixed $companyId): array
     {
         if (! $companyId) {

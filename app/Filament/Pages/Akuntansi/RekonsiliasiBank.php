@@ -12,6 +12,7 @@ use App\Domain\Banking\StatementDirection;
 use App\Domain\Banking\StatementImporter;
 use App\Domain\Banking\StatementMatcher;
 use App\Domain\Money;
+use App\Domain\Payments\PaymentLedger;
 use App\Models\Account;
 use App\Models\BankAccount;
 use App\Models\BankReconciliation;
@@ -477,16 +478,40 @@ class RekonsiliasiBank extends Page
                     ? Company::query()->find($data['company_id'])
                     : null;
 
+                /*
+                 * A statement line is one transfer, and a customer's transfer
+                 * routinely covers more than the faktur chosen here. The
+                 * matcher applies what that faktur owes and leaves the rest
+                 * unallocated; this says so out loud, because money that
+                 * quietly went nowhere is the thing this whole desk exists to
+                 * prevent.
+                 */
+                $entry = null;
+
                 $this->run(
-                    fn () => app(StatementMatcher::class)->recordPayment(
-                        $line,
-                        auth()->user(),
-                        $invoice,
-                        $company,
-                    ),
+                    function () use ($line, $invoice, $company, &$entry) {
+                        $entry = app(StatementMatcher::class)->recordPayment(
+                            $line,
+                            auth()->user(),
+                            $invoice,
+                            $company,
+                        );
+                    },
                     'Pembayaran dicatat dari mutasi',
                     'Jurnalnya diposting dan baris mutasinya tercocok.',
                 );
+
+                $sisa = $entry === null ? 0 : app(PaymentLedger::class)->unallocated($entry);
+
+                if ($sisa > 0) {
+                    Notification::make()
+                        ->title('Sebagian belum dicocokkan ke faktur')
+                        ->body(Money::format($sisa).' dari mutasi ini belum dipakai. '
+                            .'Cocokkan sisanya di layar Terima pembayaran.')
+                        ->warning()
+                        ->persistent()
+                        ->send();
+                }
             });
     }
 
