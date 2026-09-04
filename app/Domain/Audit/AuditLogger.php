@@ -30,7 +30,19 @@ class AuditLogger
         ?User $actor = null,
         ?string $alasan = null,
     ): AuditLog {
-        $actor ??= auth()->user();
+        /*
+         * The staff guard by name, not `auth()`.
+         *
+         * `auth()` resolves whatever the *default* guard happens to be, and
+         * this application has two against two different tables. Every
+         * controller in the codebase names its guard for that reason; this
+         * class was the one place still asking the ambient question, and the
+         * answer it can get wrong is a CustomerUser id written into
+         * `audit_logs.actor_id`, which is a foreign key to `users`. An action
+         * with no staff member behind it is recorded with a null actor —
+         * settlement and the sweeps already rely on that being a real answer.
+         */
+        $actor ??= auth('web')->user();
 
         return AuditLog::create([
             'actor_id' => $actor?->id,

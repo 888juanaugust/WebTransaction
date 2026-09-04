@@ -18,6 +18,7 @@ use App\Domain\Expenses\ExpenseRecorder;
 use App\Domain\Expenses\PaidFrom;
 use App\Domain\Giro\GiroRegister;
 use App\Domain\Orders\OrderStateMachine;
+use App\Domain\Orders\OrderStatus;
 use App\Domain\Payments\PaymentLedger;
 use App\Domain\Purchasing\GoodsReceiptPoster;
 use App\Domain\Purchasing\PurchaseOrderFlow;
@@ -470,9 +471,16 @@ class DemoSeeder extends Seeder
     /**
      * Take an order to `paid`.
      *
-     * `paid` is reachable only through invoice settlement, so this records
-     * the money on the ledger the way a bank transfer would be recorded and
-     * then makes the transition with meta saying plainly that a seeder did it.
+     * `paid` is reachable only through invoice settlement, so this records the
+     * money on the ledger the way a bank transfer would be recorded and lets
+     * settlement advance the order, exactly as it will in production.
+     *
+     * The explicit markPaid that used to follow is gone. Settlement already
+     * makes that transition and logs it, so the seeder's call wrote a second
+     * awaiting_payment → paid event on top of the first — harmless in the
+     * data, but the order's event log then read as though settlement had
+     * fired twice, which is precisely the thing anybody reading that log is
+     * checking for.
      */
     private function settle(Order $order, User $finance): void
     {
@@ -486,10 +494,15 @@ class DemoSeeder extends Seeder
             catatan: 'Transfer masuk (data demo).',
         );
 
-        app(OrderStateMachine::class)->markPaid($order, [
-            'source' => 'demo_seeder',
-            'catatan' => 'Data demo — pelunasan manual.',
-        ]);
+        // Belt and braces, not a duplicate: if the money did not cover the
+        // invoice the order is still awaiting payment, and a demo that
+        // silently left it there would be lying about what it seeded.
+        if ($order->refresh()->status === OrderStatus::AwaitingPayment) {
+            app(OrderStateMachine::class)->markPaid($order, [
+                'source' => 'demo_seeder',
+                'catatan' => 'Data demo — pelunasan manual.',
+            ]);
+        }
     }
 
     /**

@@ -84,8 +84,21 @@ Route::middleware(PublicContentSecurityPolicy::class)->group(function () {
  * changed the default. Naming the guard costs four characters.
  */
 Route::middleware(['web', 'auth:web'])
-    ->get('/dokumen/surat-jalan/{order}', SuratJalanController::class)
+    ->get('/dokumen/surat-jalan/{order}', [SuratJalanController::class, 'staff'])
     ->name('dokumen.surat-jalan');
+
+/*
+ * The customer's copy of the same delivery note — item 4 on CLAUDE.md's
+ * buyer-portal priority list, which asks for invoice *and* surat jalan.
+ *
+ * Two routes, one guard each, exactly as the faktur below. The buyer's gate is
+ * the stricter one: theirs appears only once the order has actually shipped,
+ * because for them this document is the record of a delivery rather than the
+ * instruction to pack one.
+ */
+Route::middleware(['web', 'auth:customer'])
+    ->get('/portal/dokumen/surat-jalan/{order}', [SuratJalanController::class, 'pelanggan'])
+    ->name('portal.dokumen.surat-jalan');
 
 /*
  * The Owner switching which region they are looking at. POST because it

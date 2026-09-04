@@ -60,7 +60,7 @@ document, stays Indonesian.
 | `/admin` | Dashboard | all staff | Five worklist queues, not a CRUD index |
 | `/admin/orders` | Order list | all | Every transition, each hiding itself unless it applies |
 | `/admin/orders/create` | Order entry | Sales, Owner | Customer, gudang, lines; live price + stock preview |
-| `/admin/orders/{id}` | Order detail | all | Lines, snapshots, full event log |
+| `/admin/orders/{id}` | Order detail | all | Line snapshots with the price reason, DPP/PPN per line, totals, the dates, the faktur, the split pieces, and the full event log. **Reads snapshots only** — never the live price list |
 | `/admin/orders/{id}/edit` | Edit draft | Sales, Owner | **Drafts only** — after `confirmed` the lines are locked |
 | `/admin/companies` | Customers | not Warehouse | Credit limit, terms, tax data, buyer logins |
 | `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
@@ -156,12 +156,13 @@ to a development one.
 |---|---|---|
 | `/portal` | Dashboard | Credit, recent orders each with **Pesan ulang**, open invoices |
 | `/portal/pesanan` | Order history | Status, totals, reorder |
-| `/portal/pesanan/{id}` | Order detail | Lines from the price snapshots |
+| `/portal/pesanan/{id}` | Order detail | Lines from the price snapshots, when it shipped and from where, and — when the goods came from more than one gudang — the other pieces of the same order |
 | `/portal/katalog` | Catalogue | **This buyer's** prices, add-to-cart |
 | `/portal/keranjang` | Cart | Quantities, indicative totals, checkout |
 | `/portal/tagihan` | Invoices | Due dates, sisa tagihan |
 | `/portal/tagihan/{id}` | Invoice detail | Full breakdown + **the company account to transfer to** |
 | `/portal/dokumen/faktur/{id}` | Faktur | The printable invoice, **own company only** |
+| `/portal/dokumen/surat-jalan/{order}` | Surat jalan | The delivery note the goods came with, **own company only and only once shipped** — for the warehouse the same document is a picking list from `confirmed`, for the buyer it is proof of a delivery |
 
 Staff and buyers authenticate on **different guards against different tables**,
 so a buyer session carries no staff identity at all. The isolation is structural
@@ -362,6 +363,7 @@ ship) still works unchanged.
 | `OrderStateMachine::confirmSplit` | The executor: resize the parent's lines to its own warehouse's share, spawn one sibling per other warehouse, confirm every piece — **one DB transaction, all-or-nothing** |
 | `OrderTransitionActions::setujui` | The approval modal runs the same `plan()` and names the split before the click: which warehouses, which SKUs, how many |
 | `OrdersAwaitingApproval::stockSummary` | The queue's Stok column: red "kurang" only when *no* combination of warehouses covers it; a coverable shortfall shows amber "Tersebar di N gudang" |
+| `OrderFamily::pieces` / `siblings` / `isSplit` | Reads the family back from any piece — `split_parent_id ?? id`, **region scope lifted on the orders and on their warehouses**, since the pieces live in different regions' books by design. The only place that knows how a family is shaped, and it is what both order detail screens ask |
 
 When approval finds the goods scattered, the order becomes one transaction per
 shipping warehouse. Each piece books in **its warehouse's region** — sibling
@@ -384,6 +386,15 @@ exceeded on the last sibling, stock raced away — the whole transaction rolls
 back and the order sits in `submitted` exactly as it was. A customer gets the
 whole order or keeps waiting; OrderSplitTest proves the rollback restores the
 parent's lines.
+
+The split is right for the books and, until 2026-09, invisible on every screen
+that reads an order: the customer who placed one order found two numbers in
+their history with nothing joining them, and the salesperson looking at either
+piece saw no sign the other existed. Both detail pages now carry a section that
+appears **only when there is a split to explain** — the pieces, where each ships
+from, its status and its date — from `OrderFamily`. Neither screen totals the
+pieces: each piece is its own transaction with its own faktur, and one summed
+number would be a figure nobody can reconcile to a document.
 
 ### Stock — append-only ledger
 
@@ -1230,7 +1241,7 @@ page exists so that moment ends.
 |---|---|
 | `LogAudit::changeSummary` | Old → new, naming only the keys that actually moved |
 | `LogAudit::sensitiveActions` | Which rows an auditor came for |
-| `AuditLogger::log` | The one way anything gets written here |
+| `AuditLogger::log` | The one way anything gets written here. Falls back to `auth('web')` — the staff guard **by name**, since this application has two and `actor_id` is a foreign key to `users`. No staff member behind the action means a null actor, which is a real answer, not a gap |
 
 The convention has always been that every money-affecting action writes to
 `audit_logs` — price overrides, credit-limit overrides, payment reversals, a
