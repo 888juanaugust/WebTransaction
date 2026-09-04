@@ -16,7 +16,14 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 /**
- * Price list uploads.
+ * Price list uploads — which are also how the catalogue is loaded.
+ *
+ * Named "Impor harga" for a year, which cost a tester a morning: they went
+ * looking for a separate barang import and concluded products had to be typed
+ * in one at a time. They do not. Publishing a version upserts the product
+ * master from the same rows (`PriceListImporter::upsertProduct`) — KODE, MERK,
+ * KATEGORI, DESCRIPTION, QTY_PER_CTN and SATUAN_DASAR all land on `products`.
+ * One file, one screen, both registers. The label now says so.
  *
  * Uploading does not change any price. The file is stored, parsed on the
  * queue, diffed, and only becomes live when somebody publishes it as a new
@@ -28,11 +35,11 @@ class PriceListImportResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
-    protected static ?string $navigationLabel = 'Impor harga';
+    protected static ?string $navigationLabel = 'Impor harga & barang';
 
-    protected static ?string $modelLabel = 'impor harga';
+    protected static ?string $modelLabel = 'impor harga & barang';
 
-    protected static ?string $pluralModelLabel = 'impor harga';
+    protected static ?string $pluralModelLabel = 'impor harga & barang';
 
     protected static ?int $navigationSort = 50;
 

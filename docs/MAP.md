@@ -82,7 +82,9 @@ document, stays Indonesian.
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
-| `/admin/price-list-imports` | Impor harga | Sales, Owner | Upload → stage → diff → publish |
+| `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
+| `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
+| `/admin/laporan/penjelajah` | Penjelajah data | per dataset | Rows, sorted and filtered, saved as named templates, downloadable as CSV. **No sums** — this is the register, not a report |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
@@ -1720,6 +1722,44 @@ All idempotent — assume they run twice.
 `carts` · `cart_items` (**no money columns**)
 
 ---
+
+### Imports, and the example file
+
+| Function | Decides |
+|---|---|
+| `CsvTemplate::toCsv` | The example file, **generated from the column constant the parser reads** — prose drifts from a parser, a generated template cannot |
+| `CompanyColumns::COLUMNS` / `keterangan` | The customer format, and what each column is for, shown beside the download |
+| `CompanyImporter::preview` | What each line *would* do — new, update, or held with a reason. **Writes nothing** |
+| `CompanyImporter::import` | Re-reads the same file and writes the rows that were not held. A known KODE updates; a bad row is skipped, never guessed at |
+
+The price import was called "Impor harga" for a year and cost a tester a
+morning: they went looking for a separate barang import and concluded products
+had to be typed one at a time. They do not — `PriceListImporter::upsertProduct`
+has always kept `products` in step with each published version. One file loads
+both registers; the label now says so.
+
+The customer importer's one hard rule is the money one. `LIMIT_KREDIT` is a
+field the customer form hides from anyone who may not set credit limits, and a
+CSV must not be the way around it: a file carrying filled values is refused
+outright for those seats rather than importing with the limits silently
+dropped, which is the failure nobody would notice. Limits that do change are
+audited by `CompanyObserver` exactly as a form edit is — the importer
+deliberately does not log that itself, because two rows for one change reads as
+two changes.
+
+### Penjelajah data
+
+| Function | Decides |
+|---|---|
+| `ExplorerDataset` | The five registers it can be pointed at, each with **its own access gate** — without that this screen is the back door around every role rule |
+| `ExplorerColumn` | One definition, rendered twice: the screen and the CSV cannot disagree, and a column a role may not see is missing from their download too |
+| `SavedView` | A named arrangement — filters, sort, search. Shared views are readable by colleagues; only the owner may delete one |
+| `Penjelajah::susun` | Applies an arrangement the way a person does: merge into the **deferred** filter state, then apply. Assigning `$tableFilters` directly is silently undone by the schema's own re-fill |
+| `Penjelajah::unduh` | Streams the table's own filtered, sorted query — an export that ignored the filters is how the whole customer list gets emailed as "four rows" |
+
+A saved view stores the **question, never its answer**: opened next month it
+reads next month's data. It shows rows and never sums, which is what keeps it
+from quietly becoming a second, disagreeing set of reports.
 
 ## 5. Not built yet
 

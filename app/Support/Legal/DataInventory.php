@@ -571,6 +571,17 @@ final class DataInventory
                 ],
             ],
 
+            /*
+             * Saved explorer arrangements. A view stores the question — which
+             * filters, which sort — never the rows it would return, so there
+             * is no customer data in here. Only who saved it is personal.
+             */
+            'saved_views' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['user_id'],
+                'bukan' => ['nama', 'dataset', 'filters', 'urutan', 'pencarian', 'dibagikan'],
+            ],
+
             // The uploaded mutasi file's bookkeeping row. The file itself
             // stays on disk under source_file_path and is full of the bank's
             // own wording — the lines table below is where that is classified.
