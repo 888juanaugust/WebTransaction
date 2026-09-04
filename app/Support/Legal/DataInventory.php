@@ -326,6 +326,19 @@ final class DataInventory
                 ],
             ],
 
+            /*
+             * How much of a payment discharges which supplier bill. No new
+             * personal data beyond who applied it and what they wrote.
+             */
+            'supplier_payment_allocations' => [
+                'kategori' => 'pajak_dan_pembayaran',
+                'personal' => ['actor_id', 'catatan'],
+                'bukan' => [
+                    'supplier_payment_entry_id', 'supplier_bill_id', 'amount_rupiah',
+                    'reverses_allocation_id',
+                ],
+            ],
+
             'supplier_payment_entries' => [
                 'kategori' => 'pajak_dan_pembayaran',
                 'personal' => ['actor_id', 'referensi', 'catatan'],

@@ -7,16 +7,19 @@ namespace App\Domain\Purchasing;
 use App\Domain\Accounting\DocumentPoster;
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Banking\BankAccounts;
+use App\Domain\Money;
 use App\Models\BankAccount;
 use App\Models\Giro;
 use App\Models\PurchaseReturn;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
 use App\Models\SupplierCreditNote;
+use App\Models\SupplierPaymentAllocation;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
 use DateTimeInterface;
 use DomainException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
@@ -27,6 +30,20 @@ use LogicException;
  * amount, opposite sign, pointing back at what they undo. The bill's total is
  * never touched by any of it, which is the whole control: whoever pays cannot
  * move the amount owed.
+ *
+ * **An entry is money leaving; an allocation is what it discharges** — the
+ * same separation as the receivable side, and needed more here, because
+ * paying a supplier once a month against everything they have sent is the
+ * ordinary shape of a trade account rather than the exception. One entry per
+ * bank line is what lets the reconciliation desk tick it; which debts that
+ * line clears is a second question with its own rows in
+ * `supplier_payment_allocations`.
+ *
+ * Nothing here over-pays a bill. Recording a Rp 42.000.000 transfer against a
+ * Rp 12.000.000 bill used to mark it paid and leave it at minus thirty
+ * million, while the Rp 30.000.000 bill the same transfer covered stayed
+ * fully open and went on ageing in Umur hutang. The supplier's total came out
+ * right, which is exactly what kept it quiet.
  */
 class SupplierLedger
 {
@@ -42,6 +59,10 @@ class SupplierLedger
      * somebody types what left the account. That makes the actor mandatory:
      * every rupiah out has a person's name against it.
      */
+    /**
+     * @param  list<array{0: SupplierBill, 1: int}>  $spread  one transfer,
+     *                                                        several tagihan
+     */
     public function recordPayment(
         Supplier $supplier,
         int $amountRupiah,
@@ -51,6 +72,7 @@ class SupplierLedger
         ?string $catatan = null,
         ?DateTimeInterface $paidAt = null,
         ?BankAccount $rekening = null,
+        array $spread = [],
     ): SupplierPaymentEntry {
         if ($amountRupiah <= 0) {
             throw new LogicException('A supplier payment must be positive.');
@@ -64,15 +86,31 @@ class SupplierLedger
             throw new LogicException('That bill belongs to a different supplier.');
         }
 
+        if ($bill !== null && $spread !== []) {
+            throw new LogicException('Sebutkan satu tagihan atau rinciannya, bukan keduanya.');
+        }
+
+        if ($bill !== null) {
+            $spread = [[$bill, $amountRupiah]];
+        }
+
         // Stored at record time — see PaymentLedger for why the default
         // moving later must never rewrite where this money actually left.
         $rekening ??= app(BankAccounts::class)->default();
 
         return DB::transaction(function () use (
-            $supplier, $amountRupiah, $actor, $bill, $referensi, $catatan, $paidAt, $rekening
+            $supplier, $amountRupiah, $actor, $bill, $referensi, $catatan, $paidAt, $rekening, $spread
         ) {
             $entry = SupplierPaymentEntry::create([
                 'supplier_id' => $supplier->id,
+                /*
+                 * Still stamped for the one-bill case — plenty of the
+                 * application reads it as "which tagihan was this for", and
+                 * there it remains true. It is not what the money is counted
+                 * from; that is `supplier_payment_allocations`, and a
+                 * transfer spread over several bills leaves this null because
+                 * no single answer exists.
+                 */
                 'supplier_bill_id' => $bill?->id,
                 'amount_rupiah' => $amountRupiah,
                 'kind' => SupplierPaymentEntry::KIND_PAYMENT,
@@ -83,7 +121,10 @@ class SupplierLedger
                 'catatan' => $catatan,
             ]);
 
-            $this->settleIfCleared($bill);
+            foreach ($spread as [$tagihan, $jumlah]) {
+                // Audited once, by the payment below.
+                $this->allocate($entry, $tagihan, (int) $jumlah, $actor, audit: false);
+            }
 
             // Dr Utang Usaha / Cr Bank.
             $this->poster->supplierPaymentMade($entry, $actor);
@@ -96,12 +137,231 @@ class SupplierLedger
                     'supplier_bill_id' => $bill?->id,
                     'amount_rupiah' => $amountRupiah,
                     'referensi' => $referensi,
+                    'tagihan' => array_map(
+                        fn (array $baris) => [$baris[0]->nomor, (int) $baris[1]],
+                        $spread,
+                    ),
                 ],
                 actor: $actor,
             );
 
             return $entry;
         });
+    }
+
+    /**
+     * Apply part (or all) of a payment to one bill.
+     *
+     * Both sides checked. Over-paying a bill used to be accepted in silence,
+     * which left it at a negative outstanding while the other bills the same
+     * transfer covered went on ageing as though nothing had been paid.
+     *
+     * @param  bool  $audit  false only where the caller's own audit row already
+     *                       records this exact application
+     */
+    public function allocate(
+        SupplierPaymentEntry $entry,
+        SupplierBill $bill,
+        int $amountRupiah,
+        User $actor,
+        ?string $catatan = null,
+        bool $audit = true,
+    ): SupplierPaymentAllocation {
+        if (! $actor->role()->canConfirmPayment()) {
+            throw new DomainException('Anda tidak berhak mencocokkan pembayaran ke pemasok.');
+        }
+
+        if ($amountRupiah <= 0) {
+            throw new DomainException('Jumlah yang dicocokkan harus lebih dari nol.');
+        }
+
+        // One supplier's money never discharges another's bill. The screens
+        // only offer the payee's own tagihan, but an id in a request is not a
+        // promise.
+        if ((int) $bill->supplier_id !== (int) $entry->supplier_id) {
+            throw new DomainException(
+                "Tagihan {$bill->nomor} milik pemasok lain — pembayaran ini bukan untuk mereka."
+            );
+        }
+
+        if ($bill->status === SupplierBill::STATUS_VOID) {
+            throw new DomainException("Tagihan {$bill->nomor} sudah dibatalkan.");
+        }
+
+        return DB::transaction(function () use ($entry, $bill, $amountRupiah, $actor, $catatan, $audit) {
+            /*
+             * Locked while we read the remainder. Two people applying the same
+             * transfer to two bills at once would each read a remainder the
+             * other is about to spend. No single-threaded test reaches it; the
+             * lock is not dead code.
+             */
+            $locked = SupplierPaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
+
+            $sisaUang = $this->unallocated($locked);
+
+            if ($amountRupiah > $sisaUang) {
+                throw new DomainException(sprintf(
+                    'Pembayaran ini hanya menyisakan %s yang belum dicocokkan, tidak cukup untuk %s.',
+                    Money::format($sisaUang),
+                    Money::format($amountRupiah),
+                ));
+            }
+
+            $sisaTagihan = $bill->fresh()->amountOutstanding();
+
+            if ($amountRupiah > $sisaTagihan) {
+                throw new DomainException(sprintf(
+                    'Tagihan %s hanya kurang %s, tidak bisa dicocokkan %s.',
+                    $bill->nomor,
+                    Money::format($sisaTagihan),
+                    Money::format($amountRupiah),
+                ));
+            }
+
+            $alokasi = SupplierPaymentAllocation::create([
+                'supplier_payment_entry_id' => $locked->id,
+                'supplier_bill_id' => $bill->id,
+                'amount_rupiah' => $amountRupiah,
+                'actor_id' => $actor->id,
+                'catatan' => $catatan,
+            ]);
+
+            $this->settleIfCleared($bill);
+
+            if ($audit) {
+                $this->audit->log(
+                    action: 'supplier_payment_allocated',
+                    subject: $alokasi,
+                    newValue: [
+                        'supplier_payment_entry_id' => $locked->id,
+                        'tagihan' => $bill->nomor,
+                        'amount_rupiah' => $amountRupiah,
+                    ],
+                    actor: $actor,
+                    alasan: $catatan,
+                );
+            }
+
+            return $alokasi;
+        });
+    }
+
+    /**
+     * Take an application back — money applied to the wrong tagihan.
+     *
+     * A negative row, never a delete. The money stays out of the account and
+     * stays the supplier's; only what it was said to discharge changes, and
+     * both versions stay readable for the day the supplier queries a
+     * statement.
+     */
+    public function unallocate(
+        SupplierPaymentAllocation $alokasi,
+        User $actor,
+        string $alasan,
+    ): SupplierPaymentAllocation {
+        if (! $actor->role()->canConfirmPayment()) {
+            throw new DomainException('Anda tidak berhak mencocokkan pembayaran ke pemasok.');
+        }
+
+        if ($alokasi->amount_rupiah < 0) {
+            throw new DomainException('Baris ini sudah pembatalan.');
+        }
+
+        if (SupplierPaymentAllocation::query()->where('reverses_allocation_id', $alokasi->id)->exists()) {
+            throw new DomainException('Pencocokan ini sudah dibatalkan.');
+        }
+
+        return DB::transaction(function () use ($alokasi, $actor, $alasan) {
+            $balik = SupplierPaymentAllocation::create([
+                'supplier_payment_entry_id' => $alokasi->supplier_payment_entry_id,
+                'supplier_bill_id' => $alokasi->supplier_bill_id,
+                'amount_rupiah' => -$alokasi->amount_rupiah,
+                'actor_id' => $actor->id,
+                'reverses_allocation_id' => $alokasi->id,
+                'catatan' => $alasan,
+            ]);
+
+            $this->reopenIfNoLongerCleared($alokasi->bill);
+
+            $this->audit->log(
+                action: 'supplier_payment_unallocated',
+                subject: $balik,
+                oldValue: ['amount_rupiah' => $alokasi->amount_rupiah],
+                newValue: ['amount_rupiah' => -$alokasi->amount_rupiah],
+                actor: $actor,
+                alasan: $alasan,
+            );
+
+            return $balik;
+        });
+    }
+
+    /** What left the account on this entry and discharges nothing yet. */
+    public function unallocated(SupplierPaymentEntry $entry): int
+    {
+        $dipakai = (int) SupplierPaymentAllocation::query()
+            ->where('supplier_payment_entry_id', $entry->id)
+            ->sum('amount_rupiah');
+
+        return (int) $entry->amount_rupiah - $dipakai;
+    }
+
+    /**
+     * How a lump payment would land if nobody intervened: oldest bill first.
+     *
+     * An offer, not an act. Which bill a payment clears can be what the
+     * supplier's own statement says, and the person reconciling with them has
+     * to be able to follow it.
+     *
+     * @return list<array{bill: SupplierBill, amount: int}>
+     */
+    public function suggestSpread(Supplier $supplier, int $amountRupiah): array
+    {
+        $sisa = $amountRupiah;
+        $rencana = [];
+
+        foreach ($this->openBills($supplier) as $bill) {
+            if ($sisa <= 0) {
+                break;
+            }
+
+            $bagian = min($sisa, $bill->amountOutstanding());
+            $rencana[] = ['bill' => $bill, 'amount' => $bagian];
+            $sisa -= $bagian;
+        }
+
+        return $rencana;
+    }
+
+    /**
+     * The supplier's bills still owed, oldest due date first.
+     *
+     * @return Collection<int, SupplierBill>
+     */
+    public function openBills(Supplier $supplier): Collection
+    {
+        return SupplierBill::query()
+            ->where('supplier_id', $supplier->id)
+            ->where('status', SupplierBill::STATUS_OPEN)
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (SupplierBill $b) => $b->amountOutstanding() > 0)
+            ->values();
+    }
+
+    /**
+     * Money out that is not fully accounted for.
+     *
+     * @return Collection<int, SupplierPaymentEntry>
+     */
+    public function unallocatedEntries(): Collection
+    {
+        return SupplierPaymentEntry::query()
+            ->unmatched()
+            ->with(['supplier', 'bankAccount', 'allocations.bill', 'allocations.actor'])
+            ->orderByDesc('paid_at')
+            ->get();
     }
 
     /**
@@ -139,9 +399,42 @@ class SupplierLedger
             ]);
 
             /*
+             * The money is coming back, so what it was said to discharge comes
+             * back with it — one negative allocation per application, hung off
+             * the reversal so both entries stay net-zero against their own.
+             *
+             * Without this the bills went on looking paid while the transfer
+             * had been recalled: the reversal only re-evaluated the single
+             * bill named on the entry, and a payment spread over four would
+             * have left three of them settled by money that had gone back.
+             */
+            $terpakai = SupplierPaymentAllocation::query()
+                ->where('supplier_payment_entry_id', $entry->id)
+                ->where('amount_rupiah', '>', 0)
+                ->whereNotExists(fn ($q) => $q->selectRaw(1)
+                    ->from('supplier_payment_allocations as pembatalan')
+                    ->whereColumn('pembatalan.reverses_allocation_id', 'supplier_payment_allocations.id'))
+                ->get();
+
+            foreach ($terpakai as $alokasi) {
+                SupplierPaymentAllocation::create([
+                    'supplier_payment_entry_id' => $reversal->id,
+                    'supplier_bill_id' => $alokasi->supplier_bill_id,
+                    'amount_rupiah' => -$alokasi->amount_rupiah,
+                    'actor_id' => $actor->id,
+                    'reverses_allocation_id' => $alokasi->id,
+                    'catatan' => $alasan,
+                ]);
+
+                $this->reopenIfNoLongerCleared($alokasi->bill);
+            }
+
+            /*
              * A reversal can take a settled bill back to open — the money was
              * never really there. Re-evaluating rather than assuming keeps the
              * status a function of the ledger instead of of the last action.
+             * Still done for the entry's own stamp, which may carry no
+             * allocation behind it; re-evaluating twice is harmless.
              */
             $bill = $entry->supplierBill;
 
@@ -287,6 +580,27 @@ class SupplierLedger
      * enter the last payment, so a part payment cannot be recorded as clearing
      * the bill.
      */
+    /**
+     * A bill no longer covered goes back to open.
+     *
+     * The mirror of settlement. Nothing else unwinds: goods received against
+     * a bill stay received, and a payment taken back is a matter for a person
+     * to look at rather than something to reverse silently through the
+     * purchasing chain.
+     */
+    private function reopenIfNoLongerCleared(?SupplierBill $bill): void
+    {
+        if ($bill === null) {
+            return;
+        }
+
+        $bill->refresh();
+
+        if ($bill->status === SupplierBill::STATUS_PAID && $bill->amountOutstanding() > 0) {
+            $bill->forceFill(['status' => SupplierBill::STATUS_OPEN])->save();
+        }
+    }
+
     private function settleIfCleared(?SupplierBill $bill): void
     {
         if ($bill === null) {

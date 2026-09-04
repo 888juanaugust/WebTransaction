@@ -24,4 +24,28 @@ class SupplierBillFactory extends Factory
             'due_date' => now()->addDays(30)->toDateString(),
         ];
     }
+
+    /**
+     * A bill for exactly this amount, with no tax on it.
+     *
+     * The default leaves the money columns at zero — an unposted bill, since
+     * only SupplierBillPoster writes those from the lines. That default used
+     * to be harmless because the ledger would accept a payment against a bill
+     * owing nothing; it will not any more, and it should not: paying three
+     * million against a bill for nothing is not a scenario, it is a fixture
+     * that was never asked to make sense.
+     *
+     * Tax stays at zero deliberately, as on InvoiceFactory: a total whose
+     * parts do not add up is an unbalanced journal the moment anything posts
+     * it.
+     */
+    public function totalling(int $rupiah): static
+    {
+        return $this->state(fn () => [
+            'subtotal_rupiah' => $rupiah,
+            'dpp_rupiah' => $rupiah,
+            'ppn_rupiah' => 0,
+            'total_rupiah' => $rupiah,
+        ]);
+    }
 }

@@ -165,10 +165,13 @@ class PayablesAgeing
      */
     private function openBills()
     {
-        $paid = DB::table('supplier_payment_entries')
-            ->whereBoundRegion('supplier_payment_entries')
+        // From the allocations, for the reason the sell side's twin gives:
+        // a bill discharged inside one transfer covering several names no
+        // entry, and would age here at its full amount.
+        $paid = DB::table('supplier_payment_allocations')
+            ->whereBoundRegion('supplier_payment_allocations')
             ->selectRaw('COALESCE(SUM(amount_rupiah), 0)')
-            ->whereColumn('supplier_payment_entries.supplier_bill_id', 'supplier_bills.id');
+            ->whereColumn('supplier_payment_allocations.supplier_bill_id', 'supplier_bills.id');
 
         $credited = DB::table('supplier_credit_notes')
             ->whereBoundRegion('supplier_credit_notes')
@@ -190,11 +193,18 @@ class PayablesAgeing
     /** @return array<int, array{nama: string, nilai: int}> */
     private function unmatched(): array
     {
+        // The unapplied remainder per supplier, not the entries nobody named
+        // a tagihan on — a half-applied transfer leaves money against no debt
+        // just as much as an untouched one does.
         return SupplierPaymentEntry::query()
-            ->whereNull('supplier_bill_id')
             ->join('suppliers', 'supplier_payment_entries.supplier_id', '=', 'suppliers.id')
             ->groupBy('supplier_payment_entries.supplier_id', 'suppliers.nama')
-            ->selectRaw('supplier_payment_entries.supplier_id AS sid, suppliers.nama, SUM(amount_rupiah) AS nilai')
+            ->selectRaw('supplier_payment_entries.supplier_id AS sid, suppliers.nama, '
+                .'SUM(supplier_payment_entries.amount_rupiah - COALESCE((
+                    SELECT SUM(amount_rupiah) FROM supplier_payment_allocations
+                    WHERE supplier_payment_allocations.supplier_payment_entry_id
+                          = supplier_payment_entries.id
+                ), 0)) AS nilai')
             ->get()
             ->filter(fn ($r) => (int) $r->nilai !== 0)
             ->mapWithKeys(fn ($r) => [(int) $r->sid => ['nama' => (string) $r->nama, 'nilai' => (int) $r->nilai]])

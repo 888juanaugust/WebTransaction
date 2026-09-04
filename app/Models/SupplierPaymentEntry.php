@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Domain\Regions\HasRegion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Money out, append-only. Never mutate a row; insert a reversing entry.
@@ -57,5 +59,31 @@ class SupplierPaymentEntry extends Model
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
+    }
+
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(SupplierPaymentAllocation::class, 'supplier_payment_entry_id');
+    }
+
+    /**
+     * Money out with some of it discharging nothing.
+     *
+     * Not `supplier_bill_id IS NULL`: that asked whether anybody had named a
+     * tagihan, which says nothing about how much of the payment the naming
+     * used. A transfer pointed at a bill smaller than itself looked handled
+     * while the rest of it was applied to no debt at all.
+     */
+    public function scopeUnmatched(Builder $query): Builder
+    {
+        return $query
+            ->where('kind', self::KIND_PAYMENT)
+            ->whereRaw(
+                'supplier_payment_entries.amount_rupiah > COALESCE((
+                    SELECT SUM(amount_rupiah) FROM supplier_payment_allocations
+                    WHERE supplier_payment_allocations.supplier_payment_entry_id
+                          = supplier_payment_entries.id
+                ), 0)'
+            );
     }
 }

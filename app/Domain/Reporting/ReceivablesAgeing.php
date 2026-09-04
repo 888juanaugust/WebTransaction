@@ -208,10 +208,19 @@ class ReceivablesAgeing
      */
     private function openInvoices()
     {
-        $paid = DB::table('payment_entries')
-            ->whereBoundRegion('payment_entries')
+        /*
+         * From the allocations, which is where a payment says how much of
+         * itself settles which faktur. Summing the entries by their
+         * `invoice_id` misses every invoice paid inside a transfer covering
+         * several — those entries name no faktur — so a settled bill would
+         * age here at its full amount while `amountOutstanding()` called it
+         * paid. Two figures disagreeing about one debt, in the report whose
+         * job is to tie to Piutang Usaha.
+         */
+        $paid = DB::table('payment_allocations')
+            ->whereBoundRegion('payment_allocations')
             ->selectRaw('COALESCE(SUM(amount_rupiah), 0)')
-            ->whereColumn('payment_entries.invoice_id', 'invoices.id');
+            ->whereColumn('payment_allocations.invoice_id', 'invoices.id');
 
         $credited = DB::table('credit_notes')
             ->whereBoundRegion('credit_notes')
@@ -264,12 +273,22 @@ class ReceivablesAgeing
     /** @return array<int, array{nama: string, nilai: int}> */
     private function unmatchedPayments(): array
     {
+        /*
+         * The unapplied *remainder* per customer, not the entries nobody
+         * named a faktur on. A transfer half-applied leaves money that is
+         * still theirs and still not against any bill; counting the whole
+         * entry (or none of it) both misstate the column this report exists
+         * to reconcile.
+         */
         return DB::table('payment_entries')
             ->whereBoundRegion('payment_entries')
             ->join('companies', 'payment_entries.company_id', '=', 'companies.id')
-            ->whereNull('payment_entries.invoice_id')
             ->groupBy('payment_entries.company_id', 'companies.nama')
-            ->selectRaw('payment_entries.company_id AS id, MIN(companies.nama) AS nama, SUM(amount_rupiah) AS nilai')
+            ->selectRaw('payment_entries.company_id AS id, MIN(companies.nama) AS nama, '
+                .'SUM(payment_entries.amount_rupiah - COALESCE((
+                    SELECT SUM(amount_rupiah) FROM payment_allocations
+                    WHERE payment_allocations.payment_entry_id = payment_entries.id
+                ), 0)) AS nilai')
             ->get()
             ->mapWithKeys(fn ($row) => [(int) $row->id => [
                 'nama' => (string) $row->nama,

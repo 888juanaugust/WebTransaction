@@ -82,6 +82,7 @@ document, stays Indonesian.
 | `/admin/uang-muka` | Uang muka | Finance, Owner | Money in before anything is owed. Badge counts deposits no invoice has claimed |
 | `/admin/nota-kredit` | Nota kredit | All but Warehouse read; **only Sales and Owner raise** | Returns and price corrections |
 | `/admin/tagihan-pemasok` | Tagihan pemasok | Finance, Owner | Supplier bills, PPN masukan, AP payments |
+| `/admin/bayar-pemasok` | Bayar pemasok | Finance, Owner | One transfer out, spread across as many of a supplier's tagihan as it covers. Body is the queue of payments not yet fully applied; badge counts them |
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
 | `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
@@ -471,11 +472,32 @@ draft → dikirim → selesai
 | `PurchaseOrderFlow::cancel` | Refused once goods have arrived — close it instead |
 | `PurchaseOrderFlow::registerReceipt` | Received quantity, inside the receipt's transaction |
 | `SupplierBillPoster::post` | **Fixes the total and computes PPN masukan per line** |
-| `SupplierLedger::recordPayment` | Money out. Append-only; never touches the bill total |
-| `SupplierLedger::reverse` | Undo by appending the opposite; can reopen a settled bill |
+| `SupplierLedger::recordPayment` | Money out. Append-only; never touches the bill total. Takes a `spread` of `[tagihan, rupiah]` for one transfer covering several |
+| `SupplierLedger::reverse` | Undo by appending the opposite, **and a negative allocation for every application it made**; reopens each bill it had cleared |
+| `SupplierLedger::allocate` | Applies part of a payment to one bill. Refuses to over-pay either side, and refuses another supplier's tagihan outright |
+| `SupplierLedger::unallocate` | Takes an application back as a negative row; the bill reopens |
+| `SupplierLedger::suggestSpread` | Oldest bill first — an offer, never an act |
 | `ThreeWayMatch::variancesFor` | Ordered vs received vs billed — only the rows that disagree |
 
 A receipt may have no PO behind it: stock sometimes simply turns up.
+
+**One transfer, several tagihan** (2026-09) — the payables mirror of the
+receivable side, and the case is stronger: paying a supplier once a month
+against everything they have sent is the ordinary shape of a trade account.
+`supplier_payment_entries.supplier_bill_id` could name exactly one bill, so
+recording a Rp 42.000.000 transfer against a Rp 12.000.000 bill marked it paid
+and left it at **minus thirty million**, while the Rp 30.000.000 bill the same
+transfer covered stayed fully open. The supplier's *total* came out right,
+which is what kept it quiet — per bill it was nonsense, and Umur hutang went on
+ageing a debt that had been settled.
+
+So `supplier_payment_allocations` carries its own rupiah, append-only, backfilled
+from the existing stamps. `SupplierBill::amountPaid()` reads it, and "unmatched"
+means a payment with money discharging nothing rather than one where nobody
+named a tagihan. Both ageing reports moved with it — including
+`ReceivablesAgeing`, which the sell-side phase left summing the entries, so a
+faktur settled inside a spread aged at its full amount while
+`amountOutstanding()` called it paid.
 
 **Price variance is not posted to inventory.** Goods stay valued at what the
 receipt said they cost; the difference goes to Selisih Harga Pembelian in the

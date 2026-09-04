@@ -688,7 +688,11 @@ class BankReconciliationTest extends TestCase
     /** Money out: Dr Utang Usaha / Cr Bank. */
     private function pay(int $amount, string $date): JournalEntry
     {
-        $bill = SupplierBill::factory()->create(['supplier_id' => $this->pemasok->id]);
+        // A bill big enough to owe what is being paid: the ledger will not
+        // apply money to a debt that is not there.
+        $bill = SupplierBill::factory()->totalling($amount)->create([
+            'supplier_id' => $this->pemasok->id,
+        ]);
 
         $entry = app(SupplierLedger::class)->recordPayment(
             supplier: $this->pemasok,

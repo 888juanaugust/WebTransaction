@@ -137,7 +137,7 @@ class MultiBankTest extends TestCase
         $this->terima(10_000_000, '2026-08-01', $bca);
 
         $pemasok = Supplier::factory()->create();
-        $bill = SupplierBill::factory()->create(['supplier_id' => $pemasok->id]);
+        $bill = SupplierBill::factory()->totalling(3_000_000)->create(['supplier_id' => $pemasok->id]);
 
         app(SupplierLedger::class)->recordPayment(
             supplier: $pemasok,

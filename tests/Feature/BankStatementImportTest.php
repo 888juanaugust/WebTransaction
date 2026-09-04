@@ -336,7 +336,7 @@ class BankStatementImportTest extends TestCase
     private function paySupplier(int $amount, string $date): void
     {
         $pemasok = Supplier::factory()->create();
-        $bill = SupplierBill::factory()->create(['supplier_id' => $pemasok->id]);
+        $bill = SupplierBill::factory()->totalling($amount)->create(['supplier_id' => $pemasok->id]);
 
         app(SupplierLedger::class)->recordPayment(
             supplier: $pemasok,

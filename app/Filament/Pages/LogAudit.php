@@ -190,6 +190,9 @@ class LogAudit extends Page implements HasTable
              */
             'payment_unallocated',
             'supplier_payment_reversed',
+            // Same reasoning as its sell-side twin: a bill moves from paid
+            // back to open with the bank statement untouched.
+            'supplier_payment_unallocated',
             'expense_reversed',
             'journal_reversed',
             'journal_posted_manually',
@@ -244,6 +247,8 @@ class LogAudit extends Page implements HasTable
             'payment_unallocated' => 'Pencocokan pembayaran dibatalkan',
             'payment_reversed' => 'Pembayaran dibalik',
             'supplier_payment_recorded' => 'Pembayaran pemasok',
+            'supplier_payment_allocated' => 'Pembayaran pemasok dicocokkan',
+            'supplier_payment_unallocated' => 'Pencocokan pembayaran pemasok dibatalkan',
             'supplier_payment_reversed' => 'Pembayaran pemasok dibalik',
             'credit_note_posted' => 'Nota kredit diposting',
             'goods_receipt_posted' => 'Penerimaan barang diposting',

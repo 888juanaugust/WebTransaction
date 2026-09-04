@@ -65,9 +65,24 @@ class SupplierBill extends Model
         return $this->hasMany(SupplierBillLine::class)->orderBy('urutan')->orderBy('id');
     }
 
+    /**
+     * Entries stamped with this bill when they were recorded.
+     *
+     * **Not what the bill has been paid.** One transfer settling four of a
+     * supplier's bills names none of them, and part of a transfer may
+     * discharge this one; the money is counted from `allocations` below. The
+     * relation stays because screens legitimately ask which payment was keyed
+     * in against a bill, and for the one-bill case that is still exactly true.
+     */
     public function paymentEntries(): HasMany
     {
         return $this->hasMany(SupplierPaymentEntry::class);
+    }
+
+    /** Every application of money to this bill, reversals included. */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(SupplierPaymentAllocation::class);
     }
 
     public function purchaseReturnLines(): HasMany
@@ -75,10 +90,18 @@ class SupplierBill extends Model
         return $this->hasMany(PurchaseReturnLine::class);
     }
 
-    /** Sum of the append-only ledger for this bill. */
+    /**
+     * Sum of the append-only ledger for this bill.
+     *
+     * Read from the allocations, which is where a payment says how much of
+     * itself discharges which bill. Reading the entries instead counted a
+     * whole transfer against the first bill it was pointed at — the reading
+     * that left one bill at a negative balance while the others it also
+     * covered went on ageing in Umur hutang.
+     */
     public function amountPaid(): int
     {
-        return (int) $this->paymentEntries()->sum('amount_rupiah');
+        return (int) $this->allocations()->sum('amount_rupiah');
     }
 
     /**
