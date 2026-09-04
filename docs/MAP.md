@@ -84,6 +84,7 @@ document, stays Indonesian.
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
 | `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
+| `/admin/penagihan` | Penagihan | Sales, Marketing, Finance, Owner | Three queues: promises due today, promises broken, overdue nobody has called. Badge counts promises only |
 | `/admin/laporan/penjelajah` | Penjelajah data | per dataset | Rows, sorted and filtered, saved as named templates, downloadable as CSV. **No sums** — this is the register, not a report |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
@@ -1761,13 +1762,34 @@ A saved view stores the **question, never its answer**: opened next month it
 reads next month's data. It shows rows and never sums, which is what keeps it
 from quietly becoming a second, disagreeing set of reports.
 
+### Penagihan — the eleven weeks before a write-off
+
+| Function | Decides |
+|---|---|
+| `CollectionDesk::record` | Logs a conversation on an **open** invoice the caller's seat actually holds. A promise needs a date, and it may not be in the past |
+| `CollectionDesk::janjiBerlaku` | The promise that stands: the latest one. A shop moving Friday to Monday has moved its promise, not made a second |
+| `CollectionDesk::janjiDitepati` | **Derived from the payment ledger, never stored** — money arriving *strictly after* the conversation, measured against what was promised. `null` while it is not yet due |
+| `CollectionDesk::worklist` | The three questions in the order a collector asks them: due today, broken, never called |
+| `CollectionDesk::chaseable` | Sales and marketing chase the customers they hold; finance and the owner chase all. In the query, not the view |
+
+The line this feature sits behind, and the reason its tests are mostly about
+absence: **a promise records what was said and changes nothing else.** It does
+not reduce a balance, does not touch the credit check, does not slow the
+150-day freeze, and does not make an invoice look handled. Settlement stays
+`payment_entries` alone. A collections tool that quietly adjusts what a
+customer owes is how a register fills with debts everybody believes are
+covered and nobody is chasing.
+
+Whether a promise was kept follows the same rule as debt aging — derived on
+every read rather than written down. A stored "kept" flag is a second opinion
+about settlement, and the day it disagrees with the ledger somebody acts on
+the wrong one.
+
 ## 5. Not built yet
 
 - Saldo menurun (declining-balance) depreciation, and a book life that differs
   from the tax life
 - Revaluation and impairment of fixed assets
-- Uang muka pelanggan — a deposit against a specific order rather than the
-  floating unallocated credit an unmatched payment currently becomes
 - Seeder ships `password` as the staff password
 
 Landed cost has one approximation worth knowing about rather than a gap: which

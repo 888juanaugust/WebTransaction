@@ -572,6 +572,22 @@ final class DataInventory
             ],
 
             /*
+             * Collections contacts. `catatan` is free text about a
+             * conversation with a named person at a shop and routinely
+             * carries what they said about their own circumstances, so it is
+             * personal in the way a visit note is — the promise figures
+             * beside it are ordinary commercial data.
+             */
+            'collection_contacts' => [
+                'kategori' => 'aktivitas_transaksi',
+                'personal' => ['catatan', 'user_id'],
+                'bukan' => [
+                    'invoice_id', 'company_id', 'cara', 'hasil',
+                    'janji_tanggal', 'janji_rupiah', 'dihubungi_pada',
+                ],
+            ],
+
+            /*
              * Saved explorer arrangements. A view stores the question — which
              * filters, which sort — never the rows it would return, so there
              * is no customer data in here. Only who saved it is personal.
