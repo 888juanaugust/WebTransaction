@@ -44,6 +44,19 @@ return [
         ],
     ],
 
+    /*
+     * Added by Filament 4.12.8 (the MFA security release). The coverage test
+     * catches new upstream strings on every upgrade — without these three a
+     * select renders its raw key, which reads as a broken screen.
+     */
+    'select' => [
+        'actions' => [
+            'clear' => ['label' => 'Kosongkan pilihan'],
+            'remove_option' => ['label' => 'Hapus :label'],
+        ],
+        'search_label' => 'Cari',
+    ],
+
     'rich_editor' => [
         'toolbar' => ['label' => 'Bilah alat editor'],
     ],
