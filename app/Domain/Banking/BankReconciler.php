@@ -81,7 +81,15 @@ class BankReconciler
             throw new DomainException('Belum ada rekening koran untuk tanggal yang belum lewat.');
         }
 
+        /*
+         * Entity-wide, like everything else about a reconciliation: one real
+         * account, one statement, one reconciliation of it. Scoped, two
+         * regions could each open one for the same account and the same date
+         * without either seeing the other — two half-proofs of one account,
+         * and neither would ever balance.
+         */
         $existing = BankReconciliation::query()
+            ->withoutGlobalScope('region')
             ->where('bank_account_id', $rekening->id)
             ->whereDate('tanggal_rekening', $date->toDateString())
             ->first();
@@ -153,6 +161,14 @@ class BankReconciler
         return JournalLine::query()
             ->with(['entry'])
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            /*
+             * Deliberately **not** `whereBoundRegion` — the one place in the
+             * ledger reads where that is right. Everything on the statement is
+             * a candidate, whichever region's books posted it, and the balance
+             * this is subtracted from is entity-wide for the same reason. The
+             * absence is load-bearing, so it is written down: a join does not
+             * carry the region scope, and this query relies on that.
+             */
             ->where('journal_lines.account_id', $bank->id)
             ->whereDate('journal_entries.tanggal', '<=', $reconciliation->tanggal_rekening)
             ->whereNotExists(fn ($q) => $q
@@ -341,7 +357,23 @@ class BankReconciler
      */
     public function summarise(BankReconciliation $reconciliation): ReconciliationSummary
     {
-        $saldoBuku = $this->ledger->balanceOf($reconciliation->glAccount()->kode, $reconciliation->tanggal_rekening);
+        /*
+         * The whole account's balance, not the bound region's share of it.
+         *
+         * This figure is compared against a number typed off a piece of paper
+         * from the bank, and the bank has never heard of our regions: every
+         * movement on the account is on that statement whichever books
+         * recorded it. `bank_accounts` carries no region for the same reason —
+         * there is one company account, the one printed on every faktur.
+         *
+         * The neraca is the other question and stays region-scoped: what this
+         * region's books say about cash. Both are right; only one of them can
+         * be reconciled against a bank.
+         */
+        $saldoBuku = $this->ledger->balanceAcrossRegions(
+            $reconciliation->glAccount()->kode,
+            $reconciliation->tanggal_rekening,
+        );
 
         $ticked = $this->tickedLineIds($reconciliation);
 
@@ -407,7 +439,13 @@ class BankReconciler
         }
 
         return DB::transaction(function () use ($reconciliation, $actor, $summary) {
-            $locked = BankReconciliation::query()->lockForUpdate()->findOrFail($reconciliation->id);
+            // Re-read entity-wide: the row may have been stamped in another
+            // region's books by whoever opened it, and finalising must not
+            // depend on who is signing.
+            $locked = BankReconciliation::query()
+                ->withoutGlobalScope('region')
+                ->lockForUpdate()
+                ->findOrFail($reconciliation->id);
 
             $this->assertDraft($locked);
 
@@ -442,7 +480,10 @@ class BankReconciler
     /** The most recent statement that has been signed off, if any. */
     public function lastFinalised(?BankAccount $rekening = null): ?BankReconciliation
     {
+        // Entity-wide: "when was this account last proven" is a question
+        // about the account, and the account is the company's.
         return BankReconciliation::query()
+            ->withoutGlobalScope('region')
             ->finalised()
             ->when($rekening !== null, fn ($q) => $q->where('bank_account_id', $rekening->id))
             ->orderByDesc('tanggal_rekening')

@@ -6,6 +6,7 @@ namespace App\Domain\Accounting;
 
 use App\Domain\Audit\AuditLogger;
 use App\Domain\Documents\DocumentNumberGenerator;
+use App\Domain\Regions\RegionContext;
 use App\Models\Account;
 use App\Models\JournalEntry;
 use App\Models\JournalLine;
@@ -43,6 +44,7 @@ class Ledger
         private readonly DocumentNumberGenerator $numbers,
         private readonly AuditLogger $audit,
         private readonly FiscalCalendar $calendar,
+        private readonly RegionContext $regions,
     ) {}
 
     /**
@@ -232,12 +234,45 @@ class Ledger
 
         $totals = JournalLine::query()
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            /*
+             * Lines carry no region — their entry does, and starting from the
+             * line model puts this query outside the HasRegion scope. Same
+             * reasoning, and the same one-line remedy, as TrialBalance.
+             *
+             * Without it every balance here was the whole company's while the
+             * subledgers it gets compared against were one region's. In a
+             * one-region business the two are the same number, so nothing said
+             * anything; open a second region and the control-account check
+             * reports drift on every account in every region, for ever. Two of
+             * those findings block the month-end close, so the close would have
+             * needed an Owner override with a written reason every month —
+             * which is how a guard stops meaning anything.
+             */
+            ->whereBoundRegion('journal_entries')
             ->where('account_id', $account->id)
             ->when($asOf !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '<=', $asOf))
             ->selectRaw('COALESCE(SUM(debit_rupiah), 0) AS d, COALESCE(SUM(kredit_rupiah), 0) AS k')
             ->first();
 
         return $account->saldo_normal->balance((int) $totals->d, (int) $totals->k);
+    }
+
+    /**
+     * The same balance for the whole company, whatever region is bound.
+     *
+     * One caller, and it earns the exception: a bank reconciliation proves a
+     * real account against a real statement, and the bank has never heard of
+     * our regions. `bank_accounts` carries no region for the same reason —
+     * there is one company account, and it is the one printed on every faktur.
+     * Every movement on it is on that statement, so the book balance it gets
+     * compared against has to be the whole account's.
+     *
+     * Named rather than done with a flag on `balanceOf`, so that reading a
+     * call site tells you which books it means without going and looking.
+     */
+    public function balanceAcrossRegions(string $kode, ?DateTimeInterface $asOf = null): int
+    {
+        return $this->regions->acrossAll(fn () => $this->balanceOf($kode, $asOf));
     }
 
     /**
@@ -251,6 +286,10 @@ class Ledger
     {
         $totals = JournalLine::query()
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            // A region's books balance on their own: every entry is posted
+            // inside one region, so an imbalance in one must not be hidden by
+            // the opposite imbalance in another.
+            ->whereBoundRegion('journal_entries')
             ->when($asOf !== null, fn ($q) => $q->whereDate('journal_entries.tanggal', '<=', $asOf))
             ->selectRaw('COALESCE(SUM(debit_rupiah), 0) AS d, COALESCE(SUM(kredit_rupiah), 0) AS k')
             ->first();

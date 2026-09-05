@@ -144,7 +144,10 @@ class RekonsiliasiBank extends Page
 
     public function currentReconciliation(): ?BankReconciliation
     {
+        // Entity-wide, like the account itself: one real account, one
+        // reconciliation of it, whoever opened it. See BankReconciler.
         return BankReconciliation::query()
+            ->withoutGlobalScope('region')
             ->where('status', BankReconciliation::STATUS_DRAFT)
             ->where('bank_account_id', $this->rekeningId)
             ->orderByDesc('tanggal_rekening')
@@ -444,9 +447,20 @@ class RekonsiliasiBank extends Page
                 );
             })
             ->schema([
+                /*
+                 * Both pickers read across regions, because the question they
+                 * ask is "whose money is this" — and money in the company's one
+                 * bank account can be any customer's, wherever their books
+                 * sit. The receipts desk already answers it that way
+                 * (`PaymentLedger::openInvoices`); this screen did not, so a
+                 * transfer from a customer homed elsewhere could be neither
+                 * named nor recorded, and the reconciliation stayed short over
+                 * money nobody disputed.
+                 */
                 Select::make('invoice_id')
                     ->label('Faktur yang dibayar')
                     ->options(fn () => Invoice::query()
+                        ->withoutGlobalScope('region')
                         ->where('status', Invoice::STATUS_OPEN)
                         ->with('company')
                         ->orderByDesc('issued_on')
@@ -461,7 +475,10 @@ class RekonsiliasiBank extends Page
 
                 Select::make('company_id')
                     ->label('Atau pelanggan yang membayar')
-                    ->options(fn () => Company::query()->orderBy('nama')->pluck('nama', 'id'))
+                    ->options(fn () => Company::query()
+                        ->withoutGlobalScope('region')
+                        ->orderBy('nama')
+                        ->pluck('nama', 'id'))
                     ->searchable(),
             ])
             ->action(function (array $data, array $arguments) {
@@ -742,6 +759,7 @@ class RekonsiliasiBank extends Page
     public function history(): Collection
     {
         return BankReconciliation::query()
+            ->withoutGlobalScope('region')
             ->finalised()
             ->where('bank_account_id', $this->rekeningId)
             ->with('finalisedBy')

@@ -30,6 +30,31 @@ use App\Models\SupplierBillLine;
  * credit is checked against invoices, not against the ledger — so a drift here
  * is a bookkeeping defect rather than a business one, which is exactly the
  * kind that goes unnoticed for a quarter.
+ *
+ * ## Both halves have to be asking about the same books
+ *
+ * A comparison is only worth anything if its two sides cover the same rows,
+ * and that is easy to get wrong here because the two sides are reached
+ * differently: the ledger side goes through a join from `journal_lines`, and
+ * several subledger sides do the same from their own line tables. A join is
+ * not a relation, so **none of those carry the region scope** — which is what
+ * `whereBoundRegion` is for, and why it now appears on every one of them.
+ *
+ * Measured with two regions trading identically and settling in full, where
+ * every row should read zero:
+ *
+ *     Persediaan            GL 60.000.000   in region 30.000.000   sub 30.000.000
+ *     Utang Belum Ditagih   GL 60.000.000   in region 30.000.000   sub 60.000.000
+ *
+ * Two different failures wearing the same clothes. Persediaan compared a
+ * company-wide ledger against a region's subledger and reported drift that was
+ * not there. Utang Belum Ditagih was company-wide on *both* sides and so
+ * agreed — for the wrong reason, and it would have started failing the moment
+ * the ledger side alone was fixed. Which is why they are fixed together.
+ *
+ * Unbound — a console command, a queue job, a consolidation — the macro is a
+ * no-op and both sides go company-wide together. That is the right answer
+ * there too, and it costs nothing to get.
  */
 class LedgerReconciliation
 {
@@ -149,6 +174,7 @@ class LedgerReconciliation
     {
         $received = (int) GoodsReceiptLine::query()
             ->join('goods_receipts', 'goods_receipt_lines.goods_receipt_id', '=', 'goods_receipts.id')
+            ->whereBoundRegion('goods_receipts')
             ->where('goods_receipts.status', 'posted')
             ->sum('goods_receipt_lines.line_value_rupiah');
 
@@ -164,6 +190,7 @@ class LedgerReconciliation
         SupplierBillLine::query()
             ->join('supplier_bills', 'supplier_bill_lines.supplier_bill_id', '=', 'supplier_bills.id')
             ->join('goods_receipt_lines', 'supplier_bill_lines.goods_receipt_line_id', '=', 'goods_receipt_lines.id')
+            ->whereBoundRegion('supplier_bills')
             ->whereNotNull('supplier_bills.posted_at')
             ->where('supplier_bills.status', '!=', 'void')
             ->where('goods_receipt_lines.qty_base', '>', 0)
@@ -192,6 +219,7 @@ class LedgerReconciliation
          */
         $billedWithoutReceipt = (int) SupplierBillLine::query()
             ->join('supplier_bills', 'supplier_bill_lines.supplier_bill_id', '=', 'supplier_bills.id')
+            ->whereBoundRegion('supplier_bills')
             ->whereNull('supplier_bill_lines.goods_receipt_line_id')
             ->where('supplier_bill_lines.jenis', '!=', SupplierBillLine::JENIS_BIAYA)
             ->whereNotNull('supplier_bills.posted_at')
@@ -260,6 +288,7 @@ class LedgerReconciliation
     {
         $billed = (int) SupplierBillLine::query()
             ->join('supplier_bills', 'supplier_bill_lines.supplier_bill_id', '=', 'supplier_bills.id')
+            ->whereBoundRegion('supplier_bills')
             ->where('supplier_bill_lines.jenis', SupplierBillLine::JENIS_BIAYA)
             ->whereNotNull('supplier_bills.posted_at')
             ->where('supplier_bills.status', '!=', 'void')

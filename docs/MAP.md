@@ -743,10 +743,56 @@ inventory is the money arriving in cost of sales. That is what this does.
 | `Ledger::post` | The only way an entry is written. **Balances or refuses**; idempotent per document + jenis |
 | `Ledger::postManual` | An entry with no document behind it — **Finance and Owner only** |
 | `Ledger::reverse` | Mirrors an entry from its own stored lines. The original is never edited |
-| `Ledger::balanceOf` | One account, in its own normal direction, optionally as at a date |
+| `Ledger::balanceOf` | One account, in its own normal direction, optionally as at a date — **the bound region's books** |
+| `Ledger::balanceAcrossRegions` | The same figure for the whole company. One caller: the bank reconciliation |
 | `TrialBalance::asOf` | Neraca saldo, every postable account, in one query |
 | `DocumentPoster::*` | **Every posting rule in the system**, in one file |
 | `LedgerReconciliation::checks` | Every control account against the subledger it summarises |
+
+**A comparison is worth nothing unless both sides cover the same rows**
+(2026-09). `TrialBalance` had this right and said why: lines carry no region,
+their entry does, and a query starting from `journal_lines` sits outside the
+`HasRegion` scope — so it filters `journal_entries` explicitly.
+`Ledger::balanceOf` made the identical join and omitted the filter, so **every
+GL balance in the system was the whole company's** while the subledgers it is
+compared against were one region's.
+
+Two regions trading identically and settling in full, where every figure should
+be zero:
+
+```
+Persediaan            GL 60.000.000   in region 30.000.000   sub 30.000.000
+Utang Belum Ditagih   GL 60.000.000   in region 30.000.000   sub 60.000.000
+```
+
+Two failures wearing the same clothes. Persediaan compared a company-wide
+ledger against one region's subledger and reported drift that was not there.
+Utang Belum Ditagih was company-wide on *both* sides — `receivedNotBilled()`
+and `unallocatedCharges()` reach `goods_receipts` and `supplier_bills` through
+joins as well — so it agreed for the wrong reason, and would have started
+failing the moment the ledger side alone was fixed. Both sides moved together.
+
+The cost, in the place it would have been paid: `buku` and `nilai_persediaan`
+are **blocking** findings for the month-end close, and the sweep that reports
+them runs nightly. From the day a second region opened, the Owner would have
+been alerted every night about drift that did not exist, and the close would
+have needed an Owner override with a written reason every month — which is
+exactly how a guard stops meaning anything.
+
+**The bank is the one deliberate exception.** A reconciliation proves a real
+account against a real statement, and the bank has never heard of our regions:
+`bank_accounts` carries no `region_id`, there is one company account, and it is
+the one printed on every faktur. So its book balance is
+`balanceAcrossRegions`, its candidate lines are entity-wide (the absence of
+`whereBoundRegion` there is load-bearing and written down as such), and the
+reconciliation record, the duplicate guard, the history and the "days since
+reconciled" nag all read across regions too — scoped, two regions could each
+open a reconciliation of the same account for the same statement date without
+seeing the other, and only a database unique index stood in the way, surfacing
+as a raw SQL error rather than the sentence the guard exists to say. The two
+customer pickers on that screen read across regions for the same reason: money
+in the company's account can be any customer's, and the receipts desk already
+answered "whose money is this" that way.
 
 The rules, all of them:
 
@@ -1382,6 +1428,14 @@ the schema and fails the build otherwise. Queries the scope cannot reach (raw
 report builders, aggregates starting from a line table) use `whereBoundRegion()`
 at the site, and the trial balance proving per region is the test that catches
 a missed one.
+
+That last sentence is where this bit; the trial balance did prove per region,
+because it was the query that had the filter. The ledger balances beside it did
+not, and nothing compared the two. A missed `whereBoundRegion()` fails silently
+by construction — the query still runs, still returns a number, and in a
+one-region business returns the *right* number. `BooksPerRegionTest` is the
+test that now catches it, by making two regions trade and asserting each one's
+books add up on their own.
 
 Three context states, and the difference is what happens on a write. **Pinned**
 filters and stamps. **Open to all** (the Owner's "Semua wilayah") reads
