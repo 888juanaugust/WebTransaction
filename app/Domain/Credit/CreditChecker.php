@@ -10,6 +10,8 @@ use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Credit exposure = unpaid invoices + confirmed orders not yet invoiced.
@@ -30,10 +32,32 @@ class CreditChecker
      *
      * The order's own amount is excluded from `committed` so re-checking an
      * already-confirmed order doesn't count it twice.
+     *
+     * **Takes the customer's row for the rest of the transaction**, and that
+     * is not incidental. Read without it, two approvals for one customer
+     * running at the same moment each see a limit the other is about to
+     * spend, and both pass. Eight forked approvals released together against
+     * a Rp 10.000.000 limit put five through and committed Rp 27.750.000 —
+     * the limit exceeded by 178%, with no error anywhere and every individual
+     * check correct on the figures it was given.
+     *
+     * A single-threaded suite cannot tell that apart from a working check,
+     * which is why `CreditLimitConcurrencyTest` forks real processes.
+     *
+     * Nothing else serialised it. The confirming transaction locks the stock
+     * rows it touches, so two orders for the *same* SKU already queue behind
+     * each other — but orders on different SKUs share no row, and different
+     * SKUs is the ordinary case for a customer with several orders waiting.
+     *
+     * Locking the customer rather than anything finer is deliberate: the
+     * limit belongs to the customer, so that is the thing two approvals
+     * contend over. Approvals for different customers still run in parallel.
      */
     public function check(Order $order): CreditStatus
     {
         $company = $order->company;
+
+        $this->holdCustomer($company);
 
         return $this->evaluate(
             company: $company,
@@ -41,6 +65,42 @@ class CreditChecker
             excludeOrderId: $order->id,
             overdueCheck: true,
         );
+    }
+
+    /**
+     * Queue behind anyone else approving for this customer.
+     *
+     * Two details, both of which would make this silently do nothing:
+     *
+     * The scope is lifted. `Company` is region-scoped and this runs inside
+     * the order's region, but since the multi-warehouse split a piece can
+     * book in a region its customer is not homed in — and a scoped lookup
+     * would find no row, take no lock, and report nothing wrong.
+     *
+     * And a lock outside a transaction is released at once, so requiring one
+     * is the difference between a guard and a decoration. There is exactly
+     * one caller and it is always inside the confirming transaction; this
+     * refuses rather than trusting that to stay true.
+     *
+     * Lock order is customer first, then stock — `check()` runs before
+     * `reserveForOrder`, on the one path that takes both — so two approvals
+     * can never hold half of each other's pair.
+     */
+    private function holdCustomer(Company $company): void
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new LogicException(
+                'CreditChecker::check() must run inside a transaction: the customer lock it '
+                .'takes is released immediately outside one, which would leave concurrent '
+                .'approvals free to spend the same limit twice.'
+            );
+        }
+
+        Company::query()
+            ->withoutGlobalScope('region')
+            ->whereKey($company->getKey())
+            ->lockForUpdate()
+            ->first();
     }
 
     /** Current position with no particular order in mind. */

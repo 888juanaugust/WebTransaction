@@ -197,6 +197,22 @@ class SupplierLedger
              */
             $locked = SupplierPaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
 
+            /*
+             * And the bill, for the mirror reason — proved on the customer
+             * side by forking processes at it: four transfers applied to one
+             * Rp 10.000.000 faktur at the same instant each read the full
+             * remainder and all four passed. Paying a supplier twice for one
+             * bill is the same defect facing the other way, and it costs
+             * real money out rather than a wrong number on a report.
+             *
+             * Order is entry then bill, matching the customer ledger.
+             */
+            SupplierBill::query()
+                ->withoutGlobalScope('region')
+                ->whereKey($bill->getKey())
+                ->lockForUpdate()
+                ->first();
+
             $sisaUang = $this->unallocated($locked);
 
             if ($amountRupiah > $sisaUang) {

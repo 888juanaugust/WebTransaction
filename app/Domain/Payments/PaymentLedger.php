@@ -260,12 +260,31 @@ class PaymentLedger
 
         return DB::transaction(function () use ($entry, $invoice, $amountRupiah, $actor, $catatan, $audit) {
             /*
-             * Locked while we read what is left. Two people banking the same
-             * transfer against two fakturs at once would each read a
-             * remainder the other is about to spend, and both would pass.
-             * No single-threaded test can reach it; the lock is not dead code.
+             * Both sides are held while their remainders are read, and both
+             * are needed for the same reason: a figure read and then decided
+             * on, with nothing keeping it still in between, is not a check.
+             *
+             * The entry stops two people banking one transfer against two
+             * fakturs, each reading a remainder the other is about to spend.
+             *
+             * The invoice stops the mirror of that, which was live until
+             * `MoneyRaceTest` forked processes at it: four separate transfers
+             * applied to one Rp 10.000.000 faktur at the same instant each
+             * saw the full remainder, and all four passed. Rp 40.000.000
+             * against a Rp 10.000.000 bill — the over-application refusal
+             * below is exactly what that was supposed to prevent, and it was
+             * correct every time on the figures it was handed.
+             *
+             * Order is entry then invoice, everywhere, so two allocations can
+             * never hold half of each other's pair.
              */
             $locked = PaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
+
+            Invoice::query()
+                ->withoutGlobalScope('region')
+                ->whereKey($invoice->getKey())
+                ->lockForUpdate()
+                ->first();
 
             $sisaUang = $this->unallocated($locked);
 

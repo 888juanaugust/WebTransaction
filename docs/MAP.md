@@ -919,8 +919,51 @@ journal that moves one when it is not.
 
 | Function | Decides |
 |---|---|
-| `CreditChecker::check(order)` | Whether this order fits the limit |
+| `CreditChecker::check(order)` | Whether this order fits the limit — **and holds the customer while it decides** |
 | `CreditChecker::status(company)` | limit, outstanding, committed, available |
+
+**A check with nothing holding the figure still is not a check** (2026-09).
+`check()` read the customer's exposure, decided on it, and returned; the
+confirming transaction then reserved stock. The reservation locks the stock
+rows it touches, so two orders for the *same* SKU already queued behind each
+other — but orders on different SKUs share no row, and different SKUs is the
+ordinary case for a customer with several orders waiting.
+
+Eight approvals released together against a Rp 10.000.000 limit:
+
+```
+confirmed             5 of 8
+committed after       Rp 27.750.000
+available now         Rp -17.750.000   ← the limit exceeded by 178%
+```
+
+No error anywhere, and every individual check correct on the figures it was
+handed. `check()` now takes the customer's row for the rest of the transaction,
+so approvals for one customer queue and approvals for different customers still
+run in parallel — `MoneyRaceTest` asserts both, because a lock that serialises
+the whole business would pass the first half and fail the company.
+
+Two details would have made the lock silently do nothing, and both are guarded:
+the region scope is lifted (after a split a piece books where its customer is
+not homed, and a scoped lookup finds no row and locks nothing), and a lock
+outside a transaction is released at once, so `check()` refuses to run without
+one.
+
+**The same shape decided money in two more places**, found by asking where else
+a figure is read, decided on, and written. `PaymentLedger::allocate` locked the
+payment entry but read what the invoice still owed without holding it: four
+transfers applied to one Rp 10.000.000 faktur at the same instant each saw the
+full remainder, and all four passed — Rp 40.000.000 against a Rp 10.000.000
+bill, which is precisely what the over-application refusal exists to prevent.
+`SupplierLedger::allocate` is the mirror, and worse, because that is cash
+leaving rather than a wrong number on a report. Both now hold the bill as well
+as the entry, in that order everywhere so two allocations cannot hold half of
+each other's pair.
+
+None of this is visible to a single-threaded suite, which is why the tests fork
+real processes and release them through a Postgres advisory lock —
+`StockReservationConcurrencyTest` established the harness and explains why
+aligning on wall-clock time alone is too loose to fail.
 
 Exposure comes from `OutstandingReceivables`, shared with the ledger's Piutang
 Usaha reconciliation and the invoice row. It used to be computed here
