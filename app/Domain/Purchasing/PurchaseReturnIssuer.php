@@ -62,7 +62,9 @@ class PurchaseReturnIssuer
 
         return $lines->map(function (GoodsReceiptLine $line) use ($billed, $returned) {
             $bill = $billed[$line->id] ?? ['qty' => 0, 'value' => 0, 'creditable' => false, 'bills' => []];
-            $back = $returned[$line->id] ?? ['qty' => 0, 'billed_qty' => 0];
+            $back = $returned[$line->id] ?? [
+                'qty' => 0, 'billed_qty' => 0, 'billed_value' => 0, 'unbilled_value' => 0,
+            ];
 
             return new ReturnableLine(
                 receiptLine: $line,
@@ -75,6 +77,8 @@ class PurchaseReturnIssuer
                 billedValueRupiah: (int) $bill['value'],
                 billIds: $bill['bills'],
                 returnedBilledQty: (int) $back['billed_qty'],
+                returnedBilledValueRupiah: (int) $back['billed_value'],
+                returnedReceiptValueRupiah: (int) $back['unbilled_value'],
                 inputVatCreditable: (bool) $bill['creditable'],
             );
         })->all();
@@ -282,12 +286,18 @@ class PurchaseReturnIssuer
             ->selectRaw(
                 'purchase_return_lines.goods_receipt_line_id AS line_id, '
                 .'SUM(purchase_return_lines.qty_base) AS qty, '
-                .'SUM(purchase_return_lines.qty_ditagih) AS billed_qty'
+                .'SUM(purchase_return_lines.qty_ditagih) AS billed_qty, '
+                // The values already given back, so the next return
+                // apportions what is left rather than the original again.
+                .'SUM(purchase_return_lines.nilai_ditagih_rupiah) AS billed_value, '
+                .'SUM(purchase_return_lines.nilai_belum_ditagih_rupiah) AS unbilled_value'
             )
             ->get()
             ->mapWithKeys(fn ($row) => [(int) $row->line_id => [
                 'qty' => (int) $row->qty,
                 'billed_qty' => (int) $row->billed_qty,
+                'billed_value' => (int) $row->billed_value,
+                'unbilled_value' => (int) $row->unbilled_value,
             ]])
             ->all();
     }

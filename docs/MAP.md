@@ -565,8 +565,42 @@ than a silent restatement of stock value.
 | `PurchaseReturnIssuer::returnable` | What a delivery still allows back, and how much of it is billed |
 | `PurchaseReturnIssuer::draftEverything` | Draws a draft with every remaining line on it |
 | `ReturnableLine::splitFor` | **Billed first**: how a quantity divides between a debt and an accrual |
+| `ReturnableLine::receiptCostFor` | Apportions **what is left** of the accrual, not the original |
 | `PurchaseReturnPoster::post` | Stock out, payable down, one transaction |
 | `DocumentPoster::purchaseReturnPosted` | The entry — see below |
+
+**Instalments have to add back up to the whole** (2026-09). Both return paths —
+this one and the customer's nota kredit — apportioned a frozen total by
+dividing the *original* figure afresh on every note. Moving-average cost almost
+never divides evenly by quantity, so the same fraction rounded up again and
+again:
+
+```
+bought 7 for Rp 80.000, shipped all 7, returned all 7 one note at a time
+→ the shelf held those same 7 units at Rp 80.003
+```
+
+Rp 3 of asset value out of rounding, cost of sales short by the same. What
+makes it worth more than its size is that **no check could see it**: the stock
+movement is recorded with the very figure the journal posts, so the general
+ledger and the costing subledger agreed with each other perfectly, and the
+control-account check compares exactly those two. It had no third opinion. Not
+a number anyone would eventually query — a number that accumulates quietly, one
+partial return at a time, for as long as the business runs.
+
+The fix is the rule `Money::allocate` applies to a split known all at once,
+carried across time instead: apportion the remainder, so the last note settles
+the difference by construction. `CreditableLine` carries `creditedCost` and
+`ReturnableLine` the values already returned, which is what makes "what is
+left" knowable.
+
+The purchase side needed one extra step the sell side did not. A receipt line's
+value has **two pools** — the billed units, whose accrual the supplier's bill
+already cleared, and the unbilled ones still standing — so the remainder is
+taken against the unbilled pool alone, computed as the complement of the billed
+apportionment so the two halves add back to the receipt line exactly. Taking a
+naive remainder over the whole line makes a half-billed delivery unwind the
+wrong accrual, and `PurchaseReturnTest` catches that.
 
 Always against a posted goods receipt. The receipt is the only evidence the
 goods ever arrived and the only record of what they cost, so a return with

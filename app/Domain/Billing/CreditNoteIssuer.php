@@ -63,7 +63,7 @@ class CreditNoteIssuer
 
         return $lines->map(function (OrderLine $line) use ($shipped, $credited) {
             $ship = $shipped[$line->sku] ?? ['qty' => 0, 'value' => 0];
-            $done = $credited[$line->id] ?? ['qty' => 0, 'value' => 0];
+            $done = $credited[$line->id] ?? ['qty' => 0, 'value' => 0, 'cost' => 0];
 
             /*
              * Shipment quantities are per SKU, not per order line: the stock
@@ -85,6 +85,7 @@ class CreditNoteIssuer
                 shippedQty: $shippedQty,
                 creditedQty: (int) $done['qty'],
                 creditedValue: (int) $done['value'],
+                creditedCost: (int) $done['cost'],
                 unitCostRupiah: $shippedQty > 0
                     ? Money::mulDiv($shippedCost, 1, $shippedQty)
                     : 0,
@@ -207,7 +208,10 @@ class CreditNoteIssuer
     /**
      * What posted notes have already taken off each order line.
      *
-     * @return array<int, array{qty: int, value: int}>
+     * The cost is summed alongside the value because the *remaining* cost is
+     * what the next return apportions from — see `CreditableLine::costFor`.
+     *
+     * @return array<int, array{qty: int, value: int, cost: int}>
      */
     private function creditedByOrderLine(Invoice $invoice): array
     {
@@ -220,11 +224,16 @@ class CreditNoteIssuer
             ->selectRaw(
                 'credit_note_lines.order_line_id AS line_id, '
                 .'SUM(credit_note_lines.qty_base) AS qty, '
-                .'SUM(credit_note_lines.line_total_rupiah) AS value'
+                .'SUM(credit_note_lines.line_total_rupiah) AS value, '
+                .'SUM(credit_note_lines.line_cost_rupiah) AS cost'
             )
             ->get()
             ->mapWithKeys(fn ($row) => [
-                (int) $row->line_id => ['qty' => (int) $row->qty, 'value' => (int) $row->value],
+                (int) $row->line_id => [
+                    'qty' => (int) $row->qty,
+                    'value' => (int) $row->value,
+                    'cost' => (int) $row->cost,
+                ],
             ])
             ->all();
     }

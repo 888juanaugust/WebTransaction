@@ -54,6 +54,10 @@ final readonly class ReturnableLine
         public array $billIds,
         /** Base units already sent back and attributed to the billed portion. */
         public int $returnedBilledQty,
+        /** What earlier returns already took off the billed portion. */
+        public int $returnedBilledValueRupiah,
+        /** What earlier returns already unwound from the receipt accrual. */
+        public int $returnedReceiptValueRupiah,
         /**
          * Whether the bill behind it carried a faktur pajak.
          *
@@ -135,14 +139,64 @@ final readonly class ReturnableLine
      * that into a per-piece figure rounds once, and multiplying it back up
      * rounds again, and returning everything would then leave a few rupiah of
      * residue behind in inventory forever.
+     *
+     * **And from what is left of it, not from the original.** The paragraph
+     * above guarded the round trip through a unit cost and missed the other
+     * road to the same place: dividing the original figure afresh on every
+     * return rounds the same fraction up again and again, so a delivery sent
+     * back in pieces unwinds a different accrual from the one the receipt
+     * made. Measured on the sell side, where the arithmetic is identical:
+     * seven units that left at Rp 80.000 came back, one note at a time, at
+     * Rp 80.003 — and no check could see it, because the journal and the stock
+     * ledger are both handed the same figure.
      */
     public function receiptCostFor(int $qtyBase): int
     {
-        if ($this->receivedQty <= 0) {
+        $sisaQty = $this->unbilledQty() - ($this->returnedQty - $this->returnedBilledQty);
+
+        if ($sisaQty <= 0) {
             return 0;
         }
 
-        return Money::mulDiv($this->receivedValueRupiah, $qtyBase, $this->receivedQty);
+        return Money::mulDiv($this->remainingReceiptValueRupiah(), $qtyBase, $sisaQty);
+    }
+
+    /**
+     * Units of this delivery whose receipt accrual is still ours to unwind.
+     *
+     * The billed ones are not: their accrual was cleared by the bill, and
+     * sending them back reduces the debt instead — `billedValueFor` handles
+     * that half. A supplier who billed for more than they delivered is capped
+     * at what arrived, the same as everywhere else here.
+     */
+    public function unbilledQty(): int
+    {
+        return max(0, $this->receivedQty - min($this->billedQty, $this->receivedQty));
+    }
+
+    /**
+     * Receipt value still accrued against unbilled units.
+     *
+     * The complement of what the billed units carry, so the two halves add
+     * back to the receipt line exactly — subtracting one apportionment rather
+     * than apportioning the other independently is what stops the pair
+     * drifting apart by a rupiah.
+     */
+    public function remainingReceiptValueRupiah(): int
+    {
+        $terpakaiBill = Money::mulDiv(
+            $this->receivedValueRupiah,
+            min($this->billedQty, $this->receivedQty),
+            max(1, $this->receivedQty),
+        );
+
+        return max(0, $this->receivedValueRupiah - $terpakaiBill - $this->returnedReceiptValueRupiah);
+    }
+
+    /** Billed value not yet credited by an earlier return. */
+    public function remainingBilledValueRupiah(): int
+    {
+        return max(0, $this->billedValueRupiah - $this->returnedBilledValueRupiah);
     }
 
     /**
@@ -152,14 +206,20 @@ final readonly class ReturnableLine
      * Only meaningful for the billed portion. Where the supplier billed a
      * different price from the one the goods were received at, this is the
      * figure they will credit — not what stock is carried at.
+     *
+     * From the remainder, for the same reason as `receiptCostFor`: sending a
+     * billed delivery back in instalments must reduce the debt by exactly what
+     * the supplier charged, not by a rounded fraction of it each time.
      */
     public function billedValueFor(int $qtyBase): int
     {
-        if ($this->billedQty <= 0) {
+        $sisaQty = max(0, $this->billedQty - $this->returnedBilledQty);
+
+        if ($sisaQty <= 0) {
             return 0;
         }
 
-        return Money::mulDiv($this->billedValueRupiah, $qtyBase, $this->billedQty);
+        return Money::mulDiv($this->remainingBilledValueRupiah(), $qtyBase, $sisaQty);
     }
 
     /** Receipt cost of one base unit, for the screen. */

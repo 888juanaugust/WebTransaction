@@ -27,6 +27,8 @@ final readonly class CreditableLine
         public int $creditedQty,
         /** Rupiah already credited against this line. */
         public int $creditedValue,
+        /** Cost already put back on the shelf by earlier notes on this line. */
+        public int $creditedCost,
         /** Frozen cost per base unit, from the shipment that sent them out. */
         public int $unitCostRupiah,
         /** Total cost of everything that shipped on this line. */
@@ -76,30 +78,60 @@ final readonly class CreditableLine
      * "rounded to whole rupiah at the line level", and the first fractional
      * one makes quantity times price drift from what was invoiced while this
      * still adds back up to it.
+     *
+     * **From what is left, not from the original.** See `costFor` below for
+     * why; the same reasoning applies here the day a line total stops dividing
+     * evenly, and doing it now costs nothing.
      */
     public function valueFor(int $qtyBase): int
     {
-        if ($this->orderedQtyBase() <= 0) {
+        $sisaQty = max(0, $this->orderedQtyBase() - $this->creditedQty);
+
+        if ($sisaQty <= 0) {
             return 0;
         }
 
-        return Money::mulDiv($this->lineTotalRupiah(), $qtyBase, $this->orderedQtyBase());
+        return Money::mulDiv($this->remainingValueRupiah(), $qtyBase, $sisaQty);
     }
 
     /**
      * What `$qtyBase` cost us, at the price it left at.
      *
-     * Apportioned the same way, from the frozen shipment value, so a return of
-     * everything gives back exactly the cost that was taken out — no rounding
-     * residue left behind in inventory.
+     * **Apportioned from what is still out, not from the whole shipment.**
+     * That distinction is the whole method. Moving-average cost almost never
+     * divides evenly by quantity, so dividing the original figure afresh on
+     * every note rounds the same fraction up again and again: seven units that
+     * left at Rp 80.000 came back, one note at a time, at Rp 80.003.
+     *
+     * Rp 3 of inventory value conjured out of rounding, cost of sales short by
+     * the same, and — this is why it mattered more than the size suggests —
+     * **nothing could see it**. The stock movement is recorded with the very
+     * figure the journal posts, so the ledger and the costing subledger agreed
+     * with each other perfectly; the control-account check compares those two
+     * and had no third opinion to compare them against. It would have
+     * accumulated quietly, one return at a time, for as long as the business
+     * ran.
+     *
+     * Taking the remainder instead makes the last note settle the difference
+     * by construction, which is the same rule `Money::allocate` applies to a
+     * split known all at once. Returns arrive over time, so the remainder has
+     * to be carried rather than computed in one pass — hence `creditedCost`.
      */
     public function costFor(int $qtyBase): int
     {
-        if ($this->shippedQty <= 0) {
+        $sisaQty = $this->remainingQty();
+
+        if ($sisaQty <= 0) {
             return 0;
         }
 
-        return Money::mulDiv($this->shippedCostRupiah, $qtyBase, $this->shippedQty);
+        return Money::mulDiv($this->remainingCostRupiah(), $qtyBase, $sisaQty);
+    }
+
+    /** Shipment cost not yet put back by an earlier note. */
+    public function remainingCostRupiah(): int
+    {
+        return max(0, $this->shippedCostRupiah - $this->creditedCost);
     }
 
     /** Unit price as invoiced, for the printed document. */
