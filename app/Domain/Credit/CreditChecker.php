@@ -9,6 +9,7 @@ use App\Domain\Orders\OrderStatus;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Credit exposure = unpaid invoices + confirmed orders not yet invoiced.
@@ -133,15 +134,29 @@ class CreditChecker
     /**
      * Confirmed orders that have not been invoiced yet. `paid` orders are not
      * counted — the money is already in.
+     *
+     * **Cross-region on both sides of the question**, and the second one was
+     * the bug. Lifting the scope on the orders alone left the invoice
+     * sub-query scoped, so a split piece booked in another region and invoiced
+     * there looked uninvoiced from here: its value was counted as committed
+     * *and* again as an outstanding invoice, since `exposureFor()` does read
+     * across regions. A customer owing Rp 11.100.000 showed Rp 15.540.000 of
+     * exposure — forty per cent of a credit limit eaten twice, on exactly the
+     * customers whose orders split, which is to say the ones buying enough to
+     * clear a warehouse.
+     *
+     * The rule this is an instance of: when a read deliberately crosses
+     * regions, every relation it asks about has to cross with it. A global
+     * scope lifted at the top and left in place one level down does not fail —
+     * it answers a different question and looks like an answer.
      */
     private function committed(Company $company, ?int $excludeOrderId): int
     {
-        // Across regions: split orders commit credit wherever they book.
         return (int) Order::query()
             ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->whereIn('status', [OrderStatus::Confirmed, OrderStatus::AwaitingPayment])
-            ->whereDoesntHave('invoice')
+            ->whereDoesntHave('invoice', fn (Builder $q) => $q->withoutGlobalScope('region'))
             ->when($excludeOrderId !== null, fn ($q) => $q->where('id', '!=', $excludeOrderId))
             ->sum('total_rupiah');
     }

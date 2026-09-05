@@ -254,23 +254,46 @@ class CollectionDesk
      * owner chase everybody. Scoped in the query rather than filtered in the
      * view, so a seat cannot widen it by asking differently.
      *
+     * **Where the region boundary falls is the whole subtlety here**, and it
+     * follows CLAUDE.md rather than convenience: a customer's documents
+     * aggregate across regions *when the read is filtered to that customer*,
+     * and region-wide totals stay scoped.
+     *
+     * So the two seat-filtered branches read across regions. Since the
+     * multi-warehouse split, one order becomes transactions in several
+     * regions' books and the fakturs follow — a debt booked in Jakarta is the
+     * same customer's debt, owed to the same company, and the sales who holds
+     * them is the person who rings about it. Scoped, their worklist silently
+     * dropped it: two overdue fakturs for one customer, one of them shown.
+     *
+     * The last branch stays scoped, and deliberately. It is not filtered to a
+     * customer at all — it is "everything outstanding", which is a region-wide
+     * total, and the answer to it belongs to whoever is working in that
+     * region's books.
+     *
      * @return Builder<Invoice>
      */
     public function chaseable(User $actor): Builder
     {
+        $role = $actor->role();
+
+        $milikSeat = in_array($role, [Role::Sales, Role::Marketing], true);
+
         $query = Invoice::query()
+            ->when($milikSeat, fn (Builder $q) => $q->withoutGlobalScope('region'))
             ->where('status', Invoice::STATUS_OPEN)
             ->with(['company'])
             ->orderBy('due_date');
 
-        $role = $actor->role();
+        // The relation has to cross with the query it hangs off: a scope
+        // lifted at the top and left in place one level down answers a
+        // narrower question and looks like an answer.
+        $kolom = $role === Role::Sales ? 'sales_user_id' : 'marketing_user_id';
 
-        if ($role === Role::Sales) {
-            return $query->whereHas('company', fn (Builder $q) => $q->where('sales_user_id', $actor->id));
-        }
-
-        if ($role === Role::Marketing) {
-            return $query->whereHas('company', fn (Builder $q) => $q->where('marketing_user_id', $actor->id));
+        if ($milikSeat) {
+            return $query->whereHas('company', fn (Builder $q) => $q
+                ->withoutGlobalScope('region')
+                ->where($kolom, $actor->id));
         }
 
         return $query;

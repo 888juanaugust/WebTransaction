@@ -795,6 +795,27 @@ plainly in the bank freed no credit until somebody allocated it, and this
 disagreed with the ledger, which never had that filter. Credit notes would have
 made it a third term computed three ways. Now there is one answer.
 
+**Cross-region has to go all the way down** (2026-09). `committed()` lifted the
+region scope on the orders it summed and left the `whereDoesntHave('invoice')`
+beside it scoped, so a split piece booked *and invoiced* in Jakarta looked
+uninvoiced from Surabaya: counted as a committed order on top of its own
+outstanding invoice, which `exposureFor()` does read across regions. Measured
+before fixing — a customer owing Rp 11.100.000 showed Rp 15.540.000 of
+exposure, forty per cent of a limit eaten twice, and eaten hardest by the
+customers ordering enough to clear a warehouse.
+
+The same blind spot sat in Penagihan, found by asking the same question of it:
+a faktur booked in another region after a split was invisible to the sales and
+marketing who hold that customer, so two overdue fakturs for one debtor showed
+as one. Both seat-filtered branches of `CollectionDesk::chaseable` now read
+across regions; the "everything outstanding" branch stays scoped, because that
+is a region-wide total rather than a question about one customer, which is the
+line CLAUDE.md draws.
+
+The rule worth carrying: **a global scope lifted at the top and left in place
+one relation down does not fail.** It answers a narrower question and returns
+something that looks like an answer.
+
 ### Payments — append-only ledger
 
 | Function | Decides |
