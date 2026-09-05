@@ -197,6 +197,9 @@ class LogAudit extends Page implements HasTable
             'journal_reversed',
             'journal_posted_manually',
             'accounting_period_reopened',
+            // Signing off figures the system said did not add up. The reason
+            // and the findings are both on the row.
+            'accounting_period_closed_over_findings',
             'purchase_order_cancelled',
             'launch_item_retracted',
             'company_status_changed',
@@ -275,6 +278,7 @@ class LogAudit extends Page implements HasTable
             'journal_posted_manually' => 'Jurnal manual',
             'journal_reversed' => 'Jurnal dibalik',
             'accounting_period_closed' => 'Periode ditutup',
+            'accounting_period_closed_over_findings' => 'Periode ditutup walau buku belum cocok',
             'accounting_period_reopened' => 'Periode dibuka kembali',
             'bank_reconciliation_opened' => 'Rekonsiliasi dibuka',
             'bank_reconciliation_finalised' => 'Rekonsiliasi diselesaikan',

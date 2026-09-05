@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Accounting;
 
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Integrity\IntegrityFinding;
+use App\Domain\Integrity\LedgerIntegrity;
 use App\Models\AccountingPeriod;
 use App\Models\AccountingPeriodReopening;
 use App\Models\JournalEntry;
@@ -44,16 +46,23 @@ class PeriodCloser
      *
      * @param  int  $tahun  four digits
      * @param  int  $bulan  1–12
+     * @param  string|null  $alasanTerpaksa  the Owner's reason for closing over
+     *                                       a finding; anything else refuses
      */
-    public function close(int $tahun, int $bulan, User $actor, ?string $catatan = null): AccountingPeriod
-    {
+    public function close(
+        int $tahun,
+        int $bulan,
+        User $actor,
+        ?string $catatan = null,
+        ?string $alasanTerpaksa = null,
+    ): AccountingPeriod {
         if (! $actor->role()->canClosePeriod()) {
             throw new DomainException('Anda tidak berhak menutup periode.');
         }
 
         $start = $this->startOf($tahun, $bulan);
 
-        return DB::transaction(function () use ($tahun, $bulan, $actor, $catatan, $start) {
+        return DB::transaction(function () use ($tahun, $bulan, $actor, $catatan, $start, $alasanTerpaksa) {
             /*
              * Lock the whole table for the duration. Two people closing two
              * different months at the same instant could each see the other's
@@ -70,6 +79,16 @@ class PeriodCloser
 
             $this->assertPeriodIsOver($start);
             $this->assertEverythingEarlierIsClosed($start);
+
+            /*
+             * Last of the guards, and deliberately so. The three above are
+             * cheap and more fundamental — a month that has not ended yet, or
+             * that has an open month before it, cannot be closed whatever the
+             * books say, and telling somebody about a control account when
+             * their real problem is that it is still August would bury the
+             * answer they need. This one walks every SKU in every region.
+             */
+            $temuan = $this->assertBooksAddUp($actor, $alasanTerpaksa, $start);
 
             /*
              * The closing entry is posted *before* the period row exists.
@@ -102,6 +121,31 @@ class PeriodCloser
                 actor: $actor,
                 alasan: $catatan,
             );
+
+            /*
+             * A close made over a known drift is its own event, not a footnote
+             * on the ordinary one. CLAUDE.md: log every override with actor,
+             * old value, new value, timestamp — the "old value" here is the
+             * state of the books that was overridden, written out in full so
+             * the question "what exactly did they sign off" has an answer that
+             * does not depend on re-running the check months later against
+             * data that has moved.
+             */
+            if ($temuan !== []) {
+                $this->audit->log(
+                    action: 'accounting_period_closed_over_findings',
+                    subject: $period,
+                    oldValue: ['temuan' => array_map(fn ($f) => [
+                        'pemeriksaan' => $f->pemeriksaan,
+                        'wilayah' => $f->wilayah,
+                        'subjek' => $f->subjek,
+                        'temuan' => $f->temuan,
+                    ], $temuan)],
+                    newValue: ['periode' => $start->format('Y-m'), 'ditutup' => true],
+                    actor: $actor,
+                    alasan: $alasanTerpaksa,
+                );
+            }
 
             return $period;
         });
@@ -284,6 +328,59 @@ class PeriodCloser
         );
 
         return $draft;
+    }
+
+    /**
+     * Do the books add up? Asked before the month is frozen.
+     *
+     * A close is the moment figures stop being provisional. Closing over a
+     * control account that has left its subledger locks in a number nobody can
+     * explain — and unlocking it again is Owner-only, so the cheap moment to
+     * notice is now rather than in March.
+     *
+     * **Refused by default, and the refusal names what is out.** There is a
+     * way through, because a business can have a drift it has investigated and
+     * decided to live with until somebody has time, and a guard with no door
+     * gets worked around by closing nothing at all. But the door is narrower
+     * than the ordinary one: Finance may close a month whose books agree; only
+     * the Owner may close one whose books do not, and only by saying why. The
+     * same two-tier shape as reopening a closed month, for the same reason —
+     * whoever is under pressure to publish a figure should not be the one who
+     * can wave the check aside alone.
+     *
+     * @return list<IntegrityFinding> what was overridden
+     */
+    private function assertBooksAddUp(User $actor, ?string $alasanTerpaksa, Carbon $start): array
+    {
+        $temuan = app(LedgerIntegrity::class)->blockingFindings();
+
+        if ($temuan === []) {
+            return [];
+        }
+
+        $daftar = collect($temuan)
+            ->map(fn ($f) => "{$f->wilayah} · {$f->subjek}: {$f->temuan}")
+            ->implode(' ');
+
+        if (! $actor->role()->canReopenPeriod()) {
+            throw new DomainException(sprintf(
+                'Buku %s belum cocok, jadi belum bisa ditutup. %s '
+                .'Jelaskan dulu selisihnya — atau minta pemilik menutupnya dengan alasan tertulis.',
+                $start->translatedFormat('F Y'),
+                $daftar,
+            ));
+        }
+
+        if (trim((string) $alasanTerpaksa) === '') {
+            throw new DomainException(sprintf(
+                'Buku %s belum cocok. %s Sebagai pemilik Anda boleh tetap menutupnya, '
+                .'tapi alasannya harus ditulis dan akan tercatat di log audit.',
+                $start->translatedFormat('F Y'),
+                $daftar,
+            ));
+        }
+
+        return $temuan;
     }
 
     private function assertPeriodIsOver(Carbon $start): void

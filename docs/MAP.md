@@ -100,7 +100,7 @@ document, stays Indonesian.
 | `/admin/akuntansi/laba-rugi` | Laba rugi | Finance, Owner | A period. Gross margin separated from overhead |
 | `/admin/akuntansi/neraca-saldo` | Neraca saldo | Finance, Owner | Trial balance **and** the control accounts against their subledgers |
 | `/admin/akuntansi/jurnal` | Jurnal | Finance, Owner | Every entry, linked to the document behind it. Read-only |
-| `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one |
+| `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one, or close one whose books have not been explained |
 | `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick each rekening's GL account against its own statement — a picker chooses which. Badge shows the worst of all accounts |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
 | `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it — grouped per pelanggan, **sales**, **barang**, merk, kategori or bulan. **Cost and margin columns vanish for Sales** |
@@ -715,7 +715,7 @@ The rules, all of them:
 |---|---|
 | `FiscalCalendar::isClosed` | Whether a date may still be posted to. Asked by `Ledger`, and by the screen |
 | `FiscalCalendar::nextToClose` | The one month that may be closed now, or null. A month in progress is never offered |
-| `PeriodCloser::close` | Locks a month. **Oldest first** — Finance and Owner |
+| `PeriodCloser::close` | Locks a month. **Oldest first**, and only when the books add up — Finance and Owner |
 | `PeriodCloser::reopen` | Unlocks one. **Newest first, Owner only**, and a reason is required |
 | `PeriodCloser::previewYearEnd` | What closing December would post, built by the same code that posts it |
 
@@ -730,6 +730,30 @@ account into Laba Ditahan, so January starts from nil. Reopening December
 reverses it rather than deleting it. Reopening is Owner-only and deliberately
 narrower than closing: it is how figures already sent to the accountant get
 quietly restated, so whoever closed the month cannot undo it alone.
+
+**A month is not closed over books that do not add up** (2026-09). The closer
+checked ordering, that the month had ended, and that it was not closed already
+— nothing about whether the figures being frozen were true. Closing over a
+control account that has left its subledger locks in a number nobody can
+explain, and unlocking it again is Owner-only, so the cheap moment to notice is
+before the button. `LedgerIntegrity::blockingFindings()` is consulted **last**
+of the guards: the calendar answers first, because being told about Piutang
+Usaha when the real problem is that it is still August buries the answer.
+
+What blocks is drawn narrowly. A control account or a stock *value* that left
+its ledger makes the neraca wrong. A drifted stock *quantity* makes the
+warehouse wrong and no journal untrue — blocking the accountant for a warehouse
+problem they cannot fix is how a guard gets overridden every month until it
+means nothing.
+
+There is a door, and it is narrower than the ordinary one: Finance closes a
+month whose books agree, and only the Owner closes one whose books do not, only
+by saying why — the same two-tier shape as reopening, since whoever is under
+pressure to publish a figure should not be able to wave the check aside alone.
+The override writes its own audit row with the findings copied into it, so
+"what exactly did they sign off" has an answer that does not depend on
+re-running the check months later against data that has moved. The findings are
+on the screen before the button, so a refusal is never a surprise.
 
 Postings are explicit calls from inside each document service's own
 transaction, not events — the journal has to land atomically with the document,
@@ -1357,6 +1381,7 @@ every kind of data the role separation elsewhere exists to keep apart.
 | `integritas:periksa` | Terminal view; exit 0 clean, 1 drifted — the counterpart to `ops:check`, asking whether the numbers are true rather than whether the box is alive |
 | `SweepLedgerIntegrity` | Nightly. Logs first, then tells the Owner — and only the Owner, since a drift means something wrote outside the domain classes |
 | `LedgerIntegrityStatus` widget | Owner only, **silent when the books agree** |
+| `LedgerIntegrity::blockingFindings` | The subset that stops a month being closed — see Tutup buku |
 
 Every one of these checks already existed and **none of them ran**.
 `StockLedger::reconcile()` said in its own docblock "run it as a scheduled

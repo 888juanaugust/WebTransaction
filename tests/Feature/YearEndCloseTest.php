@@ -349,11 +349,17 @@ class YearEndCloseTest extends TestCase
 
         $this->closer->reopen(2026, 12, $this->owner, 'Faktur pemasok Desember baru datang');
 
-        // The late bill everyone was waiting for.
+        /*
+         * The late expense everyone was waiting for, paid in cash rather than
+         * on account: Utang Usaha is a control account, and a payable posted
+         * by hand with no supplier bill behind it is a drift the closer now
+         * refuses to close over. What this test is about — that a reopened
+         * year takes the correction and closes again — is unchanged.
+         */
         $this->ledger->postManual(
             JournalDraft::manual('Beban Desember yang telat', new DateTime('2026-12-28'))
                 ->debit(AccountCode::BEBAN_OPERASIONAL, 1_000_000)
-                ->kredit(AccountCode::UTANG_USAHA, 1_000_000),
+                ->kredit(AccountCode::KAS, 1_000_000),
             $this->finance,
         );
 
@@ -439,11 +445,21 @@ class YearEndCloseTest extends TestCase
         }
     }
 
+    /**
+     * A cash sale and its cost, as manual journals.
+     *
+     * Both legs deliberately avoid control accounts. Piutang Usaha and
+     * Persediaan are summarised by subledgers — a journal into either with no
+     * invoice or stock behind it *is* a drift, and `PeriodCloser` now refuses
+     * to close a month over one. These tests are about what closing a year
+     * does to income and expense accounts, and the figures below are identical
+     * either way: Penjualan and HPP move by exactly the same amounts.
+     */
     private function trade(string $tanggal, int $sale, int $cost): void
     {
         $this->ledger->postManual(
-            JournalDraft::manual("Penjualan {$tanggal}", new DateTime($tanggal))
-                ->debit(AccountCode::PIUTANG_USAHA, $sale)
+            JournalDraft::manual("Penjualan tunai {$tanggal}", new DateTime($tanggal))
+                ->debit(AccountCode::KAS, $sale)
                 ->kredit(AccountCode::PENJUALAN, $sale),
             $this->finance,
         );
@@ -452,7 +468,7 @@ class YearEndCloseTest extends TestCase
             $this->ledger->postManual(
                 JournalDraft::manual("HPP {$tanggal}", new DateTime($tanggal))
                     ->debit(AccountCode::HARGA_POKOK_PENJUALAN, $cost)
-                    ->kredit(AccountCode::PERSEDIAAN, $cost),
+                    ->kredit(AccountCode::KAS, $cost),
                 $this->finance,
             );
         }

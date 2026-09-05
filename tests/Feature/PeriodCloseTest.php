@@ -143,8 +143,10 @@ class PeriodCloseTest extends TestCase
          */
         $company = Company::factory()->create();
 
+        // Kas rather than Piutang Usaha, for the reason trade() gives: this
+        // test is about idempotent re-posting, not about receivables.
         $draft = fn () => JournalDraft::for($company, JournalEntry::JENIS_PENJUALAN, 'Faktur', new DateTime('2026-01-10'))
-            ->debit(AccountCode::PIUTANG_USAHA, 3_000_000)
+            ->debit(AccountCode::KAS, 3_000_000)
             ->kredit(AccountCode::PENJUALAN, 3_000_000);
 
         $first = $this->ledger->post($draft());
@@ -446,12 +448,21 @@ class PeriodCloseTest extends TestCase
 
     // --- helpers ------------------------------------------------------------
 
-    /** A sale on a given date, posted as a manual journal. */
+    /**
+     * A cash sale on a given date, posted as a manual journal.
+     *
+     * Kas rather than Piutang Usaha, and that is not cosmetic. Piutang Usaha
+     * is a control account: a journal debiting it with no invoice behind it
+     * *is* a subledger drift, and closing a month over one is exactly what
+     * `PeriodCloser` now refuses. These tests are about the calendar — which
+     * month can be closed, in what order, and what a closed month refuses —
+     * so their fixture has no business inventing a receivable nobody owes.
+     */
     private function trade(string $tanggal, int $amount): void
     {
         $this->ledger->postManual(
-            JournalDraft::manual("Penjualan {$tanggal}", new DateTime($tanggal))
-                ->debit(AccountCode::PIUTANG_USAHA, $amount)
+            JournalDraft::manual("Penjualan tunai {$tanggal}", new DateTime($tanggal))
+                ->debit(AccountCode::KAS, $amount)
                 ->kredit(AccountCode::PENJUALAN, $amount),
             $this->finance,
         );

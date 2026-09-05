@@ -80,6 +80,36 @@ class LedgerIntegrity
     }
 
     /**
+     * The checks whose findings make a set of closing figures wrong.
+     *
+     * A control account that has left its subledger, or a stock value that has
+     * left the cost ledger, changes numbers that go on the neraca and the laba
+     * rugi. Closing a month over one of those freezes a figure nobody can
+     * explain, and only the Owner can reopen a closed month to fix it.
+     *
+     * A drifted quantity cache is a different kind of wrong. It makes the
+     * *warehouse* wrong — what the system thinks is on the shelf, what it will
+     * let you promise a customer — and it makes no journal entry untrue.
+     * Blocking a month-end close on it would stop the accountant for a
+     * warehouse problem they cannot fix, which is how a guard gets routinely
+     * overridden and stops meaning anything.
+     */
+    private const BLOCKING = ['buku', 'nilai_persediaan'];
+
+    /**
+     * Findings that should stop a period being closed.
+     *
+     * @return list<IntegrityFinding>
+     */
+    public function blockingFindings(): array
+    {
+        return array_values(array_filter(
+            $this->findings(),
+            fn (IntegrityFinding $f) => in_array($f->pemeriksaan, self::BLOCKING, true),
+        ));
+    }
+
+    /**
      * The four checks inside one region's books.
      *
      * @return list<IntegrityFinding>

@@ -7,6 +7,8 @@ namespace App\Filament\Pages\Akuntansi;
 use App\Domain\Accounting\FiscalCalendar;
 use App\Domain\Accounting\PeriodCloser;
 use App\Domain\Accounting\ProfitAndLoss;
+use App\Domain\Integrity\IntegrityFinding;
+use App\Domain\Integrity\LedgerIntegrity;
 use App\Models\AccountingPeriod;
 use App\Models\AccountingPeriodReopening;
 use BackedEnum;
@@ -155,12 +157,26 @@ class TutupBuku extends Page
                 ->modalHeading(fn () => 'Tutup '.($this->nextToClose()?->translatedFormat('F Y') ?? ''))
                 ->modalDescription(fn () => $this->confirmationText())
                 ->modalSubmitActionLabel('Ya, tutup periode')
-                ->schema([
+                ->schema(fn () => array_values(array_filter([
                     Textarea::make('catatan')
                         ->label('Catatan (opsional)')
                         ->placeholder('mis. sudah direkonsiliasi dengan rekening koran')
                         ->rows(2),
-                ])
+
+                    /*
+                     * Only when there is something to force past, and only for
+                     * the seat allowed to force it. Finance sees the findings
+                     * on the page and the refusal from the domain; the box for
+                     * a reason is not offered to somebody who cannot use it.
+                     */
+                    $this->temuanPenghalang() !== [] && (auth()->user()?->role()->canReopenPeriod() ?? false)
+                        ? Textarea::make('alasan_terpaksa')
+                            ->label('Alasan menutup walaupun buku belum cocok')
+                            ->helperText('Wajib. Tercatat di log audit bersama daftar selisihnya.')
+                            ->required()
+                            ->rows(2)
+                        : null,
+                ])))
                 ->action(function (array $data) {
                     $next = $this->nextToClose();
 
@@ -174,6 +190,7 @@ class TutupBuku extends Page
                             $next->month,
                             auth()->user(),
                             $data['catatan'] ?: null,
+                            $data['alasan_terpaksa'] ?? null,
                         );
                     } catch (Throwable $e) {
                         Notification::make()
@@ -248,6 +265,24 @@ class TutupBuku extends Page
                 Notification::make()->success()->title('Periode dibuka kembali')->send();
             });
     }
+
+    /**
+     * What would stop this month being closed, if anything.
+     *
+     * Shown on the page rather than only raised as a refusal, so the
+     * accountant who came here to close August finds out why before pressing
+     * the button — and the Owner deciding to close anyway can read exactly
+     * what they are signing for.
+     *
+     * @return list<IntegrityFinding>
+     */
+    public function temuanPenghalang(): array
+    {
+        return $this->temuan ??= app(LedgerIntegrity::class)->blockingFindings();
+    }
+
+    /** @var list<IntegrityFinding>|null */
+    private ?array $temuan = null;
 
     public function confirmationText(): string
     {

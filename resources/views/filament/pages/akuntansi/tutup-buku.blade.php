@@ -21,9 +21,48 @@
         never reopens a period, so Finance never sees the control.
     */
     $canReopen = auth()->user()?->role()->canReopenPeriod() ?? false;
+
+    // What would refuse the close, if anything. Shown before the button
+    // rather than only raised as an error after it.
+    $temuan = $this->temuanPenghalang();
 @endphp
 
 <x-filament-panels::page>
+
+    @if ($temuan !== [] && $next !== null)
+        <div class="rounded-xl border border-danger-300 bg-danger-50 p-4
+                    dark:border-danger-500/30 dark:bg-danger-500/10">
+            <h2 class="text-sm font-semibold text-danger-800 dark:text-danger-300">
+                Buku belum cocok — {{ $next->translatedFormat('F Y') }} belum bisa ditutup
+            </h2>
+
+            <p class="mt-1 text-sm text-danger-800/90 dark:text-danger-300/90">
+                Ada akun kontrol yang tidak lagi sama dengan buku pembantunya. Menutup bulan di
+                atas selisih ini mengunci angka yang tidak bisa dijelaskan, dan hanya pemilik yang
+                bisa membukanya kembali.
+            </p>
+
+            <ul class="mt-3 space-y-1">
+                @foreach ($temuan as $t)
+                    <li class="text-xs text-danger-900/90 dark:text-danger-200/90">
+                        <span class="font-mono">[{{ $t->wilayah }}]</span>
+                        <span class="font-medium">{{ $t->subjek }}</span> — {{ $t->temuan }}
+                    </li>
+                @endforeach
+            </ul>
+
+            <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                @if ($canReopen)
+                    Sebagai pemilik Anda tetap bisa menutupnya, tapi alasannya wajib ditulis dan
+                    tercatat di log audit bersama daftar selisih ini.
+                @else
+                    Jelaskan dulu selisihnya, atau minta pemilik yang menutup dengan alasan tertulis.
+                @endif
+                Rinciannya: <code>php artisan integritas:periksa</code>.
+            </p>
+        </div>
+    @endif
+
     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
         @if ($openFrom === null)
             <p class="text-sm text-gray-600 dark:text-gray-300">

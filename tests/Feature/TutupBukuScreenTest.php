@@ -331,11 +331,21 @@ class TutupBukuScreenTest extends TestCase
 
     // --- helpers ------------------------------------------------------------
 
+    /**
+     * A cash sale and its cost, as manual journals.
+     *
+     * Both legs deliberately avoid control accounts. Piutang Usaha and
+     * Persediaan are summarised by subledgers — a journal into either with no
+     * invoice or stock behind it *is* a drift, and `PeriodCloser` now refuses
+     * to close a month over one. These tests are about what closing a year
+     * does to income and expense accounts, and the figures below are identical
+     * either way: Penjualan and HPP move by exactly the same amounts.
+     */
     private function trade(string $tanggal, int $sale, int $cost): void
     {
         $this->ledger->postManual(
-            JournalDraft::manual("Penjualan {$tanggal}", new DateTime($tanggal))
-                ->debit(AccountCode::PIUTANG_USAHA, $sale)
+            JournalDraft::manual("Penjualan tunai {$tanggal}", new DateTime($tanggal))
+                ->debit(AccountCode::KAS, $sale)
                 ->kredit(AccountCode::PENJUALAN, $sale),
             $this->finance,
         );
@@ -344,7 +354,7 @@ class TutupBukuScreenTest extends TestCase
             $this->ledger->postManual(
                 JournalDraft::manual("HPP {$tanggal}", new DateTime($tanggal))
                     ->debit(AccountCode::HARGA_POKOK_PENJUALAN, $cost)
-                    ->kredit(AccountCode::PERSEDIAAN, $cost),
+                    ->kredit(AccountCode::KAS, $cost),
                 $this->finance,
             );
         }
