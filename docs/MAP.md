@@ -133,7 +133,7 @@ would have taken it along silently.
 | `/admin/orders/{id}` | Order detail | all | Line snapshots with the price reason, DPP/PPN per line, totals, the dates, the faktur, the split pieces, and the full event log. **Reads snapshots only** — never the live price list |
 | `/admin/orders/{id}/edit` | Edit draft | Sales, Owner | **Drafts only** — after `confirmed` the lines are locked |
 | `/admin/companies` | Customers | not Warehouse | Credit limit, terms, tax data, buyer logins |
-| `/admin/products` | Catalogue | read: everyone but Gudang · write: Inventori, Owner | Reference data; list price is read-only. A SKU anything has referenced cannot be deleted at all — deactivate |
+| `/admin/products` | Catalogue | read: **everyone**, Gudang included · write: Inventori, Owner | Reference data; list price is read-only. **Nobody creates a SKU here** — the create route is gone, items arrive through Impor barang. A SKU anything has referenced cannot be deleted at all — deactivate |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
 | `/admin/pengiriman` | Pengiriman | Inventori, Gudang, Owner | Approved orders land here for packing — pick list, surat jalan, ship. A Gudang account sees **only its own warehouse**, in the query itself |
 | `/admin/komisi-target` | Komisi & target | Owner | Set each seller's rate (effective-dated, append-only) and each sales seat's monthly target |
@@ -156,6 +156,7 @@ would have taken it along silently.
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
 | `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
+| `/admin/impor-barang` | Impor barang | Inventori, Owner | **The only door a SKU enters by.** One CSV, every item in it; preview per row, held rows say why. Carries no HARGA and refuses a file that has one |
 | `/admin/penagihan` | Penagihan | Sales, Marketing, Finance, Owner | Three queues: promises due today, promises broken, overdue nobody has called. Badge counts promises only |
 | `/admin/laporan/penjelajah` | Penjelajah data | per dataset | Rows, sorted and filtered, saved as named templates, downloadable as CSV. **No sums** — this is the register, not a report |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
@@ -1469,8 +1470,8 @@ itself.
 | `RekapPpn` | Keluaran (faktur − nota kredit) − Masukan (tagihan − retur − nota kredit pemasok) per masa |
 | `Role::canApproveOrders` | Marketing and Owner — never Sales, who are paid on the sale |
 | `Role::canManagePriceList` | Inventori and Owner — pricing moved out of Sales' hands |
-| `Role::canManageCatalogue` | The same seat, kept as its own question: a price is money, `qty_per_ctn` is arithmetic |
-| `Role::canBrowseCatalogue` | Everyone but Gudang — a part number is not a privilege |
+| `Role::canManageCatalogue` | The same seat, kept as its own question: a price is money, `qty_per_ctn` is arithmetic. Gates the edit form **and** Impor barang, so the CSV is not a way round the form |
+| `Role::canBrowseCatalogue` | **Everyone.** A part number is not a privilege — a packer holding a box needs to look up what the code on it means. The narrow thing is writing |
 | `TeamAssigner` | One sales + one marketing per customer, Owner-assigned, audited |
 | `companies.sales_user_id / marketing_user_id` | The team, not fillable, indexed for "my customers" |
 
@@ -1508,8 +1509,10 @@ by asking each of the six roles what it could reach:
 
 Two layers, and both have to agree. Filament's resource **pages** do
 authorise: `CreateRecord` and `EditRecord` abort on `canCreate`/`canEdit`, so
-the routes closed the moment those methods existed (measured: sales and
-finance get 403 on `/admin/products/create`, Gudang 403 on the list itself).
+the routes closed the moment those methods existed (measured at the time:
+sales and finance got 403 on `/admin/products/create`, Gudang 403 on the list
+itself — since re-decided, see *Impor barang* below: the create route is gone
+entirely and the list is open to everybody).
 Its **actions** do not — `DeleteAction` is a confirm modal and a
 `$record->delete()`, nothing more — so every delete/create/edit button now
 asks the resource itself with `->visible(...)`. A button that refuses when
@@ -2325,12 +2328,54 @@ is one somebody has been told the truth about.
 | `CompanyColumns::COLUMNS` / `keterangan` | The customer format, and what each column is for, shown beside the download |
 | `CompanyImporter::preview` | What each line *would* do — new, update, or held with a reason. **Writes nothing** |
 | `CompanyImporter::import` | Re-reads the same file and writes the rows that were not held. A known KODE updates; a bad row is skipped, never guessed at |
+| `ProductColumns::COLUMNS` / `keterangan` | The item format: the canonical price-list columns **minus HARGA**, so the example file cannot teach anyone to paste prices in |
+| `ProductImporter::preview` / `import` | The same shape again — look, then leap. Writes nothing until somebody has read the three counts |
+
+### Impor barang — one door for the catalogue
+
+There were two ways a SKU came into being: publishing a price list version
+(`PriceListImporter::upsertProduct` keeps `products` in step), or typing one
+into the catalogue form. The form was the weaker of the two — it asked for
+`satuan_dasar` and `qty_per_ctn` as free fields on a single screen, and a
+hundred new items meant a hundred visits to it.
+
+`ProductResource::canCreate()` now returns `false`, `CreateProduct` and its
+route are deleted, and everything comes through `ProductImporter`. One CSV
+holds the whole catalogue; the same preview-then-write shape as the customer
+import, because they are one idea and a second idiom for it is only a second
+thing to learn. What the single door buys is a single place to check the
+things orders and the stock ledger do arithmetic with:
+
+| The check | Why it is worth holding a row for |
+|---|---|
+| A file with a **HARGA column is refused outright** | Prices move by publishing a new price list version and never by an update (invariant, and `price_list_items` is append-only). Somebody pasting a supplier price list here has made an understandable mistake; the refusal names the screen that does want it rather than importing the items and silently dropping the money |
+| **`satuan_dasar` may not change** on a SKU that `hasHistory()` | 200 PCS quietly becoming 200 SET re-denominates the whole ledger. The message names the way out, which is a new KODE, not an edit |
+| MERK and KATEGORI matched against `config('pricelist.*')`, case- and space-insensitively | "hydraulic part" and "HYDRAULIC  PART" are one category typed by two people; `NGAWUR` is not a brand and becomes a held row, not a product |
+| A **KODE with a `/`** in it is held | The supplier workbook puts two SKUs in one cell. The price importer has a review queue to route those to; this screen has none, so it says "pisahkan jadi dua baris" — a KODE with a slash is a product nobody can ever order |
+| Blank `QTY_PER_CTN` → 1, **with a note on the row** | CLAUDE.md's rule for the workbook's ~724 blanks: import anyway, annotate. Held rows and annotated rows are different answers |
+| Duplicate KODE **within one file** | The last line would silently win over the first |
+
+Gated on `canManageCatalogue()` — the same capability the edit form asks for,
+so the CSV cannot be the way around the form, exactly as `LIMIT_KREDIT` is
+handled in the customer import.
+
+The other half of the change is a widening. `canBrowseCatalogue()` now returns
+true for every role, Gudang included, where before it named Gudang as the
+exception. The measured reason: a packer holds a box with a code printed on it
+and needs to know what the code means, and the thing CLAUDE.md is protecting
+is `qty_per_ctn` — a packer moving 18 to 1 moves goods without touching a
+stock screen. That is a write. Reading a part number is not.
 
 The price import was called "Impor harga" for a year and cost a tester a
 morning: they went looking for a separate barang import and concluded products
 had to be typed one at a time. They do not — `PriceListImporter::upsertProduct`
 has always kept `products` in step with each published version. One file loads
-both registers; the label now says so.
+both registers; the label says so. The tester was looking for the right thing
+in the wrong place, and it now exists: two screens, deliberately. *Impor harga
+& barang* is the supplier's own file, priced, publishing a version. *Impor
+barang* is the catalogue alone — what the parts **are**, no money in it, which
+is why it can be run by the seat that keeps the catalogue without also being
+the seat that moves prices.
 
 The customer importer's one hard rule is the money one. `LIMIT_KREDIT` is a
 field the customer form hides from anyone who may not set credit limits, and a

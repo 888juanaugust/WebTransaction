@@ -10,11 +10,14 @@ enum TemplateKind: string
     case Harga = 'harga';
     case Pelanggan = 'pelanggan';
 
+    case Barang = 'barang';
+
     public function label(): string
     {
         return match ($this) {
             self::Harga => 'Harga & barang',
             self::Pelanggan => 'Pelanggan',
+            self::Barang => 'Barang',
         };
     }
 }

@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Products\Pages;
 
+use App\Filament\Pages\ImporBarang;
 use App\Filament\Resources\Products\ProductResource;
-use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Icons\Heroicon;
 
 class ListProducts extends ListRecords
 {
@@ -14,13 +16,17 @@ class ListProducts extends ListRecords
     {
         return [
             /*
-             * Filament's CreateAction does not consult the resource, so
-             * without this a sales rep saw "Buat produk", pressed it, and got
-             * a 403 from CreateProduct::authorizeAccess. The route was never
-             * open; the button was just lying about it.
+             * Where the "Buat produk" button used to be. Items are created in
+             * bulk now — ProductResource::canCreate() is false and the create
+             * route is gone — and a catalogue screen with no way at all to add
+             * to it just reads as broken. So the affordance stays and points
+             * at the door that still opens.
              */
-            CreateAction::make()
-                ->visible(fn () => ProductResource::canCreate()),
+            Action::make('impor')
+                ->label('Impor barang')
+                ->icon(Heroicon::OutlinedArrowUpTray)
+                ->url(ImporBarang::getUrl())
+                ->visible(fn () => ImporBarang::canAccess()),
         ];
     }
 }

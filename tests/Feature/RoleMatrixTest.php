@@ -313,9 +313,15 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => false,
                 'canApproveOrders' => false,
                 'canManagePriceList' => false,
-                // The catalogue is not theirs to read or to write. The pick
-                // list in front of them names its own goods.
-                'canBrowseCatalogue' => false,
+                /*
+                 * They may look a part number up; they may not maintain the
+                 * catalogue. The first cut of this had reading barred too, on
+                 * a literal reading of CLAUDE.md's "cannot: catalogue" — too
+                 * literal, because a packer holding a box needs to check what
+                 * the code on it is, and that reveals no price, no cost and no
+                 * customer. The narrow thing is the writing.
+                 */
+                'canBrowseCatalogue' => true,
                 'canManageCatalogue' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,

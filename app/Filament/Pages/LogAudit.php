@@ -292,6 +292,7 @@ class LogAudit extends Page implements HasTable
             'bank_account_opened' => 'Rekening bank dibuka',
             'bank_account_default_changed' => 'Rekening bawaan dipindah',
             'companies_imported' => 'Pelanggan diimpor',
+            'products_imported' => 'Barang diimpor',
             'price_list_published' => 'Daftar harga diterbitkan',
             'faktur_exported' => 'Faktur pajak diekspor',
             'nsfp_recorded' => 'NSFP dicatat',

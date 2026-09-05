@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Products;
 
 use App\Filament\Navigation\SidebarGroups;
-use App\Filament\Resources\Products\Pages\CreateProduct;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\Schemas\ProductForm;
@@ -52,9 +51,21 @@ class ProductResource extends Resource
         return auth()->user()?->role()->canBrowseCatalogue() ?? false;
     }
 
+    /**
+     * Never from here. Items arrive through Impor barang, in bulk.
+     *
+     * The one-at-a-time form is gone on purpose. A SKU's `satuan_dasar` and
+     * `qty_per_ctn` are the arithmetic every order and every stock movement
+     * runs through, and one validated door for them beats two that drift —
+     * the importer checks the brand, the category, the base unit, duplicate
+     * codes within the file, and refuses to re-denominate a SKU that already
+     * has stock. A form checks whatever its fields happen to say.
+     *
+     * The cost is real and small: adding a single item means a one-row CSV.
+     */
     public static function canCreate(): bool
     {
-        return auth()->user()?->role()->canManageCatalogue() ?? false;
+        return false;
     }
 
     public static function canEdit(Model $record): bool
@@ -91,7 +102,6 @@ class ProductResource extends Resource
     {
         return [
             'index' => ListProducts::route('/'),
-            'create' => CreateProduct::route('/create'),
             'edit' => EditProduct::route('/{record}/edit'),
         ];
     }

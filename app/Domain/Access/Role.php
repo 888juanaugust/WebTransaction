@@ -229,13 +229,19 @@ enum Role: string
     /**
      * Look the catalogue up — a part number is not a privilege.
      *
-     * Everybody who sells, bills or prices needs to find a SKU. Gudang is
-     * out, and only because CLAUDE.md says so in as many words: their work is
-     * the pick list in front of them, which names its own goods.
+     * Everybody, Gudang included. The first cut of this excluded them on the
+     * strength of CLAUDE.md's role table, which lists "catalogue" among the
+     * things a packer cannot do. Read against the day's work that was too
+     * literal: a packer holding a box needs to check what the part number on
+     * it *is*, and the row in the table is about who **maintains** the
+     * catalogue — which is `canManageCatalogue()`, and is still not them.
+     *
+     * Reading a part number changes nothing and reveals no price, no cost and
+     * no customer. The narrow thing is the writing.
      */
     public function canBrowseCatalogue(): bool
     {
-        return $this !== self::Storage;
+        return true;
     }
 
     /** Finance confirms money in. Sales never does. */

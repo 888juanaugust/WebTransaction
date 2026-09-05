@@ -28,6 +28,7 @@ class CsvTemplate
         return match ($kind) {
             TemplateKind::Harga => CanonicalColumns::COLUMNS,
             TemplateKind::Pelanggan => CompanyColumns::COLUMNS,
+            TemplateKind::Barang => ProductColumns::COLUMNS,
         };
     }
 
@@ -39,6 +40,7 @@ class CsvTemplate
         return match ($kind) {
             TemplateKind::Harga => $this->keteranganHarga(),
             TemplateKind::Pelanggan => CompanyColumns::keterangan(),
+            TemplateKind::Barang => ProductColumns::keterangan(),
         };
     }
 
@@ -78,6 +80,7 @@ class CsvTemplate
         return match ($kind) {
             TemplateKind::Harga => 'contoh-impor-harga-barang.csv',
             TemplateKind::Pelanggan => 'contoh-impor-pelanggan.csv',
+            TemplateKind::Barang => 'contoh-impor-barang.csv',
         };
     }
 
@@ -87,6 +90,7 @@ class CsvTemplate
         return match ($kind) {
             TemplateKind::Harga => $this->contohHarga(),
             TemplateKind::Pelanggan => CompanyColumns::contoh(),
+            TemplateKind::Barang => ProductColumns::contoh(),
         };
     }
 

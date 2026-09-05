@@ -174,7 +174,9 @@ class SidebarNavigationTest extends TestCase
             array_keys($groups),
         );
         $this->assertSame(['Order'], $this->itemLabels($groups[SidebarGroups::PENJUALAN]));
-        $this->assertSame(['Pengiriman'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+        // Katalog joined the packer's Gudang group when reading it was opened
+        // to them; Impor barang did not, being the keeper's.
+        $this->assertSame(['Pengiriman', 'Katalog'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
         $this->assertSame(['Penjelajah data'], $this->itemLabels($groups[SidebarGroups::LAPORAN]));
     }
 

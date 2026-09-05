@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Access\Role;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
+use App\Filament\Pages\ImporBarang;
 use App\Filament\Pages\Pengiriman;
 use App\Filament\Resources\Companies\CompanyResource;
 use App\Filament\Resources\Companies\Pages\EditCompany;
@@ -51,18 +52,39 @@ class CatalogueAccessTest extends TestCase
 
     // --- who may write the catalogue ---------------------------------------
 
-    public function test_only_the_catalogue_keeper_may_create_edit_or_delete_a_sku(): void
+    public function test_nobody_creates_a_sku_from_the_catalogue_any_more(): void
     {
+        /*
+         * Creation moved out entirely: items arrive through Impor barang, in
+         * bulk, so the importer's checks on brand, category, base unit and
+         * duplicate codes are the only door. Editing an existing row is still
+         * the catalogue-keeper's.
+         */
         $product = $this->sku();
-
         $mayWrite = [Role::Warehouse, Role::Owner];
 
         foreach (Role::cases() as $role) {
             $this->as($role);
-            $expected = in_array($role, $mayWrite, true);
 
-            $this->assertSame($expected, ProductResource::canCreate(), "{$role->value} canCreate");
-            $this->assertSame($expected, ProductResource::canEdit($product), "{$role->value} canEdit");
+            $this->assertFalse(ProductResource::canCreate(), "{$role->value} canCreate");
+            $this->assertSame(
+                in_array($role, $mayWrite, true),
+                ProductResource::canEdit($product),
+                "{$role->value} canEdit",
+            );
+        }
+    }
+
+    public function test_the_import_is_the_door_and_only_the_keeper_holds_it(): void
+    {
+        foreach (Role::cases() as $role) {
+            $this->as($role);
+
+            $this->assertSame(
+                in_array($role, [Role::Warehouse, Role::Owner], true),
+                ImporBarang::canAccess(),
+                "{$role->value} may import items",
+            );
         }
     }
 
@@ -79,7 +101,10 @@ class CatalogueAccessTest extends TestCase
         $this->as(Role::Storage);
 
         $this->assertFalse(ProductResource::canEdit($product));
-        $this->assertFalse(ProductResource::canViewAny(), 'the catalogue is not on a packer’s sidebar at all');
+
+        // They may look it up — a packer holding a box needs to check what the
+        // code on it is. What they cannot do is change what it means.
+        $this->assertTrue(ProductResource::canViewAny());
 
         $this->assertSame(18, $product->fresh()->qty_per_ctn);
     }
@@ -135,15 +160,18 @@ class CatalogueAccessTest extends TestCase
             Role::Finance->value => [200, 403],
             Role::Warehouse->value => [200, 200],
             Role::Owner->value => [200, 200],
-            Role::Storage->value => [403, 403],
+            // Reading is open to everybody now, editing to nobody but the keeper.
+            Role::Storage->value => [200, 403],
         ];
 
-        foreach ($expected as $role => [$list, $write]) {
+        foreach ($expected as $role => [$list, $edit]) {
             $this->as(Role::from($role));
 
             $this->assertSame($list, $this->get('/admin/products')->getStatusCode(), "{$role} daftar");
-            $this->assertSame($write, $this->get('/admin/products/create')->getStatusCode(), "{$role} buat");
-            $this->assertSame($write, $this->get('/admin/products/KAT-RUTE/edit')->getStatusCode(), "{$role} ubah");
+            $this->assertSame($edit, $this->get('/admin/products/KAT-RUTE/edit')->getStatusCode(), "{$role} ubah");
+
+            // 404, not 403: the create route is gone, not merely closed.
+            $this->assertSame(404, $this->get('/admin/products/create')->getStatusCode(), "{$role} buat");
         }
     }
 
