@@ -53,17 +53,22 @@ class PortalPanelProvider extends PanelProvider
             ->darkModeBrandLogo(fn () => Branding::darkLogoUrl())
             ->brandLogoHeight('1.75rem')
             /*
-             * Geist, served from public/fonts: the shopfront's typeface, so
-             * the panel and the site read as one company. LocalFontProvider
-             * because the default provider for a named font fetches it from
-             * a CDN, and the privacy notice promises no CDN webfonts.
+             * Cairo, served from public/fonts — the same face and the same
+             * local provider as the admin panel, so the two staff-and-buyer
+             * surfaces stay one design system. See AdminPanelProvider for why
+             * the font is committed rather than fetched.
              */
             ->font(
-                'Geist',
-                url: fn (): string => asset('fonts/geist.css'),
+                'Cairo',
+                url: fn (): string => asset('fonts/cairo.css'),
                 provider: LocalFontProvider::class,
-                preload: fn (): array => [asset('fonts/Geist-Variable.woff2')],
+                preload: fn (): array => [asset('fonts/Cairo-Variable-latin.woff2')],
             )
+            /*
+             * Collapsible here too. A buyer reorders the same fifteen SKUs
+             * forever and mostly wants the table, not the menu.
+             */
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             /*
              * Self-service reset, on the buyer's own broker — its own token

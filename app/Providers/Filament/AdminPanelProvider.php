@@ -59,17 +59,32 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn () => view('filament.brand'))
             ->brandLogoHeight('1.75rem')
             /*
-             * Geist, served from public/fonts: the shopfront's typeface, so
-             * the panel and the site read as one company. LocalFontProvider
-             * because the default provider for a named font fetches it from
-             * a CDN, and the privacy notice promises no CDN webfonts.
+             * Cairo, served from public/fonts. The design system asks for it
+             * on all text; LocalFontProvider because Filament's default
+             * provider for a named font fetches it from Google, and the
+             * privacy notice promises no CDN webfonts.
+             *
+             * Only the latin subset is preloaded. latin-ext is declared in
+             * cairo.css with its own unicode-range and the browser fetches it
+             * only if a character in that range is actually drawn, which on
+             * these screens means a pasted supplier name and not much else.
+             *
+             * The shopfront keeps Geist — see BrandColors::panel() on why the
+             * panels and the public site have parted company for now.
              */
             ->font(
-                'Geist',
-                url: fn (): string => asset('fonts/geist.css'),
+                'Cairo',
+                url: fn (): string => asset('fonts/cairo.css'),
                 provider: LocalFontProvider::class,
-                preload: fn (): array => [asset('fonts/Geist-Variable.woff2')],
+                preload: fn (): array => [asset('fonts/Cairo-Variable-latin.woff2')],
             )
+            /*
+             * The sidebar collapses, per the design system. Filament keeps the
+             * choice per user in local storage, so a packer working one queue
+             * all day can reclaim the width and a manager moving between
+             * screens can keep the labels.
+             */
+            ->sidebarCollapsibleOnDesktop()
             ->login()
             /*
              * A profile page, which is the only way a staff member can change

@@ -43,7 +43,8 @@ gets a real hamburger (plain button + hidden panel, a few lines of inline
 JS), and sections fade up on scroll via an IntersectionObserver that respects
 `prefers-reduced-motion`. The head carries canonical, og:, and an Organization
 JSON-LD from the same config the footer prints. Typeface: Geist, self-hosted
-from `public/fonts` (no CDN), shared with both panels. The logo shows when
+from `public/fonts` (no CDN) — the panels moved to Cairo in the 2026-09
+redesign and the shopfront did not, see §The panel design system. The logo shows when
 `PERUSAHAAN_LOGO` points at a file that exists; otherwise every surface falls
 back to the wordmark.
 
@@ -52,6 +53,49 @@ and to the overseas suppliers and partners it deals with. The two legal pages
 stay in Bahasa Indonesia (instruments under Indonesian law) and declare
 `lang="id"` on their own; everything behind a login, and every printed
 document, stays Indonesian.
+
+### The panel design system
+
+Both Filament panels — admin and buyer portal — load one theme,
+`resources/css/filament/admin/theme.css`, and one palette,
+`BrandColors::panel()`. 2026-09 replaced what was there with the FixFlow
+Odoo-19 system supplied as the reference.
+
+| Token | Value | Where it comes from |
+|---|---|---|
+| Primary | `#4F46E5` indigo, at **shade 600** | `BrandColors::Indigo` — Filament paints solid buttons, active nav and focus rings from 600, so the hex has to sit there rather than be named somewhere |
+| Ground / surface / ink | `#F8FAFC` / `#FFFFFF` / `#111827` | `@theme` in the stylesheet |
+| Corners | 24px containers, 12px controls | rounded-3xl / rounded-xl. Badges stay at 6px — at 24px they are lozenges, at 12px they read as buttons and get clicked |
+| Typeface | Cairo, variable, **self-hosted** | `public/fonts/cairo.css`, two subsets fenced by `unicode-range` |
+| Topbar | 56px, solid white | `.fi-topbar` — *not* `.fi-topbar > nav`, which does not exist |
+| Control panel | `.fi-header` as a white band under the topbar | Heading, breadcrumbs and mass actions, where Odoo puts them |
+| Sidebar | White, collapsible on desktop | `->sidebarCollapsibleOnDesktop()` on both panels |
+
+**Two things here are not taste, and `DesignSystemTest` pins both.**
+
+The first is a promise. `kebijakan-privasi` tells the public this site loads
+"no CDN webfonts", and Filament's default provider for a named font fetches
+it from Google — so `->font('Cairo')` on its own would have broken a
+published privacy claim silently, with every staff and buyer page reaching
+fonts.gstatic.com. The face is committed to `public/fonts` and registered
+through `LocalFontProvider`; the test asserts no rendered panel page names an
+external host.
+
+The second is arithmetic: `Color::hex()` keeps only a hue and applies a
+generic lightness curve, so the ramp is declared by hand and shade 600 is
+asserted to be exactly `#4F46E5`.
+
+**The shopfront did not follow.** It keeps Geist and the logo blue `#073185`,
+which is also the colour on every printed faktur, so the staff tools and the
+public face no longer match. That is a real cost, taken deliberately: the
+design system was handed over as the reference for the panels, and the panels
+are what staff look at all day. `BrandColors::Blue` stays declared so the
+decision is one line to reverse rather than an excavation.
+
+Red and green survive untouched. On these screens red means an overdue
+faktur, short stock or a destructive button, and green is the "Lunas" finance
+scans a list for — a redesign that swept either into the primary would look
+tidier and read worse.
 
 ### Admin panel — staff, `web` guard against `users`
 

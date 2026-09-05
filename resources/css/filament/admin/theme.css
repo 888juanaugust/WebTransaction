@@ -4,85 +4,108 @@
 @source '../../../../resources/views/filament/**/*';
 
 /*
- * Company theme: an off-white ground, white surfaces with a hairline, the
- * company blue, and red only where something is wrong.
+ * Panel theme — the FixFlow Odoo-19 design system, 2026-09.
+ *
+ * Indigo #4F46E5 on an #F8FAFC ground, white surfaces, #111827 ink, Cairo
+ * throughout, generous corners, and a control-panel band under a 56px topbar.
+ * Shared by both panels: the admin panel and the buyer portal load this same
+ * file, so staff and buyers see one system.
  *
  * Most of the palette comes from ->colors() in the panel providers — buttons,
- * links, badges, focus rings and the active nav item all derive from the blue
- * and red set there. The typeface comes from ->font(): Geist, self-hosted
- * from public/fonts, the same face as the public site. This file does what a
- * palette and a font cannot: settle the surfaces, corners and shadows so the
- * two panels and the shopfront read as one company.
+ * links, badges, focus rings and the active nav item all derive from the
+ * indigo ramp in BrandColors. The typeface comes from ->font(): Cairo,
+ * self-hosted from public/fonts, because the privacy notice promises no CDN
+ * webfonts. This file does what a palette and a font cannot: settle the
+ * surfaces, corners, chrome geometry and states.
  *
- * 2026-08 redesign, in step with the public site: the page ground is the
- * shopfront's off-white; cards are white with a 1px line and a faintly blue
- * shadow instead of Filament's grey ring; corners are 10px on controls and
- * 16px on cards, nothing pill-shaped and nothing square; the active nav item
- * is a white pill lifted off the ground rather than a grey slab.
+ * **The shopfront has not followed.** It keeps Geist and the logo blue
+ * #073185, which is also the colour on every printed faktur. See
+ * BrandColors::panel() — that divergence is deliberate and reversible.
  *
- * --- Dark mode ---
+ * --- What the previous theme knew, and this one keeps ---
  *
  * Filament toggles dark mode by putting `.dark` on <html>. It does NOT follow
  * prefers-color-scheme once a user has chosen, so every rule below keys off
- * that class and nothing else.
+ * that class and nothing else. An earlier version used a media query and
+ * looked right only while the OS and the toggle agreed; a user on a light
+ * laptop switching the panel to dark got white cards on a near-black page.
  *
- * An earlier version of this file used @media (prefers-color-scheme: dark),
- * which looked right only because the OS and the toggle happened to agree.
- * A user on a light laptop switching the panel to dark got Filament's dark
- * chrome with these light overrides still painted on top: white cards on a
- * near-black page, and navy text on near-black.
- *
- * So: light rules are scoped `:where(html:not(.dark))`, dark rules `html.dark`.
+ * Light rules are scoped `:where(html:not(.dark))`, dark rules `html.dark`.
  * `:where()` keeps specificity at zero so Filament's own component styles can
  * still win where they should.
+ *
+ * Filament v4 names the nav classes `.fi-sidebar-item-btn` and `.fi-active` —
+ * not `-button` and `.fi-sidebar-item-active`. With the wrong names those
+ * rules match nothing and the active item is never tinted, which is invisible
+ * as bugs go: the panel simply looks less finished than intended.
  */
 
 @theme {
-    /* Light */
-    --wt-blue: #073185;   /* the logo */
-    --wt-blue-dark: #00247b;
-    --wt-blue-tint: #f0f5ff;
+    /* --- The design system's four colours ------------------------------- */
+    --wt-indigo: #4f46e5;             /* primary */
+    --wt-indigo-dark: #4338ca;        /* hover, and headings that carry weight */
+    --wt-indigo-tint: #eef2ff;        /* row hover, the faintest fill */
+    --wt-ground: #f8fafc;             /* the page */
+    --wt-surface: #ffffff;            /* cards, topbar, sidebar */
+    --wt-ink: #111827;
+    --wt-ink-muted: #6b7280;
+
+    /* Red stays #DC2626: on this panel red means something is wrong, and it
+       is the one colour the redesign must not make prettier. */
     --wt-red: #dc2626;
     --wt-red-tint: #fef2f2;
-    --wt-ground: #f8f8f7;             /* the page, shared with the public site */
-    --wt-ground-2: #eef0f4;           /* a tinted surface on the page */
-    --wt-surface: #ffffff;
-    --wt-line: rgb(22 24 29 / 0.08);
-    --wt-line-strong: rgb(22 24 29 / 0.14);
-    --wt-ink: #16181d;
-    --wt-ink-muted: #5f6470;
-    --wt-shadow-card: 0 1px 2px rgb(22 24 29 / 0.04), 0 6px 20px rgb(7 49 133 / 0.05);
-    --wt-shadow-pop: 0 8px 30px rgb(7 49 133 / 0.12), 0 1px 2px rgb(22 24 29 / 0.06);
 
-    /* Dark — same hues, re-weighted for a dark ground. Navy on near-black is
-       unreadable, so the blue lightens rather than the background darkening. */
-    --wt-blue-on-dark: #9bbefd;
-    --wt-blue-rule-dark: #073185;
+    --wt-line: rgb(17 24 39 / 0.08);
+    --wt-line-strong: rgb(17 24 39 / 0.14);
+    --wt-shadow-card: 0 1px 2px rgb(17 24 39 / 0.04), 0 8px 24px rgb(79 70 229 / 0.06);
+    --wt-shadow-pop: 0 8px 30px rgb(79 70 229 / 0.14), 0 1px 2px rgb(17 24 39 / 0.06);
+
+    /* Dark — same hues re-weighted. Indigo at 600 on near-black is legible,
+       but it is the *text* uses that need lifting, so a lighter step exists
+       for those rather than the ground being darkened further. */
+    --wt-indigo-on-dark: #a5b4fc;
     --wt-red-on-dark: #f87171;
     --wt-line-dark: rgb(255 255 255 / 0.09);
-    --wt-surface-dark: #161a21;
+    --wt-surface-dark: #171a21;
     --wt-ground-dark: #0f1115;
 
-    --wt-radius-control: 10px;
-    --wt-radius-card: 16px;
+    /*
+     * Corners. The design system says rounded-3xl on containers and
+     * rounded-xl on buttons — Tailwind's 24px and 12px. That is a visible
+     * step up from the 16/10 this panel used, and 24px is large enough that
+     * it only works because the cards are big: it is applied to sections,
+     * tables and modals, and deliberately not to table rows or badges, where
+     * a 24px corner on a 32px-tall element is a lozenge.
+     */
+    --wt-radius-card: 24px;
+    --wt-radius-control: 12px;
+
+    /* The topbar height the design system specifies, used by the band below
+       it so the two line up whatever Filament's own padding does. */
+    --wt-topbar-h: 56px;
 }
 
 /* ====================================================================
    Type
    ==================================================================== */
 
-/* Headings tighten a touch, like the shopfront; numbers line up in columns. */
+/*
+ * Cairo runs a little wider and a little lighter than Geist at the same
+ * nominal size, so headings take slightly more weight and slightly less
+ * tracking than they did.
+ */
 .fi-header-heading,
 .fi-section-header-heading,
 .fi-ta-header-heading,
 .fi-modal-heading {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
 }
 
 .fi-header-heading {
-    font-weight: 600;
+    font-weight: 700;
 }
 
+/* Money lines up in columns or it cannot be scanned. */
 .fi-ta-cell,
 .fi-wi-stats-overview-stat-value,
 .fi-in-text,
@@ -91,8 +114,66 @@
 }
 
 /* ====================================================================
-   Surfaces
+   Chrome — topbar, the control panel band, sidebar
    ==================================================================== */
+
+/*
+ * 56px, and solid white rather than the translucent blur this panel used.
+ * The blur was pleasant over a scrolling page and it is the wrong instinct
+ * here: with a control-panel band directly beneath it, two translucent layers
+ * stack and the heading underneath shows through the topbar.
+ *
+ * On `.fi-topbar` itself. The previous theme addressed `.fi-topbar > nav`,
+ * and **there is no nav** — measured, `.fi-topbar` contains
+ * `.fi-topbar-start` and `.fi-topbar-end` directly, so every rule in that
+ * selector had been matching nothing since it was written. Its tallest child
+ * is 36px, so 56px is a comfortable fit rather than a squeeze.
+ */
+.fi-topbar {
+    height: var(--wt-topbar-h);
+    min-height: var(--wt-topbar-h);
+    padding-block: 0;
+    box-shadow: none;
+    border-bottom-width: 1px;
+    backdrop-filter: none;
+}
+
+/*
+ * The control panel: the page heading, its breadcrumbs and its actions on a
+ * white band under the topbar, closed by a hairline — where Odoo puts the
+ * view title and its mass actions.
+ *
+ * `.fi-header` is already exactly that pair, so this is a restyle and not new
+ * markup. It lives inside `.fi-page-header-main-ctn`, a flex column with
+ * 2rem of vertical padding and a 2rem gap; the negative block margin cancels
+ * the padding so the band sits against the topbar, and the gap below it does
+ * the separating. The inline margins match `.fi-main`'s own padding so the
+ * band reaches the edges of the content column — measured at 1rem / 1.5rem /
+ * 2rem across the md and lg breakpoints, which is why there are three of
+ * them and not one.
+ */
+.fi-header {
+    background-color: var(--wt-surface);
+    border-bottom: 1px solid var(--wt-line);
+    margin-block-start: -2rem;
+    padding-block: 1rem;
+    padding-inline: 1rem;
+    margin-inline: -1rem;
+}
+
+@media (min-width: 768px) {
+    .fi-header {
+        padding-inline: 1.5rem;
+        margin-inline: -1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .fi-header {
+        padding-inline: 2rem;
+        margin-inline: -2rem;
+    }
+}
 
 :where(html:not(.dark)) {
     .fi-body,
@@ -100,21 +181,17 @@
         background-color: var(--wt-ground);
     }
 
-    /* The topbar floats over the ground: translucent, blurred, one hairline. */
-    .fi-topbar > nav,
     .fi-topbar {
-        background-color: rgb(255 255 255 / 0.8);
-        backdrop-filter: blur(12px);
+        background-color: var(--wt-surface);
         border-color: var(--wt-line);
     }
 
-    /* The sidebar sits on the ground, separated by a hairline, not a shadow. */
+    /* White, per the design system — it used to share the page ground. */
     .fi-sidebar {
-        background-color: var(--wt-ground);
+        background-color: var(--wt-surface);
         border-inline-end: 1px solid var(--wt-line);
     }
 
-    /* Cards and tables sit on white with a hairline and a faint blue shadow. */
     .fi-section:not(.fi-section-not-contained):not(.fi-aside),
     .fi-ta-ctn,
     .fi-wi-stats-overview-stat,
@@ -153,16 +230,19 @@ html.dark {
         background-color: var(--wt-ground-dark);
     }
 
-    .fi-topbar > nav,
     .fi-topbar {
-        background-color: rgb(15 17 21 / 0.8);
-        backdrop-filter: blur(12px);
+        background-color: var(--wt-surface-dark);
         border-color: var(--wt-line-dark);
     }
 
     .fi-sidebar {
-        background-color: var(--wt-ground-dark);
+        background-color: var(--wt-surface-dark);
         border-inline-end: 1px solid var(--wt-line-dark);
+    }
+
+    .fi-header {
+        background-color: var(--wt-surface-dark);
+        border-bottom-color: var(--wt-line-dark);
     }
 
     /*
@@ -200,13 +280,6 @@ html.dark {
     }
 }
 
-/* A flat hairline rather than a drop shadow — shadows read as grey. */
-.fi-topbar > nav,
-.fi-topbar {
-    border-bottom-width: 1px;
-    box-shadow: none;
-}
-
 /* ====================================================================
    Corners — one scale for the whole panel
    ==================================================================== */
@@ -228,12 +301,24 @@ html.dark {
     border-radius: var(--wt-radius-control);
 }
 
+/*
+ * Badges keep a small corner on purpose. At 24px they become lozenges and at
+ * 12px they read as buttons, and a badge that reads as a button gets clicked.
+ */
 .fi-badge {
     border-radius: 6px;
 }
 
+/*
+ * The band spans the content column, so its own corners have to go —
+ * otherwise a 24px radius cuts the corner out of a full-bleed white strip.
+ */
+.fi-header {
+    border-radius: 0;
+}
+
 /* ====================================================================
-   Blue — the brand mark and wherever the eye should land
+   Indigo — the brand mark, the active state, wherever the eye should land
    ==================================================================== */
 
 .fi-logo {
@@ -243,42 +328,37 @@ html.dark {
 
 :where(html:not(.dark)) {
     .fi-logo {
-        color: var(--wt-blue);
+        color: var(--wt-indigo);
     }
 
     /*
-     * Filament v4 names these `.fi-sidebar-item-btn` and `.fi-active` — not
-     * `-button` and `.fi-sidebar-item-active`. With the wrong names these rules
-     * matched nothing and the active nav item was never tinted at all, which is
-     * invisible as bugs go: the panel simply looked slightly less finished than
-     * intended. The label is its own span with its own colour, so it has to be
-     * named separately from the button.
-     *
-     * The active item is a white pill lifted off the ground: the one place in
-     * the sidebar with a surface, so the eye finds it without any colour fill.
+     * The active nav item is a filled indigo tint, per the design system.
+     * The previous theme used a white pill lifted off a grey ground, which
+     * cannot work now that the sidebar itself is white — a white pill on
+     * white is only its shadow.
      */
     .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
-        background-color: var(--wt-surface);
-        box-shadow: 0 1px 2px rgb(22 24 29 / 0.06), 0 0 0 1px var(--wt-line);
+        background-color: var(--wt-indigo-tint);
+        box-shadow: none;
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-label {
-        color: var(--wt-blue-dark);
+        color: var(--wt-indigo-dark);
         font-weight: 600;
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
     .fi-sidebar-item.fi-active .fi-sidebar-item-btn > .fi-icon {
-        color: var(--wt-blue);
+        color: var(--wt-indigo);
     }
 
     .fi-sidebar-item:not(.fi-active) .fi-sidebar-item-btn:hover {
-        background-color: var(--wt-ground-2);
+        background-color: var(--wt-ground);
     }
 
     /* Each worklist reads as its own block on an otherwise quiet page. */
     .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-blue-dark);
+        color: var(--wt-indigo-dark);
     }
 
     .fi-ta-header {
@@ -288,42 +368,46 @@ html.dark {
     .fi-ta-header-cell {
         color: var(--wt-ink-muted);
         font-size: 0.8125rem;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .fi-ta-row:hover {
-        background-color: var(--wt-blue-tint);
+        background-color: var(--wt-indigo-tint);
     }
 
-    /* Solid primary buttons carry the shopfront's button shadow. */
     .fi-btn.fi-color-primary:not(.fi-outlined) {
-        box-shadow: 0 1px 2px rgb(7 49 133 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.15);
+        box-shadow: 0 1px 2px rgb(79 70 229 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.15);
     }
 }
 
 html.dark {
     .fi-logo {
-        color: var(--wt-blue-on-dark);
+        color: var(--wt-indigo-on-dark);
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
-        background-color: var(--wt-surface-dark);
-        box-shadow: 0 0 0 1px var(--wt-line-dark);
+        background-color: rgb(79 70 229 / 0.22);
+        box-shadow: none;
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-label,
     .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
     .fi-sidebar-item.fi-active .fi-sidebar-item-btn > .fi-icon {
-        color: var(--wt-blue-on-dark);
+        color: var(--wt-indigo-on-dark);
+    }
+
+    .fi-sidebar-item:not(.fi-active) .fi-sidebar-item-btn:hover {
+        background-color: rgb(255 255 255 / 0.05);
     }
 
     .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-blue-on-dark);
+        color: var(--wt-indigo-on-dark);
     }
 
     /*
-     * The rule under each queue heading. The light tint (#f0f5ff) is very
-     * nearly white, so reusing it here drew a glaring bar across every widget.
+     * The rule under each queue heading. The light tint (#eef2ff) is very
+     * nearly white, so reusing it here would draw a glaring bar across every
+     * widget.
      */
     .fi-ta-header {
         border-bottom: 1px solid var(--wt-line-dark);
@@ -331,11 +415,11 @@ html.dark {
 
     .fi-ta-header-cell {
         font-size: 0.8125rem;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .fi-ta-row:hover {
-        background-color: rgb(7 49 133 / 0.28);
+        background-color: rgb(79 70 229 / 0.24);
     }
 }
 
@@ -343,7 +427,7 @@ html.dark {
     font-weight: 600;
 }
 
-/* Pressed feedback on every button, like the shopfront. */
+/* Pressed feedback on every button. */
 .fi-btn:active,
 .fi-icon-btn:active {
     transform: scale(0.98);
@@ -388,7 +472,7 @@ html.dark .fi-ta-row:has(.fi-badge.fi-color-danger) {
 
 :where(html:not(.dark)) .fi-simple-layout {
     background-color: var(--wt-ground);
-    background-image: radial-gradient(ellipse 60% 50% at 50% 100%, rgb(7 49 133 / 0.12), transparent 70%);
+    background-image: radial-gradient(ellipse 60% 50% at 50% 100%, rgb(79 70 229 / 0.10), transparent 70%);
 }
 
 html.dark .fi-simple-layout {
@@ -405,6 +489,13 @@ html.dark .fi-simple-layout {
     .fi-header-actions,
     .fi-btn {
         display: none !important;
+    }
+
+    /* The band is chrome on screen and a stray white strip on paper. */
+    .fi-header {
+        border: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .fi-body,

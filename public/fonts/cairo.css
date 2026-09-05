@@ -1,0 +1,50 @@
+/*
+ * Cairo for the Filament panels, served from this app rather than a CDN.
+ *
+ * The FixFlow design system asks for Cairo on all text. Filament's default
+ * provider for a named font fetches it from Google, and the privacy notice
+ * this company publishes says in as many words: no CDN webfonts. So the face
+ * is committed here and registered through LocalFontProvider, exactly as
+ * Geist was — see AdminPanelProvider and PortalPanelProvider.
+ *
+ * Two subsets, not the nine the package ships. The panels are Bahasa
+ * Indonesia, so latin carries every glyph on every screen and latin-ext
+ * covers a pasted supplier name with a diacritic Latin-1 does not have. The
+ * Arabic subset is 100 kB the browser would download and never draw, and
+ * `unicode-range` means the browser only fetches a file when a character in
+ * that range actually appears — so the ranges below are load-bearing, not
+ * decoration.
+ *
+ * Variable, 200-1000, one file per subset: the design system uses several
+ * weights and a variable face is smaller than three static cuts.
+ *
+ * Licence: Cairo-OFL.txt beside the font files.
+ *
+ * Provenance, so a future update is a repeat rather than a rediscovery: the
+ * two woff2 files are `cairo-latin-wght-normal` and
+ * `cairo-latin-ext-wght-normal` from `@fontsource-variable/cairo` 5.3.0,
+ * copied out of `node_modules/@fontsource-variable/cairo/files/` and renamed.
+ * The package is not a dependency — nothing builds against it — which is why
+ * it is not in package.json.
+ */
+@font-face {
+    font-family: 'Cairo';
+    font-style: normal;
+    font-weight: 200 1000;
+    font-display: swap;
+    src: url('/fonts/Cairo-Variable-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+        U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    font-style: normal;
+    font-weight: 200 1000;
+    font-display: swap;
+    src: url('/fonts/Cairo-Variable-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+        U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}

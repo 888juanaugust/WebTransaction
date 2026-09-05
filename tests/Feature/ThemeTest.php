@@ -110,28 +110,46 @@ class ThemeTest extends TestCase
     }
 
     /**
-     * The panel and the public site draw from two separate declarations of the
-     * same palette, and they have drifted before. The logo's blue has to be in
-     * both or the shopfront and the panel are subtly different companies.
+     * The shopfront still wears the logo's blue.
+     *
+     * This test used to assert that the panel wore it too, and that was the
+     * right guard while both did — the two palettes are declared separately
+     * and had drifted before. The FixFlow design system (2026-09) moved the
+     * **panels** to indigo and left the public site and every printed
+     * document on #073185, so the guard now covers what is still shared: the
+     * shopfront's own declaration, and the fact that the logo blue is still
+     * defined somewhere the panels can be put back onto.
+     *
+     * Editing this test was the deliberate act the change required, which is
+     * the point of having written it down in the first place.
      */
-    public function test_the_public_site_uses_the_same_blue_as_the_panel(): void
+    public function test_the_shopfront_still_wears_the_logo_blue(): void
     {
-        $css = file_get_contents(resource_path('css/app.css'));
-
-        $this->assertStringContainsString('--color-brand-600: #073185;', $css);
         $this->assertStringContainsString(
-            '--wt-blue: #073185',
-            file_get_contents(resource_path('css/filament/admin/theme.css')),
+            '--color-brand-600: #073185;',
+            file_get_contents(resource_path('css/app.css')),
         );
+
+        // Still declared, so the panels are one line from going back.
+        $this->assertSame('oklch(0.348 0.148 262.160)', BrandColors::Blue[600]);
     }
 
-    public function test_the_palette_is_blue_and_red(): void
+    /**
+     * The panels lead with indigo, and red and green keep their jobs.
+     *
+     * `danger` and `success` are not brand colours here: red means an overdue
+     * faktur or short stock, green is the "Lunas" finance scans a list for.
+     * A redesign that swept either into the primary would look tidier and
+     * read worse, so both are asserted to be something other than it.
+     */
+    public function test_the_panel_palette_leads_with_indigo(): void
     {
         $palette = BrandColors::panel();
 
-        $this->assertSame(BrandColors::Blue, $palette['primary']);
-        $this->assertSame(BrandColors::Blue, $palette['info']);
+        $this->assertSame(BrandColors::Indigo, $palette['primary']);
+        $this->assertSame(BrandColors::Indigo, $palette['info']);
         $this->assertSame(BrandColors::Red, $palette['danger']);
+        $this->assertNotSame($palette['primary'], $palette['success']);
     }
 
     /** "Dasbor" is the dictionary word; "Dashboard" is what staff say. */
