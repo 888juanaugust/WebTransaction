@@ -21,6 +21,7 @@ use App\Jobs\PruneAbandonedCarts;
 use App\Jobs\PurgeVisitPhotos;
 use App\Jobs\ReleaseStaleReservations;
 use App\Jobs\SweepDebtAging;
+use App\Jobs\SweepLedgerIntegrity;
 use App\Models\Company;
 use App\Models\CustomerUser;
 use App\Observers\CompanyObserver;
@@ -236,6 +237,16 @@ class AppServiceProvider extends ServiceProvider
         // Baskets untouched for three months. A cart holds quantities and
         // never money, so this deletes a shopping list, not a record.
         Schedule::job(new PruneAbandonedCarts)->dailyAt('01:00');
+
+        /*
+         * Do the ledgers still add up? Nightly, before the backup, so a dump
+         * taken minutes later is one somebody has been told the truth about.
+         *
+         * Once a day rather than hourly: drift is caused by a write, not by
+         * the passage of time, and a check that walks every SKU in every
+         * region has no business running while people are ordering.
+         */
+        Schedule::job(new SweepLedgerIntegrity)->dailyAt('01:30');
 
         /*
          * Nightly backup, at an hour when nobody is ordering.

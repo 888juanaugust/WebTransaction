@@ -1348,6 +1348,36 @@ every kind of data the role separation elsewhere exists to keep apart.
 | `OpsAlerter` | Mails the Owner once per incident (6h throttle, cleared on recovery); the mail is deliberately unqueued |
 | Heartbeat | The scheduler stamps the cache every minute; the stamp's absence *is* the "cron is dead" finding |
 
+### Keutuhan buku — the checks that used to run nowhere
+
+| Piece | Decides |
+|---|---|
+| `LedgerIntegrity::findings` | Four questions, **region by region**: cached stock vs the movement ledger, cached reservations vs the reservations held, moving-average value vs the cost ledger, every control account vs its subledger (plus the trial balance) |
+| `StockLedger::reconcileReservations` | The check that did not exist. `qty_reserved` is moved by `+=`/`-=` with `max(0, …)` clamps that floor an over-decrement silently at zero |
+| `integritas:periksa` | Terminal view; exit 0 clean, 1 drifted — the counterpart to `ops:check`, asking whether the numbers are true rather than whether the box is alive |
+| `SweepLedgerIntegrity` | Nightly. Logs first, then tells the Owner — and only the Owner, since a drift means something wrote outside the domain classes |
+| `LedgerIntegrityStatus` widget | Owner only, **silent when the books agree** |
+
+Every one of these checks already existed and **none of them ran**.
+`StockLedger::reconcile()` said in its own docblock "run it as a scheduled
+audit" and was reachable from the test suite and nowhere else; the control
+accounts only from a screen somebody had to think to open; the reservation
+column had no witness at all. A guard that is never run is a comment.
+
+**Nothing here repairs anything.** Rebuilding a cache from its ledger would
+make the symptom vanish and leave the cause — something writing outside the
+domain classes — to do it again next week, unwitnessed. The finding is the
+product.
+
+**Region by region, never unpinned**, and that is load-bearing rather than
+tidy. `product_costs` is unique on (region_id, sku), so average cost is kept
+per region: running the valuation check with the scope open compares one
+region's cost row against the movements of *every* region and invents drift on
+a SKU that is perfectly healthy — verified, two regions holding one SKU produce
+two false findings that way and none when pinned. A check that cries wolf is
+switched off within a fortnight, and then it is not there on the morning it was
+right.
+
 ### Pengaturan perusahaan — the values only the business knows
 
 | Piece | Decides |
@@ -1789,8 +1819,13 @@ if a portal resource over a company-owned table lacks the scope.
 | `ParsePriceListImport` | On upload | Parses the workbook into staging |
 | `ReleaseStaleReservations` | Every 15 min | Frees stock on stale unpaid orders |
 | `PruneAbandonedCarts` | Daily 01:00 | Baskets untouched for 90 days — quantities only, never money |
+| `SweepLedgerIntegrity` | Daily 01:30 | Asks whether the ledgers still add up, and tells the Owner when they do not. **Repairs nothing** |
 
 All idempotent — assume they run twice.
+
+`SweepDebtAging` (00:30) and `PurgeVisitPhotos` (00:45) run on the same nightly
+line; the integrity sweep sits last, just before the 02:15 backup, so the dump
+is one somebody has been told the truth about.
 
 ---
 

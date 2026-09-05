@@ -11,6 +11,7 @@ use App\Filament\Widgets\DebtRemovalsAwaitingVerification;
 use App\Filament\Widgets\ExpenseClaimsAwaitingVerification;
 use App\Filament\Widgets\GiroDue;
 use App\Filament\Widgets\LaunchReadinessSummary;
+use App\Filament\Widgets\LedgerIntegrityStatus;
 use App\Filament\Widgets\NilaiStokKategori;
 use App\Filament\Widgets\OrdersAwaitingApproval;
 use App\Filament\Widgets\OrdersReadyToPick;
@@ -110,6 +111,7 @@ class AdminPanelProvider extends PanelProvider
                  */
                 LaunchReadinessSummary::class,
                 BackupStatus::class,
+                LedgerIntegrityStatus::class,
                 OrdersAwaitingApproval::class,
                 AccountsAwaitingApproval::class,
                 UnmatchedPayments::class,

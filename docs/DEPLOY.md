@@ -543,6 +543,26 @@ age, disk space — and three things read them:
   immediately. The mail is deliberately not queued: an alert about a dead
   worker that waits for a worker is a punchline.
 
+### Are the numbers on it true?
+
+A different question from "is the box alive", and it has its own command.
+`php artisan integritas:periksa` asks whether every cached column still agrees
+with the ledger behind it — stock against its kartu stok, reservations against
+the reservations actually held, inventory value against the cost ledger, every
+control account against its subledger. **Exit 0 clean, 1 drifted.**
+
+Worth running at three moments: after a restore drill (it is the cheapest
+proof the data survived), after any deploy that touched the ledgers, and
+before closing a month. A nightly job (`SweepLedgerIntegrity`, 01:30) asks the
+same question unprompted and tells the Owner through the panel's bell; the
+Owner's dashboard shows a panel **only when something has drifted**.
+
+It never repairs anything, deliberately. Rebuilding a cache from its ledger
+makes the symptom vanish and leaves whatever wrote outside the domain classes
+to do it again next week, unwitnessed. If it reports a drift, the question to
+answer is *what wrote that column*, and the answer is usually a hand-run SQL
+statement or a code path that skipped the domain class.
+
 Two findings only a human can arrange:
 
 - **External uptime.** This box cannot see itself vanish from the internet.

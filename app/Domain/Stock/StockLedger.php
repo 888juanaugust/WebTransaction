@@ -492,6 +492,14 @@ class StockLedger
      * The invariant is that this changes nothing. Run it as a scheduled audit;
      * if it ever reports a drift, something wrote stock outside this class.
      *
+     * **Answers for one region — whichever is pinned.** Both sides of the
+     * comparison are scoped the same way, which is what keeps it honest: a
+     * warehouse belongs to exactly one region, so its levels and its movements
+     * are in the same books and comparing them within a region is the whole
+     * question. Sweeping every region is the caller's job, and
+     * `LedgerIntegrity` does it by pinning to each in turn — never by running
+     * unpinned, which is a different and wrong question. See that class.
+     *
      * @return list<array{sku: string, warehouse_id: int, cached: int, ledger: int}>
      */
     public function reconcile(): array
@@ -512,6 +520,82 @@ class StockLedger
                 }
             }
         });
+
+        return $drift;
+    }
+
+    /**
+     * The other cached column, and the one with no witness until now.
+     *
+     * `qty_reserved` is not summed from anything — it is moved by `+=` and
+     * `-=` as orders are confirmed and shipped, and both decrements are
+     * wrapped in `max(0, …)`. That clamp is defensible on its own (a negative
+     * reservation is meaningless) and it is also a drift *hider*: an
+     * over-decrement floors silently at zero instead of going negative, so a
+     * mistake leaves no trace in the column it corrupted.
+     *
+     * The truth it should equal is the held reservations themselves. Both
+     * directions of drift cost real money and neither announces itself:
+     * over-reserved is stock the business cannot sell and nobody can explain,
+     * under-reserved is selling the same carton twice.
+     *
+     * Scoped to the pinned region on both sides, exactly like `reconcile()`,
+     * and swept across regions by `LedgerIntegrity` rather than by running
+     * unpinned.
+     *
+     * @return list<array{sku: string, warehouse_id: int, cached: int, held: int}>
+     */
+    public function reconcileReservations(): array
+    {
+        $held = StockReservation::query()
+            ->where('status', StockReservation::STATUS_HELD)
+            ->groupBy('sku', 'warehouse_id')
+            ->selectRaw('sku, warehouse_id, SUM(qty_base) AS qty')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->sku.'@'.$row->warehouse_id => (int) $row->qty])
+            ->all();
+
+        $drift = [];
+        $terlihat = [];
+
+        StockLevel::query()
+            ->orderBy('id')
+            ->chunkById(500, function ($levels) use (&$drift, &$terlihat, $held) {
+                foreach ($levels as $level) {
+                    $kunci = $level->sku.'@'.$level->warehouse_id;
+                    $terlihat[$kunci] = true;
+
+                    $seharusnya = $held[$kunci] ?? 0;
+
+                    if ($seharusnya !== (int) $level->qty_reserved) {
+                        $drift[] = [
+                            'sku' => $level->sku,
+                            'warehouse_id' => (int) $level->warehouse_id,
+                            'cached' => (int) $level->qty_reserved,
+                            'held' => $seharusnya,
+                        ];
+                    }
+                }
+            });
+
+        /*
+         * Reservations held against a level row that does not exist. Not
+         * reachable through this class — reserving locks or creates the level
+         * first — which is exactly why it is worth reporting: if it ever
+         * happens, something wrote reservations outside here.
+         */
+        foreach ($held as $kunci => $qty) {
+            if (! isset($terlihat[$kunci])) {
+                [$sku, $warehouseId] = explode('@', $kunci);
+
+                $drift[] = [
+                    'sku' => $sku,
+                    'warehouse_id' => (int) $warehouseId,
+                    'cached' => 0,
+                    'held' => $qty,
+                ];
+            }
+        }
 
         return $drift;
     }
