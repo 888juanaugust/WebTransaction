@@ -1639,8 +1639,32 @@ every kind of data the role separation elsewhere exists to keep apart.
 | `OpsHealth` | Seven checks: PostgreSQL, Redis, antrean, job gagal, scheduler heartbeat, umur cadangan, disk. Every check catches its own exceptions — a health check that throws lies by omission |
 | `ops:check` | Terminal view; exit 0/1/2 = sehat/waspada/gawat, so a prober pages on the number |
 | `KesehatanSistem` widget | Owner only, **silent when healthy** — same rule as the backup banner |
-| `OpsAlerter` | Mails the Owner once per incident (6h throttle, cleared on recovery); the mail is deliberately unqueued |
+| `OpsAlerter` | Mails the Owner once per incident (6h throttle, cleared on recovery); the mail is deliberately unqueued. **An unreachable throttle means send** — see below |
 | Heartbeat | The scheduler stamps the cache every minute; the stamp's absence *is* the "cron is dead" finding |
+
+### What a Redis outage actually does
+
+`SESSION_DRIVER=database`, so staff stay signed in and keep working while the
+cache is down. That is the whole difficulty: nothing stops, so nothing is
+noticed. Three things went wrong on that path, each a different kind of wrong.
+
+| Piece | Decides |
+|---|---|
+| `PengaturanPerusahaan::tersimpan` | Cache **then database**, and only null when neither answers. The cache is an optimisation over one `pluck`; it used to be treated as the source, so an outage left config answering — and what config answers is the placeholder rekening, printed on every faktur, with the document rendering perfectly and nothing raised |
+| `PengaturanPerusahaan::CACHE_TTL` | 60s, not forever. Saving forgets the key, so staleness is normally impossible — except when the forget itself cannot land, which is exactly during an outage. The bound is what makes swallowing that failure safe |
+| `LaunchReadiness::survives` | Runs each check inside its own guard: one unanswerable question no longer destroys the fifteen answerable ones. A check that could not run is reported as *not passing, and named* — "could not check" and "checked and it is wrong" call for different actions |
+| `OpsAlerter::claimTheIncident` | The throttle lives in the cache, and the cache is one of the things that can be gawat. It used to detect the Redis outage correctly and then die on the way to telling anybody. Unreachable now means **send**: a repeated mail is a nuisance, an unreported outage is why the class exists — and the repetition ends when the cache comes back, which is the same event that ends the incident |
+
+Measured, with `service redis-server stop` and the readiness screen open:
+before, HTTP 500 and a stack trace; after, the full checklist with `Sandi
+staf` marked *Gagal diperiksa: Connection refused* and `Rekening perusahaan
+sudah diisi` still green off the database.
+
+`tests/Support/ExplodingCacheStore` is what makes this testable. Deliberately
+not a null store — a null cache returns misses, which is indistinguishable
+from a working cache that happens to be empty, and every caller handles that
+by definition. `phpredis` against a stopped server *throws*, from whichever
+method the caller happened to reach, and that is what the fixture does.
 
 ### Keutuhan buku — the checks that used to run nowhere
 

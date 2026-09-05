@@ -101,7 +101,20 @@ class OpsHealth
                 ? OpsCheck::sehat('redis', 'Cache/antrean (Redis)', 'Tulis-baca berhasil')
                 : OpsCheck::gawat('redis', 'Cache/antrean (Redis)', 'Tulisan tidak terbaca kembali');
         } catch (Throwable $e) {
-            // Redis is on the login path: staff cannot sign in without it.
+            /*
+             * Gawat, but not for the reason this comment used to give. It
+             * said Redis was on the login path and staff could not sign in
+             * without it; `SESSION_DRIVER=database`, so they can. Sessions
+             * moved and the comment did not, which is how a sentence written
+             * to help somebody at 03:00 starts misleading them instead.
+             *
+             * What actually stops: the queue, so nothing scheduled runs — no
+             * stale-reservation sweep, no nightly integrity check, no debt
+             * ageing — and the cache, which the launch checklist and the
+             * company settings read through. The screens stay up and the
+             * work behind them quietly does not happen, which is why this is
+             * gawat rather than a warning.
+             */
             return OpsCheck::gawat('redis', 'Cache/antrean (Redis)', 'Tidak bisa dihubungi: '.$e->getMessage());
         }
     }

@@ -29,6 +29,21 @@ class PengaturanPerusahaan
 {
     public const CACHE_KEY = 'pengaturan:semua';
 
+    /**
+     * Bounded rather than forever, and the bound is the point.
+     *
+     * Saving forgets this key, so a minute of staleness is normally
+     * impossible. It becomes possible in exactly one situation: the cache is
+     * unreachable when somebody saves, so the forget cannot land, and the old
+     * value is still sitting there when the cache comes back. Kept forever
+     * that value would be served until someone thought to flush by hand —
+     * for settings whose whole purpose is to be right on a printed document.
+     *
+     * A minute of a stale rekening is a bad minute; an indefinite one is a
+     * bad quarter. The cost of the bound is one `pluck` a minute.
+     */
+    public const CACHE_TTL = 60;
+
     /** kunci tersimpan → config path yang ditimpanya */
     public const PETA = [
         // Where customer money goes. Printed on every faktur.
@@ -67,18 +82,59 @@ class PengaturanPerusahaan
     private const KUNCI_JSON = ['mitra_json'];
 
     /**
+     * What the Owner has stored, from the cache if it is there and from the
+     * database if it is not. Null only when neither can answer.
+     *
+     * **The cache is an optimisation over one `pluck`, and it used to be
+     * treated as the source.** When Redis was unreachable this gave up and
+     * left config answering — which sounds harmless and is not, because what
+     * config answers is the placeholder:
+     *
+     *     Redis up    rekening.nomor '1234567890'  bank 'BCA CABANG SURABAYA'
+     *     Redis down  rekening.nomor ''            bank 'BCA'
+     *
+     * `config/perusahaan.php` says of that value: *a wrong number here sends
+     * customer money to somebody else's account*. So a cache outage silently
+     * printed the placeholder rekening on every faktur, the placeholder NPWP
+     * on every faktur pajak, and the placeholder legal identity on the public
+     * site — with the documents rendering perfectly and nothing raised.
+     *
+     * Falling back to the database keeps every one of those right and loses
+     * only the caching. The database failing too is the case the original
+     * guard was written for — a fresh clone mid-migration — and that still
+     * returns null and leaves config alone.
+     *
+     * @return array<string, string|null>|null
+     */
+    private function tersimpan(): ?array
+    {
+        try {
+            return Cache::remember(
+                self::CACHE_KEY,
+                self::CACHE_TTL,
+                fn () => Pengaturan::query()->pluck('nilai', 'kunci')->all(),
+            );
+        } catch (Throwable) {
+            // The cache is gone. The answer is not.
+        }
+
+        try {
+            return Pengaturan::query()->pluck('nilai', 'kunci')->all();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Lay stored values over config. Called at boot, before any request
      * reads the keys; guarded because boot also happens with no database —
      * a fresh clone mid-migration must not fatal on its own settings.
      */
     public function overlay(): void
     {
-        try {
-            $tersimpan = Cache::rememberForever(
-                self::CACHE_KEY,
-                fn () => Pengaturan::query()->pluck('nilai', 'kunci')->all(),
-            );
-        } catch (Throwable) {
+        $tersimpan = $this->tersimpan();
+
+        if ($tersimpan === null) {
             return;
         }
 
@@ -175,7 +231,18 @@ class PengaturanPerusahaan
             }
         });
 
-        Cache::forget(self::CACHE_KEY);
+        /*
+         * The rows are committed by now, so a cache that cannot be reached
+         * must not turn a saved change into an exception. The bounded TTL
+         * above is what makes swallowing this safe: the stale value ages out
+         * on its own rather than outliving the outage.
+         */
+        try {
+            Cache::forget(self::CACHE_KEY);
+        } catch (Throwable) {
+            // Nothing to do about it here, and nothing worth failing over.
+        }
+
         $this->overlay();
     }
 }

@@ -14,6 +14,7 @@ use App\Models\PriceListVersion;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 /**
  * Is this thing ready to be used by a real business?
@@ -120,17 +121,51 @@ class LaunchReadiness
     /** @return list<LaunchCheck> */
     private function automatic(): array
     {
-        return [
-            $this->companyIdentity(),
-            $this->partners(),
-            $this->taxIdentity(),
-            $this->priceList(),
-            $this->bankAccount(),
-            $this->staffPasswords(),
-            $this->backups(),
-            $this->realOrder(),
-            $this->controlAccounts(),
-        ];
+        return array_map(
+            fn (array $one) => $this->survives($one[0], $one[1], $one[2]),
+            [
+                ['identitas_perusahaan', 'Identitas perusahaan', fn () => $this->companyIdentity()],
+                ['mitra', 'Daftar mitra', fn () => $this->partners()],
+                ['identitas_pajak', 'Identitas pajak', fn () => $this->taxIdentity()],
+                ['daftar_harga', 'Daftar harga', fn () => $this->priceList()],
+                ['rekening', 'Rekening perusahaan', fn () => $this->bankAccount()],
+                ['sandi_staf', 'Sandi staf', fn () => $this->staffPasswords()],
+                ['cadangan', 'Cadangan', fn () => $this->backups()],
+                ['order_sungguhan', 'Order sungguhan', fn () => $this->realOrder()],
+                ['akun_kontrol', 'Akun kontrol', fn () => $this->controlAccounts()],
+            ],
+        );
+    }
+
+    /**
+     * Run one check, and let it fail without taking the report with it.
+     *
+     * The whole point of this screen is to answer "is anything in the way",
+     * and it used to answer a stack trace. `staffPasswords()` reads through
+     * the cache; with Redis unreachable the exception escaped, `launch:check`
+     * exited 1 having printed nothing, and the readiness page 500'd — so the
+     * fifteen other answers, every one of which was available, were lost to
+     * the one that was not.
+     *
+     * A check that cannot run is reported as not passing, named, and told
+     * apart from one that ran and found a problem: "could not check" and
+     * "checked and it is wrong" call for different actions, and a launch
+     * checklist that blurs them is worse than one that is simply slow.
+     */
+    private function survives(string $kunci, string $judul, callable $check): LaunchCheck
+    {
+        try {
+            return $check();
+        } catch (Throwable $e) {
+            return LaunchCheck::checked(
+                kunci: $kunci,
+                judul: $judul,
+                keterangan: 'Pemeriksaan ini tidak bisa dijalankan, jadi statusnya belum diketahui.',
+                lulus: false,
+                temuan: 'Gagal diperiksa: '.$e->getMessage(),
+                tindakan: 'Periksa layanan pendukung (cache/Redis, basis data), lalu muat ulang.',
+            );
+        }
     }
 
     private function companyIdentity(): LaunchCheck
