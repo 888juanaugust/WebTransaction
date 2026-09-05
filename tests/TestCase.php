@@ -6,6 +6,7 @@ use App\Domain\Regions\RegionContext;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -52,6 +53,37 @@ abstract class TestCase extends BaseTestCase
     {
         return app(RegionContext::class)->region()
             ?? throw new \RuntimeException('No region is bound in this test.');
+    }
+
+    /**
+     * Write a ledger row the way it was written before a column existed.
+     *
+     * The append-only triggers refuse to let anything change a ledger row,
+     * and they are right to: in production a legacy payment entry has a null
+     * `bank_account_id` because it was *inserted* before the column existed,
+     * and a pre-costing stock movement has a null `value_rupiah` for the same
+     * reason. Neither was ever updated into that shape.
+     *
+     * A test cannot insert into the past, so it makes the row and then bends
+     * it. This is the seam where that is allowed — named at the call site so
+     * the exception reads as the fiction it is, and never usable from
+     * application code, which has no way to reach it.
+     *
+     * @param  list<string>  $tables
+     */
+    protected function asIfWrittenBeforeTheColumnExisted(array $tables, callable $write): void
+    {
+        foreach ($tables as $table) {
+            DB::statement("ALTER TABLE {$table} DISABLE TRIGGER {$table}_append_only");
+        }
+
+        try {
+            $write();
+        } finally {
+            foreach ($tables as $table) {
+                DB::statement("ALTER TABLE {$table} ENABLE TRIGGER {$table}_append_only");
+            }
+        }
     }
 
     private ?User $penyetuju = null;

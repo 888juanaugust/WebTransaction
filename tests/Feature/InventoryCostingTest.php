@@ -423,7 +423,9 @@ class InventoryCostingTest extends TestCase
             qtySigned: 200,
             reason: MovementReason::Penerimaan,
         );
-        StockMovement::query()->where('sku', self::SKU)->update(['value_rupiah' => null]);
+        $this->asIfWrittenBeforeTheColumnExisted(['stock_movements'], fn () => StockMovement::query()
+            ->where('sku', self::SKU)
+            ->update(['value_rupiah' => null]));
         ProductCost::query()->where('sku', self::SKU)->delete();
 
         // Then a proper receipt on top.

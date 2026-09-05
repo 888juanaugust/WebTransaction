@@ -191,6 +191,53 @@ settlement in the payment ledger — finance's hand against the bank statement.
 Per line, never only on the total: summing rounded lines is not the same number
 as rounding a summed total, and the faktur has to agree with the lines on it.
 
+### Append-only, enforced by the database
+
+Invariants 1 and 4 — never `UPDATE products SET stock`, never mutate a payment
+row — were kept by the domain classes and by nothing else. They now have a
+Postgres trigger behind them.
+
+| Piece | Decides |
+|---|---|
+| `ledger_is_append_only()` | One trigger function on eight tables: `stock_movements`, `payment_entries`, `payment_allocations`, `supplier_payment_entries`, `supplier_payment_allocations`, `journal_entries`, `journal_lines`, `audit_logs`. UPDATE and DELETE both raise SQLSTATE 23001 with the table and the verb in the message |
+| The one exception | `journal_entries.reversed_by_entry_id` may go from null to set, with the rest of the row byte-identical — `Ledger::reverse` stamping the original with a pointer to its mirror. No figure moves, and the null-check is what makes a second reversal impossible |
+| Not guarded: `order_events` | Append-only in spirit, but it cascades from `orders`, and `OrderEraser` deletes draft and submitted orders — which have events |
+| `TestCase::asIfWrittenBeforeTheColumnExisted` | The only seam that lifts a trigger, and only in tests. A legacy row with a null `bank_account_id` or `value_rupiah` was *inserted* that way in production; a test cannot insert into the past, so it makes the row and bends it, under a name that says so |
+
+**Measured before it was written**, by listening to every query the whole suite
+issues — 2059 tests, the application exercised end to end — and recording every
+UPDATE or DELETE against these tables. Production code mutated one row, once:
+the reversal pointer above. Every other hit was a fixture faking a legacy row,
+and three of those were `price_list_items`, which the import carries forward by
+insert exactly as "never UPDATE a price" requires.
+
+So this forbids nothing the code does. What it changes is the next person, who
+writes `->update(['amount_rupiah' => …])` on a Tuesday, or corrects a figure
+from `php artisan tinker` at 23:00 because a customer is on the phone. A model
+event or a static check would not: a raw query, a migration or a console
+one-liner goes straight around them. The database is the layer every writer has
+to pass through.
+
+### The database runs on the application's clock
+
+`config/database.php` sets `timezone` on the pgsql connection. It did not, and
+PHP is `Asia/Jakarta` while the server — VPS and CI alike — is UTC:
+
+```
+php now   2026-09-06 00:02:03
+pg  now   2026-09-05 17:02:03
+```
+
+Seven hours, and for seven hours a day a different calendar date. Nothing was
+visibly wrong, because every timestamp this system stores is written by PHP.
+The reason it was worth fixing: eleven tables carry `DEFAULT CURRENT_TIMESTAMP`
+— evaluated by Postgres — on `timestamp without time zone` columns that
+Eloquent reads back as Jakarta. Among them `payment_entries`,
+`journal_entries`, `stock_movements`, `audit_logs`. The first bulk insert that
+omitted `created_at` would have stamped the money seven hours early and
+silently, and a journal posted before 07:00 Jakarta would carry the previous
+day — on the first of a month, a period that may already be closed.
+
 ### Backups — the copy that survives the machine
 
 CLAUDE.md asks for nightly `pg_dump`, encrypted, off-box, restore tested. The

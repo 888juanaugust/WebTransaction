@@ -205,7 +205,8 @@ class StockTransferTest extends TestCase
         app(StockLedger::class)->record(
             self::SKU, $this->pusat->id, 100, MovementReason::Koreksi
         );
-        StockMovement::query()->update(['value_rupiah' => null, 'unit_cost_rupiah' => null]);
+        $this->asIfWrittenBeforeTheColumnExisted(['stock_movements'], fn () => StockMovement::query()
+            ->update(['value_rupiah' => null, 'unit_cost_rupiah' => null]));
 
         $before = app(InventoryValuation::class)->unvaluedQuantity();
 

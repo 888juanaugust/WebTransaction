@@ -97,6 +97,26 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+
+            /*
+             * The same clock the application runs on.
+             *
+             * PHP is Asia/Jakarta and Postgres was Etc/UTC — measured seven
+             * hours apart, and for seven hours of every day on a different
+             * calendar date. Nothing was wrong yet, because every timestamp
+             * this system stores is written by PHP. But eleven tables carry
+             * `DEFAULT CURRENT_TIMESTAMP` on a `timestamp without time zone`
+             * column — payment_entries, journal_entries, stock_movements and
+             * audit_logs among them — so the first bulk insert that omits
+             * created_at would have stamped the money seven hours early,
+             * silently, and a journal posted before 07:00 Jakarta would have
+             * landed in the previous day, and on the first of a month in a
+             * period that may already be closed.
+             *
+             * Mirrors config/app.php's default rather than reading it: config
+             * files are loaded before any of them can call config().
+             */
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'Asia/Jakarta')),
         ],
 
         'sqlsrv' => [

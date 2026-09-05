@@ -192,7 +192,10 @@ class MultiBankTest extends TestCase
         // Every payment recorded before multi-bank existed has a null
         // bank_account_id. The poster must read that as 1-1100 forever.
         $entry = $this->terima(5_000_000, '2026-08-05');
-        $entry->forceFill(['bank_account_id' => null])->save();
+        $this->asIfWrittenBeforeTheColumnExisted(
+            ['payment_entries'],
+            fn () => $entry->forceFill(['bank_account_id' => null])->save(),
+        );
 
         $pembalik = app(PaymentLedger::class)->reverse($entry->fresh(), $this->finance, 'Uji warisan');
 
