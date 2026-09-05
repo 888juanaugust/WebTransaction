@@ -400,6 +400,64 @@ class SupplierCreditNoteTest extends TestCase
 
     // --- helpers ------------------------------------------------------------
 
+    /**
+     * A bill is credited once, not repeatedly.
+     *
+     * `assertWithinWhatIsOwed` compares the note against what the bill still
+     * owes — and that figure was billed less paid less returned, with posted
+     * credit notes left out entirely. So it never moved, and every note fitted
+     * inside it. Three notes of Rp 10.000.000 against a Rp 10.000.000 bill all
+     * posted, sequentially, with no concurrency involved:
+     *
+     *     before any note        bill owes 10.000.000   payables  10.000.000
+     *     after note 1 of 10jt   bill owes 10.000.000   payables           0
+     *     after note 2 of 10jt   bill owes 10.000.000   payables -10.000.000
+     *     after note 3 of 10jt   bill owes 10.000.000   payables -20.000.000
+     *
+     * The aggregate `totalPayable()` subtracted the notes all along, so the
+     * two halves of the same question disagreed — and the bill stayed `open`
+     * at its full amount, ageing in Umur hutang and standing in the payment
+     * run for money no longer owed. It could have been paid in full on top,
+     * because the over-payment guard reads the same figure.
+     */
+    public function test_a_bill_cannot_be_credited_more_than_once_over(): void
+    {
+        $bill = $this->billedReceipt(100, 60_000);
+        $owed = (int) $bill->total_rupiah;
+
+        $this->terbitkan($this->draft($owed, AccountCode::SELISIH_HARGA_PEMBELIAN, $bill));
+
+        $this->assertSame(0, $bill->refresh()->amountOutstanding(), 'nothing left owing');
+        $this->assertSame(SupplierBill::STATUS_PAID, $bill->refresh()->status, 'and the bill is closed');
+
+        // A second note of the same size has nothing left to credit.
+        $this->assertRefused(fn () => $this->terbitkan(
+            $this->draft($owed, AccountCode::SELISIH_HARGA_PEMBELIAN, $bill->refresh()),
+        ));
+
+        $this->assertGreaterThanOrEqual(
+            0,
+            app(SupplierLedger::class)->totalPayable(),
+            'the payables subledger may never go negative',
+        );
+    }
+
+    /**
+     * And the per-bill figure agrees with the supplier-wide one, which is the
+     * property underneath — one question, one answer, whichever end you ask.
+     */
+    public function test_what_one_bill_owes_ties_to_what_the_supplier_is_owed(): void
+    {
+        $bill = $this->billedReceipt(100, 60_000);
+
+        $this->terbitkan($this->draft(2_500_000, AccountCode::SELISIH_HARGA_PEMBELIAN, $bill));
+
+        $this->assertSame(
+            $bill->refresh()->amountOutstanding(),
+            app(SupplierLedger::class)->totalPayable(),
+        );
+    }
+
     private function draft(
         int $dasar,
         string $account,

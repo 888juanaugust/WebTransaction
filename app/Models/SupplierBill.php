@@ -125,9 +125,44 @@ class SupplierBill extends Model
             ->sum(DB::raw('purchase_return_lines.nilai_ditagih_rupiah + purchase_return_lines.ppn_rupiah'));
     }
 
+    /**
+     * What the supplier has credited back on posted notes.
+     *
+     * The mirror of `Invoice::amountCredited()`, and it was simply missing —
+     * this bill's outstanding was billed less paid less returned, with the
+     * notes left out, while `SupplierLedger::totalPayable()` subtracted them
+     * from the supplier's total all along. So the aggregate and the per-bill
+     * figure answered the same question differently.
+     *
+     * Measured, sequentially, with no concurrency anywhere: three notes of
+     * Rp 10.000.000 posted one after another against one Rp 10.000.000 bill.
+     * Every one passed the "does this fit inside what is owed" check, because
+     * that check reads the figure below and the figure never moved. The bill
+     * stayed `open` at its full amount — so it would go on ageing in Umur
+     * hutang, appear in the payment run, and could be **paid in full** as
+     * well, since the over-payment guard reads the same figure. The payables
+     * subledger reached minus Rp 20.000.000: a supplier owing us money that
+     * does not exist.
+     *
+     * Drafts are excluded for the reason they are everywhere else here: a
+     * draft is somebody's intention, and letting one lower a debt takes a
+     * bill out of the payment run on the strength of a document nobody has
+     * agreed to.
+     */
+    public function amountCredited(): int
+    {
+        return (int) SupplierCreditNote::query()
+            ->where('supplier_bill_id', $this->getKey())
+            ->where('status', SupplierCreditNote::STATUS_POSTED)
+            ->sum('total_rupiah');
+    }
+
     public function amountOutstanding(): int
     {
-        return $this->total_rupiah - $this->amountPaid() - $this->amountReturned();
+        return $this->total_rupiah
+            - $this->amountPaid()
+            - $this->amountReturned()
+            - $this->amountCredited();
     }
 
     /** Input VAT this bill carries — creditable only with a faktur pajak behind it. */

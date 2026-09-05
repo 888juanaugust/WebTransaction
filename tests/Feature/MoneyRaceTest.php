@@ -5,15 +5,22 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Accounting\AccountCode;
+use App\Domain\Billing\CustomerDepositRegister;
 use App\Domain\Credit\CreditChecker;
+use App\Domain\Expenses\PaidFrom;
+use App\Domain\Giro\GiroRegister;
 use App\Domain\Orders\CreditLimitExceededException;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Payments\PaymentLedger;
+use App\Domain\Purchasing\SupplierCreditNoteIssuer;
 use App\Domain\Purchasing\SupplierLedger;
 use App\Domain\Stock\MovementReason;
 use App\Domain\Stock\StockLedger;
 use App\Models\Company;
+use App\Models\CustomerDeposit;
+use App\Models\Giro;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderLine;
@@ -23,6 +30,7 @@ use App\Models\PriceListVersion;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
+use App\Models\SupplierCreditNote;
 use App\Models\SupplierPaymentEntry;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -273,6 +281,137 @@ class MoneyRaceTest extends TestCase
         $this->assertSame(10_000_000, $fresh->amountPaid());
     }
 
+    // --- the rest of the money paths -----------------------------------------
+
+    /**
+     * Four deposits, one faktur, applied at the same instant.
+     *
+     * `apply()` locks the deposit — two people spending one deposit twice was
+     * already thought about — and reads what the faktur owes without holding
+     * it, which is the other half of the same question.
+     */
+    public function test_two_deposits_cannot_over_pay_one_faktur(): void
+    {
+        $company = $this->customer(900_000_000);
+        $invoice = $this->openInvoiceFor($company, 10_000_000);
+
+        $deposits = [];
+
+        for ($n = 0; $n < 4; $n++) {
+            $deposits[] = app(CustomerDepositRegister::class)->receive(
+                company: $company,
+                jumlahRupiah: 10_000_000,
+                diterimaDi: PaidFrom::Bank,
+                tanggal: now(),
+                actor: $this->finance,
+            );
+        }
+
+        $outcomes = $this->race($deposits, 'child_apply_deposit', $invoice->id);
+
+        $this->assertSame(0, $outcomes['errored']);
+        $this->assertSame(1, $outcomes['won'], 'only one deposit may settle it');
+
+        $fresh = Invoice::query()->findOrFail($invoice->id);
+
+        $this->assertSame(0, $fresh->amountOutstanding());
+        $this->assertSame(10_000_000, $fresh->amountPaid());
+    }
+
+    /**
+     * Four cheques on one faktur, clearing together.
+     *
+     * The property here is the opposite of the others and it matters more:
+     * **every cheque must be recorded.** Clearing is the bank telling us money
+     * arrived, and refusing to write that down leaves the reconciliation short
+     * over a transfer nobody disputes — which is why clearing caps what it
+     * applies and queues the rest rather than throwing.
+     *
+     * So all four win, the faktur takes what it owes and no more, and the
+     * balance sits unallocated where the receipts queue finds it.
+     */
+    public function test_every_cheque_that_clears_is_recorded_and_none_over_applies(): void
+    {
+        $company = $this->customer(900_000_000);
+        $invoice = $this->openInvoiceFor($company, 10_000_000);
+
+        $giros = [];
+
+        for ($n = 0; $n < 4; $n++) {
+            $giros[] = app(GiroRegister::class)->receive(
+                company: $company,
+                nilaiRupiah: 10_000_000,
+                bankPenerbit: 'BCA',
+                nomorWarkat: 'AB'.str_pad((string) $n, 6, '0', STR_PAD_LEFT),
+                jatuhTempo: now()->addDays(30),
+                actor: $this->finance,
+                invoice: $invoice,
+            );
+        }
+
+        $outcomes = $this->race($giros, 'child_clear_giro');
+
+        $this->assertSame(0, $outcomes['errored'], 'a cheque that clears must never fail to record');
+        $this->assertSame(4, $outcomes['won'], 'every cheque is recorded');
+
+        $fresh = Invoice::query()->findOrFail($invoice->id);
+
+        $this->assertSame(0, $fresh->amountOutstanding(), 'settled, and not past zero');
+        $this->assertSame(10_000_000, $fresh->amountPaid(), 'the faktur took only what it owed');
+
+        // The other three cheques are money in the bank, waiting to be matched.
+        $this->assertSame(
+            40_000_000,
+            (int) PaymentEntry::query()->where('company_id', $company->id)->sum('amount_rupiah'),
+            'all four cheques are on the ledger',
+        );
+    }
+
+    /**
+     * Four credit notes against one supplier bill.
+     *
+     * Nothing downstream catches this one: a supplier credit note is not a
+     * payment, so it never reaches the allocation guard. Over-crediting a bill
+     * writes off a debt we still owe.
+     */
+    public function test_two_credit_notes_cannot_over_credit_one_supplier_bill(): void
+    {
+        $supplier = Supplier::factory()->create(['nama' => 'PT Pemasok Nota']);
+
+        $bill = SupplierBill::factory()->totalling(10_000_000)->create([
+            'supplier_id' => $supplier->id,
+            'status' => SupplierBill::STATUS_OPEN,
+            'posted_at' => now(),
+        ]);
+
+        $notes = [];
+
+        for ($n = 0; $n < 4; $n++) {
+            $notes[] = app(SupplierCreditNoteIssuer::class)->draft(
+                supplier: $supplier,
+                tanggal: now(),
+                accountCode: AccountCode::BEBAN_OPERASIONAL,
+                dasarRupiah: 10_000_000,
+                alasan: "Potongan harga {$n}",
+                actor: $this->finance,
+                bill: $bill,
+            );
+        }
+
+        $outcomes = $this->race($notes, 'child_post_supplier_note');
+
+        $this->assertSame(0, $outcomes['errored']);
+        $this->assertSame(1, $outcomes['won'], 'only one note fits inside the bill');
+
+        $fresh = SupplierBill::query()->findOrFail($bill->id);
+
+        $this->assertGreaterThanOrEqual(
+            0,
+            $fresh->amountOutstanding(),
+            'a bill may never be credited past zero',
+        );
+    }
+
     // --- fixtures ------------------------------------------------------------
 
     private function customer(int $limit, string $suffix = ''): Company
@@ -408,6 +547,69 @@ class MoneyRaceTest extends TestCase
             return 1;
         } catch (Throwable $e) {
             fwrite(STDERR, "confirm child failed: {$e->getMessage()}\n");
+
+            return 2;
+        }
+    }
+
+    /** 0 = applied, 1 = refused, anything else unexpected. */
+    private function child_apply_deposit(int $depositId, ?int $invoiceId): int
+    {
+        $this->atTheGate();
+
+        try {
+            app(CustomerDepositRegister::class)->apply(
+                CustomerDeposit::findOrFail($depositId),
+                Invoice::findOrFail($invoiceId),
+                10_000_000,
+                User::query()->where('role', Role::Finance->value)->firstOrFail(),
+            );
+
+            return 0;
+        } catch (DomainException) {
+            return 1;
+        } catch (Throwable $e) {
+            fwrite(STDERR, "deposit child failed: {$e->getMessage()}\n");
+
+            return 2;
+        }
+    }
+
+    /** 0 = recorded. A cheque that clears must never fail to be written down. */
+    private function child_clear_giro(int $giroId, ?int $context): int
+    {
+        $this->atTheGate();
+
+        try {
+            app(GiroRegister::class)->clear(
+                Giro::findOrFail($giroId),
+                User::query()->where('role', Role::Finance->value)->firstOrFail(),
+            );
+
+            return 0;
+        } catch (Throwable $e) {
+            fwrite(STDERR, "giro child failed: {$e->getMessage()}\n");
+
+            return 2;
+        }
+    }
+
+    /** 0 = posted, 1 = refused as over-credit, anything else unexpected. */
+    private function child_post_supplier_note(int $noteId, ?int $context): int
+    {
+        $this->atTheGate();
+
+        try {
+            app(SupplierCreditNoteIssuer::class)->post(
+                SupplierCreditNote::findOrFail($noteId),
+                User::query()->where('role', Role::Owner->value)->firstOrFail(),
+            );
+
+            return 0;
+        } catch (DomainException) {
+            return 1;
+        } catch (Throwable $e) {
+            fwrite(STDERR, "supplier note child failed: {$e->getMessage()}\n");
 
             return 2;
         }

@@ -171,6 +171,24 @@ class CustomerDepositRegister
              * test can reach that, so mutation testing reports the lock as
              * removable — it is not.
              */
+            /*
+             * The faktur first, then the deposit.
+             *
+             * Both because the check below reads what the faktur still owes —
+             * two deposits applied at once each saw the full remainder — and
+             * because the `payment_entries` row written a few lines down
+             * carries an `invoice_id`, which takes a key-share lock on the
+             * faktur. Two of those, each then asking to upgrade, is the
+             * deadlock a forked test found rather than a wait. Same rule and
+             * same order as `PaymentLedger::holdInvoices`, which this
+             * ultimately calls through.
+             */
+            Invoice::query()
+                ->withoutGlobalScope('region')
+                ->whereKey($invoice->getKey())
+                ->lockForUpdate()
+                ->first();
+
             $locked = CustomerDeposit::query()->lockForUpdate()->findOrFail($deposit->id);
 
             $sisa = $locked->sisaRupiah();

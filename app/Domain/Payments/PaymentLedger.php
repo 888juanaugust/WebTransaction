@@ -90,6 +90,26 @@ class PaymentLedger
         $rekening ??= app(BankAccounts::class)->default();
 
         return DB::transaction(function () use ($company, $amountRupiah, $actor, $invoice, $catatan, $paidAt, $rekening, $spread) {
+            /*
+             * Every faktur this receipt will touch, held before anything that
+             * points at one is written.
+             *
+             * The order is not a style choice. Inserting a row with an
+             * `invoice_id` takes a key-share lock on that faktur to hold the
+             * foreign key still, and key-share is compatible with itself — so
+             * two receipts against one faktur both get it, and then both ask
+             * to upgrade to `FOR UPDATE`, and Postgres kills one for
+             * deadlock. Two people banking against the same bill at the same
+             * moment is not an exotic case; it is a Friday afternoon.
+             *
+             * Taking the exclusive lock first means the second receipt waits
+             * where waiting is harmless, instead of dying where it is not.
+             */
+            $this->holdInvoices([
+                ...($invoice !== null ? [$invoice] : []),
+                ...array_map(fn (array $baris) => $baris[0], $spread),
+            ]);
+
             $entry = PaymentEntry::create([
                 'company_id' => $company->id,
                 /*
@@ -135,6 +155,49 @@ class PaymentLedger
 
             return $entry;
         });
+    }
+
+    /**
+     * Take the exclusive lock on every faktur this transaction will touch,
+     * before anything that points at one is written.
+     *
+     * Two rules in one small method, and both were learned from a deadlock a
+     * forked test produced rather than from reading the code:
+     *
+     * **Before the inserts.** A row carrying an `invoice_id` takes a
+     * key-share lock on that faktur so the foreign key cannot move under it.
+     * Key-share is compatible with itself, so two transactions both get it
+     * and then both try to upgrade to `FOR UPDATE` — a cycle, and Postgres
+     * ends one of them with SQLSTATE 40P01. Taking the exclusive lock first
+     * turns that into an ordinary wait.
+     *
+     * **In a fixed order.** A receipt spread over several fakturs takes
+     * several locks, and two receipts sharing two fakturs in opposite orders
+     * deadlock on each other for the ordinary reason. Ascending id is an
+     * order both agree on without having to know about each other.
+     *
+     * Region scope lifted: since the multi-warehouse split a customer's
+     * fakturs can sit in another region's books, and a scoped lookup would
+     * lock nothing and say nothing.
+     *
+     * @param  list<Invoice>  $invoices
+     */
+    private function holdInvoices(array $invoices): void
+    {
+        $ids = collect($invoices)
+            ->filter()
+            ->map(fn (Invoice $i) => (int) $i->getKey())
+            ->unique()
+            ->sort()
+            ->values();
+
+        foreach ($ids as $id) {
+            Invoice::query()
+                ->withoutGlobalScope('region')
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->first();
+        }
     }
 
     /**
@@ -275,16 +338,12 @@ class PaymentLedger
              * below is exactly what that was supposed to prevent, and it was
              * correct every time on the figures it was handed.
              *
-             * Order is entry then invoice, everywhere, so two allocations can
-             * never hold half of each other's pair.
+             * **Invoice first, then entry**, and see `holdInvoices()` for why
+             * the order is load-bearing rather than arbitrary.
              */
-            $locked = PaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
+            $this->holdInvoices([$invoice]);
 
-            Invoice::query()
-                ->withoutGlobalScope('region')
-                ->whereKey($invoice->getKey())
-                ->lockForUpdate()
-                ->first();
+            $locked = PaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
 
             $sisaUang = $this->unallocated($locked);
 

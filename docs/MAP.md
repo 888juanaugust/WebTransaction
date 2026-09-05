@@ -956,14 +956,49 @@ transfers applied to one Rp 10.000.000 faktur at the same instant each saw the
 full remainder, and all four passed — Rp 40.000.000 against a Rp 10.000.000
 bill, which is precisely what the over-application refusal exists to prevent.
 `SupplierLedger::allocate` is the mirror, and worse, because that is cash
-leaving rather than a wrong number on a report. Both now hold the bill as well
-as the entry, in that order everywhere so two allocations cannot hold half of
-each other's pair.
+leaving rather than a wrong number on a report.
 
 None of this is visible to a single-threaded suite, which is why the tests fork
 real processes and release them through a Postgres advisory lock —
 `StockReservationConcurrencyTest` established the harness and explains why
 aligning on wall-clock time alone is too loose to fail.
+
+**Order the locks, or the fix is a deadlock** (2026-09). Holding the faktur as
+well as the entry was right and immediately produced `SQLSTATE 40P01` under the
+same forked tests. Writing a row that carries an `invoice_id` takes a key-share
+lock on that faktur to keep the foreign key still; key-share is compatible with
+itself, so two receipts against one bill both get it and then both ask to
+upgrade to `FOR UPDATE`. Two people banking against one faktur at the same
+moment is a Friday afternoon, not an exotic case.
+
+So the rule, and it is written into `PaymentLedger::holdInvoices` and
+`SupplierLedger::holdBills` rather than left to be rediscovered: **take the
+document's exclusive lock before writing anything that points at it, and take
+several in ascending id.** Ascending order is what lets two receipts sharing
+two fakturs agree without knowing about each other. `CustomerDepositRegister`
+follows the same order for the same reason — it writes an invoice-referencing
+payment entry of its own.
+
+**And one thing the race tests found that was not a race at all.** Four credit
+notes posting against one supplier bill all succeeded, and narrowing it down
+showed they succeeded *sequentially* too: `SupplierBill::amountOutstanding()`
+was billed less paid less returned, with posted credit notes left out — no
+`amountCredited()`, where `Invoice::amountOutstanding()` has had one all along.
+
+```
+before any note        bill owes 10.000.000   payables  10.000.000
+after note 1 of 10jt   bill owes 10.000.000   payables           0
+after note 2 of 10jt   bill owes 10.000.000   payables -10.000.000
+after note 3 of 10jt   bill owes 10.000.000   payables -20.000.000
+```
+
+The guard that asks "does this note fit inside what is still owed" read a
+figure that never moved. Meanwhile `SupplierLedger::totalPayable()` had been
+subtracting the notes all along, so the aggregate and the per-bill answer to
+one question disagreed — and a fully credited bill stayed `open` at its full
+amount, ageing in Umur hutang, standing in the payment run, and payable in full
+on top, because the over-payment guard reads the same figure. The mirror is now
+there and a note that clears a bill closes it.
 
 Exposure comes from `OutstandingReceivables`, shared with the ledger's Piutang
 Usaha reconciliation and the invoice row. It used to be computed here

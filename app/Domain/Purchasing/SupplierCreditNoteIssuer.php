@@ -127,6 +127,36 @@ class SupplierCreditNoteIssuer
         }
 
         return DB::transaction(function () use ($note, $actor) {
+            /*
+             * The tagihan first, and it is what makes the check below mean
+             * anything.
+             *
+             * Locking the note alone stops two people posting *the same* note
+             * twice — which is what the guard underneath was written for. It
+             * does nothing about two *different* notes against one bill, and
+             * that is the case that costs money: each read what the supplier
+             * still owed, each fitted inside it, and all four posted. Four
+             * notes of Rp 10.000.000 against a Rp 10.000.000 bill, measured
+             * by forking processes at it.
+             *
+             * Nothing downstream would have caught it either. A credit note
+             * is not a payment, so it never reaches the allocation guard —
+             * this is the only place the question is asked.
+             *
+             * Bill before note, matching the order everywhere else money is
+             * applied to a document: the note row carries a
+             * `supplier_bill_id`, so writing it takes a key-share lock on the
+             * bill, and two of those upgrading to `FOR UPDATE` deadlock
+             * instead of queueing.
+             */
+            if ($note->supplier_bill_id !== null) {
+                SupplierBill::query()
+                    ->withoutGlobalScope('region')
+                    ->whereKey($note->supplier_bill_id)
+                    ->lockForUpdate()
+                    ->first();
+            }
+
             $locked = SupplierCreditNote::query()->lockForUpdate()->findOrFail($note->id);
 
             /*
@@ -156,6 +186,13 @@ class SupplierCreditNoteIssuer
             ])->save();
 
             $this->poster->supplierCreditNotePosted($locked->refresh(), $actor);
+
+            /*
+             * A note can settle a bill outright, and until `amountCredited()`
+             * existed nothing noticed: the bill stayed open at its full
+             * amount with nothing left owing on it.
+             */
+            app(SupplierLedger::class)->settleIfCleared($locked->bill);
 
             $this->audit->log(
                 action: 'supplier_credit_note_posted',

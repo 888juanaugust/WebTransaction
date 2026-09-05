@@ -101,6 +101,13 @@ class SupplierLedger
         return DB::transaction(function () use (
             $supplier, $amountRupiah, $actor, $bill, $referensi, $catatan, $paidAt, $rekening, $spread
         ) {
+            // Every tagihan this transfer will touch, held before anything
+            // pointing at one is written — see holdBills().
+            $this->holdBills([
+                ...($bill !== null ? [$bill] : []),
+                ...array_map(fn (array $baris) => $baris[0], $spread),
+            ]);
+
             $entry = SupplierPaymentEntry::create([
                 'supplier_id' => $supplier->id,
                 /*
@@ -150,6 +157,37 @@ class SupplierLedger
     }
 
     /**
+     * Take the exclusive lock on every tagihan this transaction will touch,
+     * before anything pointing at one is written.
+     *
+     * The mirror of `PaymentLedger::holdInvoices`, and the same two rules for
+     * the same reasons: a row carrying a `supplier_bill_id` takes a key-share
+     * lock on that bill, key-share is compatible with itself, and two
+     * transfers both holding it and then both asking to upgrade is a deadlock
+     * rather than a wait. Ascending id so two transfers sharing two bills
+     * agree on an order without knowing about each other.
+     *
+     * @param  list<SupplierBill>  $bills
+     */
+    private function holdBills(array $bills): void
+    {
+        $ids = collect($bills)
+            ->filter()
+            ->map(fn (SupplierBill $b) => (int) $b->getKey())
+            ->unique()
+            ->sort()
+            ->values();
+
+        foreach ($ids as $id) {
+            SupplierBill::query()
+                ->withoutGlobalScope('region')
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->first();
+        }
+    }
+
+    /**
      * Apply part (or all) of a payment to one bill.
      *
      * Both sides checked. Over-paying a bill used to be accepted in silence,
@@ -195,23 +233,17 @@ class SupplierLedger
              * other is about to spend. No single-threaded test reaches it; the
              * lock is not dead code.
              */
-            $locked = SupplierPaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
-
             /*
-             * And the bill, for the mirror reason — proved on the customer
-             * side by forking processes at it: four transfers applied to one
-             * Rp 10.000.000 faktur at the same instant each read the full
-             * remainder and all four passed. Paying a supplier twice for one
-             * bill is the same defect facing the other way, and it costs
-             * real money out rather than a wrong number on a report.
-             *
-             * Order is entry then bill, matching the customer ledger.
+             * The bill first, then the entry — see `holdBills()`, and the
+             * mirror reasoning in PaymentLedger. Four transfers applied to
+             * one Rp 10.000.000 faktur at the same instant each read the full
+             * remainder and all four passed; paying a supplier twice for one
+             * bill is that defect facing the other way, and it costs cash out
+             * rather than a wrong number on a report.
              */
-            SupplierBill::query()
-                ->withoutGlobalScope('region')
-                ->whereKey($bill->getKey())
-                ->lockForUpdate()
-                ->first();
+            $this->holdBills([$bill]);
+
+            $locked = SupplierPaymentEntry::query()->lockForUpdate()->findOrFail($entry->id);
 
             $sisaUang = $this->unallocated($locked);
 
@@ -617,7 +649,15 @@ class SupplierLedger
         }
     }
 
-    private function settleIfCleared(?SupplierBill $bill): void
+    /**
+     * A bill with nothing left owing is closed, however it got there.
+     *
+     * Public because a credit note can clear one just as a payment can, and
+     * before `amountCredited()` existed a fully-credited bill stayed `open` at
+     * its full amount — ageing in Umur hutang and standing in the payment run
+     * for money that was no longer owed.
+     */
+    public function settleIfCleared(?SupplierBill $bill): void
     {
         if ($bill === null) {
             return;
