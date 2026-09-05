@@ -46,9 +46,21 @@ class Invoice extends Model
         ];
     }
 
+    /**
+     * Region-free, by the same argument as `company()` below: the invoice's
+     * own scope is the gate, and this is the order that raised it.
+     *
+     * An invoice always sits in its order's books, so this only ever matters
+     * to a read that already crossed regions deliberately — and the one that
+     * does is the tax filing. Scoped, the faktur pajak export loaded a null
+     * order for every faktur outside the current region, found no priced
+     * lines on it, and reported the faktur as *blocked for having no lines*.
+     * A right-sounding refusal about the wrong thing is worse than a missing
+     * row: somebody goes and looks at an order that is perfectly fine.
+     */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class)->withoutGlobalScope('region');
     }
 
     public function company(): BelongsTo

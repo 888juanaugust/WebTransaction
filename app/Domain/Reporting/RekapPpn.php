@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reporting;
 
+use App\Domain\Tax\FilingScope;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\PurchaseReturn;
@@ -24,32 +25,39 @@ use App\Models\SupplierCreditNote;
  * rather than assumed: this recap follows the documents in this system, and
  * a masukan faktur that never got entered as a bill is invisible to it —
  * the filing figure is the accountant's call, made with this sheet in hand.
+ *
+ * **Entity-wide, not region-scoped**, unlike the management reports beside it.
+ * This one is filed: one PT, one NPWP, one SPT Masa a month, and it has to
+ * carry every document the company raised whichever region's books took it.
+ * See `FilingScope`. Scoped, it agreed with a region-scoped Coretax export
+ * about the same wrong number — which is worse than disagreeing, because
+ * these two figures are exactly what an accountant cross-checks.
  */
 class RekapPpn
 {
     public function build(Period $period): ReportTable
     {
-        $keluaranFaktur = (int) Invoice::query()
+        $keluaranFaktur = (int) FilingScope::entityWide(Invoice::class)
             ->whereIn('status', [Invoice::STATUS_OPEN, Invoice::STATUS_PAID])
             ->whereBetween('issued_on', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');
 
-        $keluaranNotaKredit = (int) CreditNote::query()
+        $keluaranNotaKredit = (int) FilingScope::entityWide(CreditNote::class)
             ->where('status', CreditNote::STATUS_POSTED)
             ->whereBetween('tanggal', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');
 
-        $masukanTagihan = (int) SupplierBill::query()
+        $masukanTagihan = (int) FilingScope::entityWide(SupplierBill::class)
             ->whereIn('status', [SupplierBill::STATUS_OPEN, SupplierBill::STATUS_PAID])
             ->whereBetween('tanggal_faktur', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');
 
-        $masukanRetur = (int) PurchaseReturn::query()
+        $masukanRetur = (int) FilingScope::entityWide(PurchaseReturn::class)
             ->where('status', PurchaseReturn::STATUS_POSTED)
             ->whereBetween('tanggal', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');
 
-        $masukanNotaKredit = (int) SupplierCreditNote::query()
+        $masukanNotaKredit = (int) FilingScope::entityWide(SupplierCreditNote::class)
             ->where('status', SupplierCreditNote::STATUS_POSTED)
             ->whereBetween('tanggal', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');

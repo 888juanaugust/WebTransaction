@@ -249,7 +249,61 @@ invoice. That round trip is the feature.
 | `FakturExporter::preview` | What a filing would contain **and what it would leave out** |
 | `FakturExporter::export` | Writes the file, keeps it, records the filing |
 | `NsfpRecorder::record` | Matches returned serials to invoices by our own reference |
+| `FilingScope::entityWide` | **The filing is the NPWP's, not a region's** — see below |
 | `FakturWriter` | The one part in doubt — see below |
+
+**A filing crosses every region, and this is the one place where region scoping
+is wrong by construction** (2026-09). Regions are sets of books and warehouses;
+they are not legal entities and they do not file separately. The company has
+one NIB and one NPWP, and there is one SPT Masa PPN a month under it.
+
+Read region-scoped — which is what a filer's session always is — a month with
+three sales in Surabaya's books and two in Jakarta's produced:
+
+```
+fakturs in the masa    5      PPN Rp 1.650.000
+the export contained   3      PPN Rp   660.000
+reported as blocked    0
+rekap PPN keluaran     Rp   660.000
+```
+
+Rp 990.000 of output VAT collected from customers and not reported, with
+nothing on the screen saying so — precisely the failure `FakturExporter`'s
+docblock says it exists to prevent. Worse than a number that argues with
+itself: the export and the recap agreed, so the two figures an accountant
+cross-checks confirmed each other. And it was not a matter of remembering to
+widen the region first — Finance is the role that files, and `BindRegionContext`
+pins Finance to the region on their account and returns. There is no switcher
+for them to forget.
+
+Every read on the way to an SPT now goes through `FilingScope::entityWide`,
+which is the one thing to grep for when asking what a filing actually sees:
+the eligible invoices, the already-exported count, the period picker, the
+stamping of `faktur_exported_at`, the whole of `RekapPpn`, the past-filings
+list, and the download. Writes are untouched — an export row still stamps the
+region of whoever made it, which is a true fact about who filed and never a
+filter on what they filed.
+
+Four things went with it, each a scope left one relation down:
+
+- **`Invoice::order()`** was scoped, so once the invoices were read entity-wide
+  the foreign ones loaded a null order and were reported as *blocked for having
+  no priced lines*. A confident refusal about the wrong thing is worse than a
+  missing row: somebody goes and inspects an order that is perfectly fine.
+- **`FakturExportLine::invoice()`** was scoped, and `NsfpRecorder` writes
+  through `$line->invoice?->…` — so a serial for a foreign faktur landed on the
+  export line, never on the faktur, and was counted as written.
+- **The duplicate-serial guard** could not see a clash in another region — the
+  check the recorder's own docblock calls "a discrepancy the tax office finds
+  and we do not".
+- **The past-filings list and the file download** were scoped, so a filing made
+  from other books was invisible and its file 404'd. An empty list honestly
+  reads as "nobody has filed yet", which is how a month gets filed twice.
+
+The neraca and laba rugi are deliberately **not** changed. Those are management
+accounts per region and the Owner has a switcher; the tax filing is a document
+with the company's NPWP on it and a deadline, prepared by a role that cannot
+switch.
 
 **The file format is not settled, and nothing in this repository can settle
 it.** `CLAUDE.md` specifies a CSV in the e-Faktur import layout, which the

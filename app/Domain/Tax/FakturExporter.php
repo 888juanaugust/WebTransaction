@@ -30,6 +30,12 @@ use Illuminate\Support\Facades\Storage;
  * called: it would give the same answer today, but "would give the same
  * answer" is an assumption with a rate change in it, and the customer is
  * holding a printed faktur that says what it says.
+ *
+ * **And nothing is scoped to a region.** One PT, one NPWP, one SPT a month —
+ * see `FilingScope`, which every read here goes through. Read region-scoped,
+ * this class did precisely the thing the paragraph above says it exists to
+ * prevent: filed three fakturs of five, reported nothing as blocked, and left
+ * the other two looking unexported forever.
  */
 class FakturExporter
 {
@@ -131,7 +137,16 @@ class FakturExporter
 
             $referensi = array_map(fn (FakturRecord $r) => $r->referensi, $preview->siap);
 
-            $invoices = Invoice::query()->whereIn('nomor', $referensi)->get();
+            /*
+             * Entity-wide like the query that chose them. Stamped narrower
+             * than they were selected, a faktur from another region's books
+             * would go into the file and stay `faktur_exported_at` null — so
+             * it would be offered again next month, and again, as a faktur
+             * nobody had ever reported.
+             */
+            $invoices = FilingScope::entityWide(Invoice::class)
+                ->whereIn('nomor', $referensi)
+                ->get();
 
             foreach ($invoices as $invoice) {
                 FakturExportLine::create([
@@ -187,7 +202,7 @@ class FakturExporter
      */
     private function eligible(int $tahun, int $masa, bool $termasukSudahDiekspor): Collection
     {
-        $query = Invoice::query()
+        $query = FilingScope::entityWide(Invoice::class)
             ->with(['order.lines', 'company'])
             ->where('status', '!=', Invoice::STATUS_VOID)
             ->whereYear('issued_on', $tahun)
@@ -204,7 +219,7 @@ class FakturExporter
 
     private function alreadyExportedCount(int $tahun, int $masa): int
     {
-        return Invoice::query()
+        return FilingScope::entityWide(Invoice::class)
             ->where('status', '!=', Invoice::STATUS_VOID)
             ->whereYear('issued_on', $tahun)
             ->whereMonth('issued_on', $masa)
@@ -215,7 +230,7 @@ class FakturExporter
     /** Periods with something in them, newest first, for the screen's picker. */
     public function availablePeriods(int $limit = 24): array
     {
-        return Invoice::query()
+        return FilingScope::entityWide(Invoice::class)
             ->where('status', '!=', Invoice::STATUS_VOID)
             ->orderByDesc('issued_on')
             ->limit(2000)

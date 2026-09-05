@@ -176,9 +176,18 @@ class NsfpRecorder
         return $cleaned;
     }
 
+    /**
+     * The serial has to be unique across the company, not across one region.
+     *
+     * An NSFP is issued by the tax office against our NPWP, so two of our
+     * fakturs sharing one is a discrepancy whichever books they sit in.
+     * Region-scoped, this check could not see the clash it exists to find —
+     * and the failure is silent at our end by definition, since the whole
+     * point is that nothing in our own books looks wrong.
+     */
     private function assertNotUsedElsewhere(string $nsfp, FakturExportLine $line): void
     {
-        $clash = Invoice::query()
+        $clash = FilingScope::entityWide(Invoice::class)
             ->where('nsfp', $nsfp)
             ->where('id', '!=', $line->invoice_id)
             ->first();

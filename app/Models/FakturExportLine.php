@@ -27,8 +27,17 @@ class FakturExportLine extends Model
         return $this->belongsTo(FakturExport::class);
     }
 
+    /**
+     * Region scope lifted, matching the filing that created this row.
+     *
+     * A filing carries the whole company's month, so a line here can point at
+     * a faktur booked in another region's books. Scoped, this relation
+     * resolved to null for exactly those — and `NsfpRecorder` writes the
+     * serial through `$line->invoice?->…`, so the number landed on the export
+     * line, not on the faktur, and nothing said so.
+     */
     public function invoice(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(Invoice::class)->withoutGlobalScope('region');
     }
 }

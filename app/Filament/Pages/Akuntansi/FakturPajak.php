@@ -6,6 +6,7 @@ namespace App\Filament\Pages\Akuntansi;
 
 use App\Domain\Tax\FakturExporter;
 use App\Domain\Tax\FakturExportPreview;
+use App\Domain\Tax\FilingScope;
 use App\Domain\Tax\NsfpRecorder;
 use App\Models\FakturExport;
 use BackedEnum;
@@ -97,7 +98,14 @@ class FakturPajak extends Page
     {
         [$tahun, $masa] = $this->periodParts();
 
-        return FakturExport::query()
+        /*
+         * Every filing for the masa, whichever region's books the person who
+         * made it was working in — the company files one SPT a month, so
+         * "has this month been filed" has one answer. Scoped, a filing made
+         * from another region was simply absent from this list, and the
+         * honest reading of an empty list is "nobody has filed yet".
+         */
+        return FilingScope::entityWide(FakturExport::class)
             ->with('createdBy')
             ->where('tahun_pajak', $tahun)
             ->where('masa_pajak', $masa)
@@ -203,7 +211,9 @@ class FakturPajak extends Page
             ])
             ->modalSubmitActionLabel('Catat')
             ->action(function (array $data, array $arguments) {
-                $export = FakturExport::query()->find($arguments['export'] ?? null);
+                // Entity-wide, like the list this button was clicked from.
+                $export = FilingScope::entityWide(FakturExport::class)
+                    ->find($arguments['export'] ?? null);
 
                 if ($export === null) {
                     Notification::make()->title('Ekspor tidak ditemukan')->danger()->send();
