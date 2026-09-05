@@ -375,6 +375,89 @@ class CustomerStatementTest extends TestCase
         ));
     }
 
+    /**
+     * The note counts the *remainder*, not the whole of every entry nobody
+     * named a faktur on.
+     *
+     * Since the allocation ledger, `invoice_id IS NULL` answers a different
+     * question from the one this note asks. Finance banks Rp 15.000.000 and
+     * puts Rp 9.000.000 of it against a bill; the other Rp 6.000.000 is the
+     * customer's money sitting on no faktur, and the customer is the person
+     * most entitled to be told so.
+     */
+    public function test_the_unmatched_note_counts_only_the_part_no_faktur_claimed(): void
+    {
+        $invoice = $this->invoice(20_000_000, '2026-08-05');
+
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $this->company,
+            amountRupiah: 15_000_000,
+            actor: $this->finance,
+            paidAt: Carbon::parse('2026-08-10'),
+            spread: [[$invoice, 9_000_000]],
+        );
+
+        $table = $this->statement->build(
+            $this->company,
+            Period::between('2026-08-01', '2026-08-31'),
+        );
+
+        $catatan = implode(' ', $table->catatan);
+
+        $this->assertStringContainsString('belum dicocokkan', $catatan);
+        $this->assertStringContainsString('6.000.000', $catatan);
+        $this->assertStringNotContainsString('15.000.000', $catatan);
+
+        // The row says it too, so the figure and its explanation are not on
+        // opposite ends of the page.
+        $baris = collect($table->rows)->firstWhere('pembayaran', 15_000_000);
+
+        $this->assertStringContainsString('6.000.000', $baris['keterangan']);
+        $this->assertStringContainsString('belum dicocokkan', $baris['keterangan']);
+    }
+
+    /**
+     * And the other direction: a transfer spread over several fakturs is fully
+     * matched, whatever `invoice_id` says.
+     *
+     * The old test read that column, so this — the ordinary month end for a
+     * customer on terms — told them Rp 12.000.000 of their own payment was
+     * sitting on nothing.
+     */
+    public function test_a_payment_spread_over_several_fakturs_is_not_called_unmatched(): void
+    {
+        $satu = $this->invoice(7_000_000, '2026-08-05');
+        $dua = $this->invoice(5_000_000, '2026-08-06');
+
+        app(PaymentLedger::class)->recordManualPayment(
+            company: $this->company,
+            amountRupiah: 12_000_000,
+            actor: $this->finance,
+            paidAt: Carbon::parse('2026-08-10'),
+            spread: [[$satu, 7_000_000], [$dua, 5_000_000]],
+        );
+
+        $table = $this->statement->build(
+            $this->company,
+            Period::between('2026-08-01', '2026-08-31'),
+        );
+
+        $this->assertSame(0, $table->totals['saldo']);
+
+        $this->assertEmpty(array_filter(
+            $table->catatan,
+            fn (string $c) => str_contains($c, 'belum dicocokkan'),
+        ));
+
+        // Both fakturs named in the Dokumen column, and the row says what
+        // happened rather than leaving the customer to work it out.
+        $baris = collect($table->rows)->firstWhere('pembayaran', 12_000_000);
+
+        $this->assertStringContainsString($satu->nomor, $baris['dokumen']);
+        $this->assertStringContainsString($dua->nomor, $baris['dokumen']);
+        $this->assertStringContainsString('2 faktur', $baris['keterangan']);
+    }
+
     public function test_a_customer_who_has_paid_everything_gets_an_empty_statement_not_a_wrong_one(): void
     {
         $table = $this->statement->build(

@@ -44,6 +44,13 @@ use Illuminate\Support\Carbon;
  * held: we cannot lose cash we already have, so `forCompany()` subtracts them
  * and this does not. That is the same asymmetry as giro, in the other
  * direction.
+ *
+ * **Every read here crosses regions**, because it is filtered to one customer
+ * and a customer is not a region. Since the multi-warehouse split their
+ * fakturs book wherever the goods shipped from, and a statement written from
+ * one region's books shows the customer part of what they owe — a document
+ * sent out under our name, understating their debt, in writing. That is the
+ * one direction of this error nobody at this end ever notices.
  */
 class CustomerStatement
 {
@@ -117,17 +124,20 @@ class CustomerStatement
         $before = $from->copy()->startOfDay();
 
         $invoiced = (int) Invoice::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->where('status', '!=', Invoice::STATUS_VOID)
             ->whereDate('issued_on', '<', $before)
             ->sum('total_rupiah');
 
         $paid = (int) PaymentEntry::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->where('paid_at', '<', $before)
             ->sum('amount_rupiah');
 
         $credited = (int) CreditNote::query()
+            ->withoutGlobalScope('region')
             ->posted()
             ->where('company_id', $company->id)
             ->whereDate('tanggal', '<', $before)
@@ -149,6 +159,7 @@ class CustomerStatement
         $movements = [];
 
         $invoices = Invoice::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
             ->where('status', '!=', Invoice::STATUS_VOID)
             ->whereBetween('issued_on', [$from->toDateString(), $to->toDateString()])
@@ -166,7 +177,8 @@ class CustomerStatement
         }
 
         $payments = PaymentEntry::query()
-            ->with('invoice')
+            ->withoutGlobalScope('region')
+            ->with(['invoice', 'allocations.invoice'])
             ->where('company_id', $company->id)
             ->whereBetween('paid_at', [$from, $to])
             ->get();
@@ -176,7 +188,7 @@ class CustomerStatement
 
             $movements[] = [
                 'tanggal' => Carbon::parse($payment->paid_at),
-                'dokumen' => $payment->invoice?->nomor ?? '',
+                'dokumen' => implode(', ', $this->paymentDocuments($payment)),
                 'keterangan' => $this->paymentLabel($payment),
                 // Reversals are stored as negative payment rows, so a bounced
                 // transfer comes back as a charge without any special case.
@@ -185,6 +197,7 @@ class CustomerStatement
         }
 
         $notes = CreditNote::query()
+            ->withoutGlobalScope('region')
             ->posted()
             ->where('company_id', $company->id)
             ->whereBetween('tanggal', [$from->toDateString(), $to->toDateString()])
@@ -205,14 +218,68 @@ class CustomerStatement
         return $movements;
     }
 
+    /**
+     * Which fakturs one payment was put against.
+     *
+     * From the allocations, not from `invoice_id`. The column on the entry is
+     * the one-bill shorthand and is null the moment a transfer covers four
+     * fakturs — which is the ordinary month end for a customer on 30-day
+     * terms. Read from there, the Dokumen column on this statement went blank
+     * on exactly the payments the customer is most likely to ask about.
+     *
+     * @return list<string>
+     */
+    private function paymentDocuments(PaymentEntry $payment): array
+    {
+        $nomor = $payment->allocations
+            ->map(fn ($alokasi) => (string) ($alokasi->invoice?->nomor ?? ''))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($nomor !== []) {
+            return $nomor;
+        }
+
+        return $payment->invoice?->nomor ? [(string) $payment->invoice->nomor] : [];
+    }
+
+    /**
+     * What to call one line of money coming in.
+     *
+     * "Belum dicocokkan" is decided on the arithmetic — how much of the entry
+     * no faktur has claimed — rather than on whether anybody named a faktur.
+     * The old test was `invoice_id === null`, which called a transfer spread
+     * across four bills *unmatched* and called a Rp 50.000.000 transfer
+     * pointed at a Rp 12.000.000 bill *matched*. Both are wrong to say to a
+     * customer, and the second is the one that starts an argument, because
+     * they can see the Rp 38.000.000 that nothing on this page accounts for.
+     */
     private function paymentLabel(PaymentEntry $payment): string
     {
         if ((int) $payment->amount_rupiah < 0) {
             return 'Pembalikan pembayaran'.($payment->catatan ? " — {$payment->catatan}" : '');
         }
 
-        return $payment->invoice_id === null
-            ? 'Pembayaran diterima — belum dicocokkan ke faktur'
+        $dialokasikan = (int) $payment->allocations->sum('amount_rupiah');
+        $sisa = (int) $payment->amount_rupiah - $dialokasikan;
+
+        if ($dialokasikan <= 0) {
+            return 'Pembayaran diterima — belum dicocokkan ke faktur';
+        }
+
+        if ($sisa > 0) {
+            return sprintf(
+                'Pembayaran diterima — %s belum dicocokkan ke faktur',
+                Money::format($sisa),
+            );
+        }
+
+        $faktur = count($this->paymentDocuments($payment));
+
+        return $faktur > 1
+            ? "Pembayaran diterima — dibagi ke {$faktur} faktur"
             : 'Pembayaran diterima';
     }
 
@@ -255,12 +322,25 @@ class CustomerStatement
             );
         }
 
+        /*
+         * How much of their money is sitting on no faktur — summed as the
+         * remainder of each entry, not as the whole of the entries nobody
+         * named a faktur on. The old shape asked the question `invoice_id IS
+         * NULL` answers, which since the allocation ledger is a different
+         * question: it counted the *whole* of a transfer spread across four
+         * bills as unmatched, and counted nothing at all of a transfer aimed
+         * at one bill it was twice the size of.
+         */
         $unmatched = (int) PaymentEntry::query()
+            ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
-            ->whereNull('invoice_id')
-            ->where('amount_rupiah', '>', 0)
+            ->where('kind', PaymentEntry::KIND_PAYMENT)
             ->where('paid_at', '<=', $period->to->copy()->endOfDay())
-            ->sum('amount_rupiah');
+            ->selectRaw('COALESCE(SUM(payment_entries.amount_rupiah - COALESCE((
+                SELECT SUM(amount_rupiah) FROM payment_allocations
+                WHERE payment_allocations.payment_entry_id = payment_entries.id
+            ), 0)), 0) AS sisa')
+            ->value('sisa');
 
         if ($unmatched > 0) {
             $catatan[] = sprintf(

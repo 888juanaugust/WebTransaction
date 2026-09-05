@@ -816,6 +816,35 @@ The rule worth carrying: **a global scope lifted at the top and left in place
 one relation down does not fail.** It answers a narrower question and returns
 something that looks like an answer.
 
+**The one that went outside** (2026-09). Same blind spot, in the rekening
+koran — and this one is posted to the customer. Every query in
+`CustomerStatement` was region-scoped, so staff in Surabaya printed a
+Surabaya-shaped account: a customer owing Rp 11.100.000 was sent a statement
+closing at Rp 6.660.000. Understated by forty per cent, in the customer's
+favour, over our name, on the one document written to settle an argument about
+exactly that figure. It would have settled it.
+
+The buyer's own portal was never short, and it is worth knowing why: the
+`region` global scope in `HasRegion` returns early whenever the `customer`
+guard is authenticated, so a buyer reads their own documents from every
+region's books and `company_id` is their boundary. `CrossRegionExposureTest`
+pins that. A statement is not a portal screen — it is built by staff on the
+`web` guard — which is precisely how it was missed.
+
+Its closing balance is now asserted as an *identity* against what the credit
+check spends (`StatementAcrossRegionsTest`), not against a literal. Two rules
+that happen to agree today is not one rule.
+
+Two allocation-era defects went with it, both left over from the entry →
+allocation move above. The unmatched-payments note still summed whole entries
+where `invoice_id` was null, so a transfer spread across four fakturs was
+reported to the customer as entirely unapplied while a partly applied one was
+reported as nothing; it now sums the remainder, the same shape as
+`PaymentEntry::scopeUnmatched`. And the Dokumen column read `invoice_id`
+directly, so it went blank on exactly the payments a customer asks about — it
+now names every faktur the payment was actually put against, and the row says
+"dibagi ke N faktur" or how much of it is still on none.
+
 ### Payments — append-only ledger
 
 | Function | Decides |
