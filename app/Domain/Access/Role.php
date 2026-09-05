@@ -204,6 +204,40 @@ enum Role: string
         return in_array($this, [self::Warehouse, self::Owner], true);
     }
 
+    /**
+     * Maintain the catalogue itself: what a SKU is, not what it costs.
+     *
+     * The same seat as the price list today, and kept separate anyway,
+     * because the two protect different things and could reasonably part
+     * company later. A price is money; a catalogue row is arithmetic —
+     * `qty_per_ctn` and `satuan_dasar` are how every order converts cartons
+     * to pieces and how the stock ledger reads a quantity (invariant 5).
+     * Somebody who could not change a price but could quietly change 18 to 1
+     * would still be able to move goods.
+     *
+     * This existed as nothing at all until it was measured: ProductResource
+     * declared no access methods, so Filament's permissive default applied
+     * and every role could create, edit and delete SKUs — a Gudang clerk
+     * included, whose row in CLAUDE.md says plainly that the catalogue is not
+     * theirs.
+     */
+    public function canManageCatalogue(): bool
+    {
+        return in_array($this, [self::Warehouse, self::Owner], true);
+    }
+
+    /**
+     * Look the catalogue up — a part number is not a privilege.
+     *
+     * Everybody who sells, bills or prices needs to find a SKU. Gudang is
+     * out, and only because CLAUDE.md says so in as many words: their work is
+     * the pick list in front of them, which names its own goods.
+     */
+    public function canBrowseCatalogue(): bool
+    {
+        return $this !== self::Storage;
+    }
+
     /** Finance confirms money in. Sales never does. */
     public function canConfirmPayment(): bool
     {

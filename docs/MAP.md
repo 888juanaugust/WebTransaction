@@ -63,7 +63,7 @@ document, stays Indonesian.
 | `/admin/orders/{id}` | Order detail | all | Line snapshots with the price reason, DPP/PPN per line, totals, the dates, the faktur, the split pieces, and the full event log. **Reads snapshots only** — never the live price list |
 | `/admin/orders/{id}/edit` | Edit draft | Sales, Owner | **Drafts only** — after `confirmed` the lines are locked |
 | `/admin/companies` | Customers | not Warehouse | Credit limit, terms, tax data, buyer logins |
-| `/admin/products` | Catalogue | all (prices hidden from Warehouse) | Reference data; list price is read-only |
+| `/admin/products` | Catalogue | read: everyone but Gudang · write: Inventori, Owner | Reference data; list price is read-only. A SKU anything has referenced cannot be deleted at all — deactivate |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
 | `/admin/pengiriman` | Pengiriman | Inventori, Gudang, Owner | Approved orders land here for packing — pick list, surat jalan, ship. A Gudang account sees **only its own warehouse**, in the query itself |
 | `/admin/komisi-target` | Komisi & target | Owner | Set each seller's rate (effective-dated, append-only) and each sales seat's monthly target |
@@ -1399,6 +1399,8 @@ itself.
 | `RekapPpn` | Keluaran (faktur − nota kredit) − Masukan (tagihan − retur − nota kredit pemasok) per masa |
 | `Role::canApproveOrders` | Marketing and Owner — never Sales, who are paid on the sale |
 | `Role::canManagePriceList` | Inventori and Owner — pricing moved out of Sales' hands |
+| `Role::canManageCatalogue` | The same seat, kept as its own question: a price is money, `qty_per_ctn` is arithmetic |
+| `Role::canBrowseCatalogue` | Everyone but Gudang — a part number is not a privilege |
 | `TeamAssigner` | One sales + one marketing per customer, Owner-assigned, audited |
 | `companies.sales_user_id / marketing_user_id` | The team, not fillable, indexed for "my customers" |
 
@@ -1409,6 +1411,44 @@ cannot approve orders and Marketing can; and whoever sets the price neither
 approves credit nor confirms money. Inventori gained prices and cost (their
 stock statistics are cost figures) and remains blind to customer credit data,
 which is now the boundary that matters for that role.
+
+#### Every screen has to declare its own answer
+
+`PanelAccessDeclaredTest` walks whatever the panel actually registers and
+requires each page to define `canAccess`, each resource all four of
+`canViewAny`/`canCreate`/`canEdit`/`canDelete`, and each widget `canView` —
+inside `App\`, not inherited from Filament, whose default is yes.
+
+It exists because every screen *was* gated when it was written and every
+screen *was* tested on its own, and nothing ever enumerated the set. Measured
+by asking each of the six roles what it could reach:
+
+- **`ProductResource` declared nothing at all.** A Gudang clerk — the one role
+  CLAUDE.md says outright cannot touch the catalogue — changed `qty_per_ctn`
+  from 18 to 1 and then deleted the SKU, leaving 200 units and Rp 2.000.000 in
+  a stock ledger that no longer pointed at anything. The valuation, the
+  unvalued-quantity report and the nightly integrity sweep all carried on
+  reporting zero, because they iterate products.
+- **`CompanyResource::canDelete` was undeclared and `EditCompany` renders a
+  Delete button.** A sales rep deleted a customer: approval, credit limit,
+  NPWP and assigned seats with it.
+- Ten more resources left `canDelete` (and four `canEdit`) to the default. All
+  are now `false` — an invoice is withdrawn with a credit note, a posted bill
+  is credited, a filed claim keeps its trail.
+
+Two layers, and both have to agree. Filament's resource **pages** do
+authorise: `CreateRecord` and `EditRecord` abort on `canCreate`/`canEdit`, so
+the routes closed the moment those methods existed (measured: sales and
+finance get 403 on `/admin/products/create`, Gudang 403 on the list itself).
+Its **actions** do not — `DeleteAction` is a confirm modal and a
+`$record->delete()`, nothing more — so every delete/create/edit button now
+asks the resource itself with `->visible(...)`. A button that refuses when
+pressed is a support call, and it teaches people that permission errors are
+normal.
+
+`Product::deleting` sits under all of it, refusing any SKU named by one of
+the nineteen tables that carry a code — because tinker and a queued job never
+reach a Filament action at all.
 
 A team assignment is refused when it would be a fiction: wrong role for the
 seat, a deactivated account, or somebody from another region — the scope

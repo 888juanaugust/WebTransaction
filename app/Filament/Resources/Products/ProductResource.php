@@ -15,10 +15,18 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * The catalogue. Prices do not live here — they live in price list versions,
  * and are only ever changed by publishing a new one.
+ *
+ * Reading is broad and writing is not, and until this was measured neither
+ * was anything: the class declared no access methods, so Filament's
+ * permissive default answered for it and **every role could create, edit and
+ * delete a SKU**. Measured as a Gudang clerk — the one role CLAUDE.md says
+ * outright cannot touch the catalogue — `qty_per_ctn` went from 18 to 1, and
+ * then the product was deleted outright, leaving its stock ledger behind.
  */
 class ProductResource extends Resource
 {
@@ -35,6 +43,36 @@ class ProductResource extends Resource
     protected static ?int $navigationSort = 30;
 
     protected static ?string $recordTitleAttribute = 'kode';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->role()->canBrowseCatalogue() ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->role()->canManageCatalogue() ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()?->role()->canManageCatalogue() ?? false;
+    }
+
+    /**
+     * Only the catalogue-keeper, and only for a SKU nothing has happened to.
+     *
+     * The second half is not an authorisation question but a bookkeeping one,
+     * and it is answered again in `Product::deleting` so that a console
+     * one-liner meets the same refusal. Here it decides whether the button is
+     * offered at all: a Delete that always errors is worse than no Delete.
+     */
+    public static function canDelete(Model $record): bool
+    {
+        return (auth()->user()?->role()->canManageCatalogue() ?? false)
+            && $record instanceof Product
+            && ! $record->hasHistory();
+    }
 
     public static function form(Schema $schema): Schema
     {

@@ -65,6 +65,10 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => true,
                 'canApproveOrders' => false,
                 'canManagePriceList' => false,
+                // A part number is not a privilege; changing what a carton
+                // holds is — that is the catalogue-keeper's, same as price.
+                'canBrowseCatalogue' => true,
+                'canManageCatalogue' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => true,
                 // A credit note reduces what a customer owes, which is editing
@@ -119,6 +123,10 @@ class RoleMatrixTest extends TestCase
                 // catalogue-keeper's. The person who sets the price still
                 // neither approves credit nor confirms money.
                 'canManagePriceList' => true,
+                // The catalogue is theirs too — and it is arithmetic, not
+                // money: qty_per_ctn is how every order converts cartons.
+                'canBrowseCatalogue' => true,
+                'canManageCatalogue' => true,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,
                 'canIssueCreditNote' => false,
@@ -163,6 +171,10 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => true,
                 'canApproveOrders' => true,
                 'canManagePriceList' => false,
+                // A part number is not a privilege; changing what a carton
+                // holds is — that is the catalogue-keeper's, same as price.
+                'canBrowseCatalogue' => true,
+                'canManageCatalogue' => false,
                 'canConfirmPayment' => false,
                 'canEditOrderPrices' => false,
                 'canIssueCreditNote' => false,
@@ -194,6 +206,8 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => false,
                 'canApproveOrders' => false,
                 'canManagePriceList' => false,
+                'canBrowseCatalogue' => true,
+                'canManageCatalogue' => false,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => false,
                 // Finance confirm payments, so they must not be able to write
@@ -241,6 +255,8 @@ class RoleMatrixTest extends TestCase
                 'canCreateOrders' => true,
                 'canApproveOrders' => true,
                 'canManagePriceList' => true,
+                'canBrowseCatalogue' => true,
+                'canManageCatalogue' => true,
                 'canConfirmPayment' => true,
                 'canEditOrderPrices' => true,
                 'canIssueCreditNote' => true,
@@ -259,6 +275,67 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => true,
                 'canViewAuditLog' => true,
                 'canManageStaff' => true,
+            ]],
+
+            /*
+             * Gudang, and the reason this block exists.
+             *
+             * It did not, and the role with the narrowest permission in the
+             * organisation was the one nothing here asked about — six of its
+             * capabilities were pinned in GudangRoleTest and the other
+             * twenty-five were pinned nowhere. That is how a Gudang clerk came
+             * to be able to create, edit and delete SKUs: not because anybody
+             * decided it, but because ProductResource declared no opinion and
+             * no test asked what the answer was.
+             *
+             * Everything here is false except picking, shipping and looking
+             * things up, which is what the row in CLAUDE.md says: their
+             * warehouse's queue, and nothing outside their own warehouse.
+             */
+            'storage' => [Role::Storage, [
+                /*
+                 * True, and recorded rather than corrected. canSeePrices()
+                 * returns true for everybody on purpose — see its docblock,
+                 * written when the roles were five and Gudang was not among
+                 * them. Gudang inherits that blanket yes; CLAUDE.md's row
+                 * forbids them cost and credit but says nothing about price,
+                 * and no screen a packer can open shows one. Worth a decision
+                 * by somebody who runs the warehouse, not a quiet flip here.
+                 */
+                'canSeePrices' => true,
+                'canSeeCreditData' => false,
+                'canSeeCost' => false,
+                'canRecordPurchases' => false,
+                'canPostJournals' => false,
+                'canSeeBooks' => false,
+                'canClosePeriod' => false,
+                'canReopenPeriod' => false,
+                'canCreateOrders' => false,
+                'canApproveOrders' => false,
+                'canManagePriceList' => false,
+                // The catalogue is not theirs to read or to write. The pick
+                // list in front of them names its own goods.
+                'canBrowseCatalogue' => false,
+                'canManageCatalogue' => false,
+                'canConfirmPayment' => false,
+                'canEditOrderPrices' => false,
+                'canIssueCreditNote' => false,
+                'canOverrideCreditLimit' => false,
+                'canPickAndShip' => true,
+                // Moving stock between warehouses is Inventori's; a packer
+                // ships what their own warehouse was told to ship.
+                'canTransferStock' => false,
+                'canVerifyReturns' => false,
+                'canCountStock' => false,
+                'canApproveStockCount' => false,
+                'canAllocateLandedCost' => false,
+                'canReturnToSupplier' => false,
+                'canHandleGiro' => false,
+                'canReconcileBank' => false,
+                'canExportFaktur' => false,
+                'canSeeReports' => false,
+                'canViewAuditLog' => false,
+                'canManageStaff' => false,
             ]],
         ];
     }

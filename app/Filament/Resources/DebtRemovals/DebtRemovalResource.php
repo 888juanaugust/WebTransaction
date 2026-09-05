@@ -51,6 +51,12 @@ class DebtRemovalResource extends Resource
         return false;
     }
 
+    /** A filed claim is a two-key document; removing it removes the trail. */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     /**
      * A team member sees their own customers' claims; finance and the Owner
      * see the region's whole register. A claim you can neither decide nor

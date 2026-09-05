@@ -39,6 +39,36 @@ class OrderResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'nomor';
 
+    /**
+     * Everybody working an order can read it.
+     *
+     * Spelled out rather than left to Filament's default, which is what it
+     * was relying on. The default happened to be right here — sales place
+     * orders, marketing approve them, finance bills them, the warehouses pick
+     * them — but "right by accident" and "right on purpose" read identically
+     * until somebody changes the default, and only one of them survives it.
+     */
+    public static function canViewAny(): bool
+    {
+        return auth()->check();
+    }
+
+    /**
+     * Never from here.
+     *
+     * An order is erased through OrderTransitionActions, which goes via
+     * OrderEraser: draft or submitted only, by the seat that owns the
+     * customer's queue, with an audit snapshot written before the row goes.
+     * This said yes to all six roles — no Delete button was rendered, so
+     * nothing exploited it, but a resource that answers "yes, anybody" to a
+     * question it never intends to be asked is one action away from meaning
+     * it.
+     */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     /** Sales and Owner take orders; warehouse and finance do not. */
     public static function canCreate(): bool
     {

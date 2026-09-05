@@ -64,6 +64,12 @@ class SupplierBillResource extends Resource
         return static::canViewAny() && $record->posted_at === null;
     }
 
+    /** A posted bill is money owed; it is credited, never removed. */
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         if (! static::canViewAny()) {

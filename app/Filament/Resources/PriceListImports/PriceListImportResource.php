@@ -59,6 +59,22 @@ class PriceListImportResource extends Resource
         return auth()->user()?->role()->canManagePriceList() ?? false;
     }
 
+    /**
+     * An import is a record of what somebody uploaded and what was decided
+     * about it. CLAUDE.md keeps the raw file forever for the same reason, and
+     * a record that can be edited or deleted answers whatever the last person
+     * to touch it wanted.
+     */
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return PriceListImportForm::configure($schema);

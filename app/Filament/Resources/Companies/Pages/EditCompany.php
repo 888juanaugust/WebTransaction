@@ -17,7 +17,15 @@ class EditCompany extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            /*
+             * Filament's DeleteAction authorises nothing on its own, so the
+             * resource's canDelete() has to be asked here or it is a comment.
+             * Measured before this line: a sales rep pressed this button and
+             * the customer went — approval, credit limit, NPWP and assigned
+             * seats with it.
+             */
+            DeleteAction::make()
+                ->visible(fn (Company $record) => CompanyResource::canDelete($record)),
         ];
     }
 

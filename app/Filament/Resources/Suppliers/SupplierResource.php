@@ -48,6 +48,22 @@ class SupplierResource extends Resource
         return auth()->user()?->role()->canRecordPurchases() ?? false;
     }
 
+    /** What the inherited default was already doing, now on purpose. */
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    /**
+     * Never from here. A supplier is referenced by every bill, receipt and
+     * purchase order ever raised against them; the answer to "we stopped
+     * buying from them" is the aktif flag, not a missing row.
+     */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     public static function canCreate(): bool
     {
         return static::canViewAny();

@@ -13,7 +13,14 @@ class ListProducts extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            /*
+             * Filament's CreateAction does not consult the resource, so
+             * without this a sales rep saw "Buat produk", pressed it, and got
+             * a 403 from CreateProduct::authorizeAccess. The route was never
+             * open; the button was just lying about it.
+             */
+            CreateAction::make()
+                ->visible(fn () => ProductResource::canCreate()),
         ];
     }
 }

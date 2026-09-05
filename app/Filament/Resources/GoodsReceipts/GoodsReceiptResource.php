@@ -69,6 +69,15 @@ class GoodsReceiptResource extends Resource
         return static::canViewAny() && ! $record->isPosted();
     }
 
+    /**
+     * Never. A draft receipt is emptied, not erased; a posted one moved stock
+     * and put a value on it, and the movement outlives the paperwork.
+     */
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         if (! static::canViewAny()) {

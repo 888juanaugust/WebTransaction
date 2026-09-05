@@ -44,6 +44,33 @@ class CompanyResource extends Resource
         return auth()->user()?->role()->canSeeCreditData() ?? false;
     }
 
+    /** What the inherited default was already doing, now on purpose. */
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    /**
+     * The Owner, and only for a customer nothing has happened to.
+     *
+     * EditCompany renders a Delete button and this method did not exist, so
+     * Filament answered yes for everybody who could open the page — measured,
+     * **a sales rep deleted a customer outright**. What goes with the row is
+     * the approval, the credit limit somebody decided on, the NPWP and the
+     * seats the Owner assigned through TeamAssigner.
+     *
+     * A customer with orders or invoices is held by foreign keys and the
+     * database refuses on its own; that is exactly the case where the row is
+     * evidence. What was left unguarded was the other case — an account
+     * approved this morning, deletable by the person who is paid on its
+     * sales, with the credit decision going quietly with it. The everyday
+     * answer to "we stopped selling to them" is the status field.
+     */
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->role()->canManageStaff() ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CompanyForm::configure($schema);

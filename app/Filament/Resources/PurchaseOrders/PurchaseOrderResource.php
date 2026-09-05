@@ -60,6 +60,12 @@ class PurchaseOrderResource extends Resource
         return static::canViewAny() && $record->status->isEditable();
     }
 
+    /** Cancelled is a status a PO carries, not a row that goes away. */
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         if (! static::canViewAny()) {

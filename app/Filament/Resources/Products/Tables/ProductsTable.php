@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Products\Tables;
 
 use App\Domain\Money;
 use App\Domain\Pricing\PriceResolver;
+use App\Filament\Resources\Products\ProductResource;
 use App\Models\Company;
 use App\Models\Product;
 use Filament\Actions\EditAction;
@@ -80,7 +81,12 @@ class ProductsTable
                     )),
             ])
             ->recordActions([
-                EditAction::make()->label('Ubah'),
+                // Same reason as the create button: the edit route already
+                // refuses anyone but the catalogue-keeper, so the link must
+                // not be offered to the rest.
+                EditAction::make()
+                    ->label('Ubah')
+                    ->visible(fn (Product $record) => ProductResource::canEdit($record)),
             ])
             ->defaultSort('kode');
     }

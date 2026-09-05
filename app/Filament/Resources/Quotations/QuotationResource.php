@@ -57,6 +57,21 @@ class QuotationResource extends Resource
         return auth()->user()?->role()->canCreateOrders() ?? false;
     }
 
+    /**
+     * Spelled out rather than inherited, and both are what the default was
+     * already doing — the point is that they now say so.
+     */
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    /** A price promised in writing stays readable after it lapses. */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

@@ -48,6 +48,12 @@ class InvoiceResource extends Resource
         return false;
     }
 
+    /** A faktur is withdrawn with a credit note, never taken off the record. */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     public static function table(Table $table): Table
     {
         return InvoicesTable::configure($table);

@@ -53,6 +53,12 @@ class SalesExpenseClaimResource extends Resource
         return false;
     }
 
+    /** Whoever files a claim never verifies it, and nobody makes it vanish. */
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     /** A sales reads their own claims; finance and the Owner read them all. */
     public static function getEloquentQuery(): Builder
     {
