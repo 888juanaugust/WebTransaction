@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\SupplierCreditNotes;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\SupplierCreditNotes\Pages\ListSupplierCreditNotes;
 use App\Filament\Resources\SupplierCreditNotes\Tables\SupplierCreditNotesTable;
 use App\Models\SupplierCreditNote;
@@ -26,7 +27,7 @@ class SupplierCreditNoteResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptRefund;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?string $navigationLabel = 'Nota kredit pemasok';
 

@@ -42,11 +42,27 @@ class DatabaseSeeder extends Seeder
          */
         $wilayahUtama = Region::query()->orderBy('id')->value('id');
 
+        /*
+         * People, not role labels. The accounts used to be named after
+         * their roles — "Pemilik", "Gudang" — which read fine in a table and
+         * badly on the account card, where the role is printed under the
+         * name and the demo Owner became "Pemilik / Pemilik". The emails
+         * are what docs/DEMO.md refers to and they are unchanged.
+         */
+        $nama = [
+            Role::Owner->value => 'Budi Santoso',
+            Role::Sales->value => 'Andi Wijaya',
+            Role::Marketing->value => 'Rina Kusuma',
+            Role::Warehouse->value => 'Dewi Lestari',
+            Role::Storage->value => 'Agus Prasetyo',
+            Role::Finance->value => 'Siti Rahayu',
+        ];
+
         foreach (Role::cases() as $role) {
             User::query()->firstOrCreate(
                 ['email' => "{$role->value}@example.test"],
                 [
-                    'name' => $role->label(),
+                    'name' => $nama[$role->value] ?? $role->label(),
                     'password' => Hash::make('password'),
                     'role' => $role,
                     'is_active' => true,

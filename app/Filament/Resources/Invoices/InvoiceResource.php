@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Invoices;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Invoices\Pages\ListInvoices;
 use App\Filament\Resources\Invoices\Tables\InvoicesTable;
 use App\Models\Invoice;
@@ -22,6 +23,8 @@ class InvoiceResource extends Resource
     protected static ?string $model = Invoice::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Faktur';
 

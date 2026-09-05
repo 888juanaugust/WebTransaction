@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StoreVisits;
 
 use App\Domain\Access\Role;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\StoreVisits\Pages\CreateStoreVisit;
 use App\Filament\Resources\StoreVisits\Pages\ListStoreVisits;
 use App\Models\StoreVisit;
@@ -28,6 +29,8 @@ class StoreVisitResource extends Resource
     protected static ?string $model = StoreVisit::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Kunjungan toko';
 

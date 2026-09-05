@@ -8,6 +8,7 @@ use App\Domain\Tax\FakturExporter;
 use App\Domain\Tax\FakturExportPreview;
 use App\Domain\Tax\FilingScope;
 use App\Domain\Tax\NsfpRecorder;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\FakturExport;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -32,7 +33,7 @@ class FakturPajak extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentArrowDown;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Faktur pajak';
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Widgets\AccountsAwaitingApproval;
 use App\Filament\Widgets\ArusStok;
 use App\Filament\Widgets\BackupStatus;
@@ -23,6 +24,9 @@ use App\Filament\Widgets\ReturnsAwaitingVerification;
 use App\Filament\Widgets\UnmatchedPayments;
 use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
+use App\Support\Branding;
+use App\Support\InitialsAvatar;
+use Filament\Enums\UserMenuPosition;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -50,13 +54,15 @@ class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->brandName(config('perusahaan.nama_singkat'))
             /*
-             * A view rather than a URL: the mark plus the signed-in account's
-             * role beside it (and the warehouse, for a Gudang account), so
-             * "which account is this open on" is answered in the corner every
-             * eye already visits. The view handles the dark-mode mark and
-             * falls back to the wordmark when no logo file is committed.
+             * The mark alone. It used to carry the signed-in role beside it
+             * so that "which account is this open on?" was answered in the
+             * corner; that line now lives under the account's name at the
+             * foot of the sidebar — see the USER_MENU_BEFORE hook below —
+             * where the reference design puts it. Filament falls back to the
+             * wordmark when there is no logo file.
              */
-            ->brandLogo(fn () => view('filament.brand'))
+            ->brandLogo(fn () => Branding::logoUrl())
+            ->darkModeBrandLogo(fn () => Branding::darkLogoUrl())
             ->brandLogoHeight('1.75rem')
             /*
              * Cairo, served from public/fonts. The design system asks for it
@@ -100,8 +106,27 @@ class AdminPanelProvider extends PanelProvider
              * which is the point of a reminder.
              */
             ->databaseNotifications()
-            // Clean white surfaces, company blue, company red. See BrandColors
-            // for why the ramps are declared rather than generated from hex.
+            /*
+             * The account lives at the foot of the sidebar — avatar, name,
+             * chevron — not in the topbar. Same seat as the reference design,
+             * and it frees the topbar for the region switcher and search.
+             */
+            ->userMenu(position: UserMenuPosition::Sidebar)
+            /*
+             * Initials drawn locally. Filament's default fetches the avatar
+             * from ui-avatars.com with the account's name in the URL, which
+             * the privacy notice says this site does not do — see
+             * InitialsAvatar.
+             */
+            ->defaultAvatarProvider(InitialsAvatar::class)
+            /*
+             * Seven groups in a fixed order, declared once. Every resource
+             * and page names one of them; see SidebarGroups for the shape and
+             * the figures that made it necessary.
+             */
+            ->navigationGroups(SidebarGroups::panel())
+            // Indigo surfaces, company red. See BrandColors for why the ramps
+            // are declared rather than generated from hex.
             ->colors(BrandColors::panel())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -166,17 +191,65 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             /*
-             * The region switcher, next to the user menu. For the Owner it is
-             * a select that changes which books every screen below reads; for
-             * pinned staff it is a label naming the one region they work in —
-             * both render nothing while only one region exists, so the panel
-             * looks exactly as before until a second region is created.
+             * The region switcher, left of the search box. For the Owner it
+             * is a select that changes which books every screen below reads;
+             * for pinned staff it is a label naming the one region they work
+             * in — both render nothing while only one region exists, so the
+             * panel looks exactly as before until a second region is created.
+             *
+             * It used to hang off USER_MENU_BEFORE. That hook renders inside
+             * the user menu wherever the menu is, and the menu is now in the
+             * sidebar footer — so left there, the switcher would have
+             * followed it down and out of the topbar it belongs in.
              */
             ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
                 fn (): string => auth()->check()
                     ? view('filament.wilayah-switcher')->render()
                     : '',
+            )
+            // The "Utama" heading above the menu, matching "Lainnya" above
+            // the settings group (which the stylesheet draws, being the one
+            // place a hook cannot reach).
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_START,
+                fn (): string => view('filament.sidebar-bagian', ['label' => 'Utama'])->render(),
+            )
+            /*
+             * Every group starts folded, so the one holding the current page
+             * has to be opened by hand — Filament remembers folds and never
+             * re-opens one. See the view for why this is a script and not a
+             * stylesheet rule.
+             */
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_END,
+                fn (): string => view('filament.sidebar-buka-grup-aktif')->render(),
+            )
+            /*
+             * The line under the account's name: the role, and the warehouse
+             * for a packer. This is the information the brand view used to
+             * put beside the logo, moved to where the reference design keeps
+             * it. USER_MENU_BEFORE is the right hook now for exactly the
+             * reason it was the wrong one for the switcher — it follows the
+             * menu into the sidebar.
+             */
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                function (): string {
+                    $user = auth('web')->user();
+
+                    if ($user === null) {
+                        return '';
+                    }
+
+                    $keterangan = $user->role()->label();
+
+                    if ($user->role()->isWarehouseBound() && $user->warehouse) {
+                        $keterangan .= ' · '.$user->warehouse->nama;
+                    }
+
+                    return view('filament.akun-keterangan', ['keterangan' => $keterangan])->render();
+                },
             )
             ->authMiddleware([
                 Authenticate::class,

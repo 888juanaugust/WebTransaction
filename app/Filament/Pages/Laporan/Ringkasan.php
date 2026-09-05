@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Laporan;
 use App\Domain\Reporting\Period;
 use App\Domain\Reporting\Ringkasan as RingkasanData;
 use App\Domain\Reporting\RingkasanBulanan;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -28,7 +29,7 @@ class Ringkasan extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentChartBar;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Laporan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::LAPORAN;
 
     protected static ?string $navigationLabel = 'Ringkasan bulanan';
 

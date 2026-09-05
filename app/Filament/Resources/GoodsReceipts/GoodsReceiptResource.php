@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\GoodsReceipts;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\GoodsReceipts\Pages\CreateGoodsReceipt;
 use App\Filament\Resources\GoodsReceipts\Pages\EditGoodsReceipt;
 use App\Filament\Resources\GoodsReceipts\Pages\ListGoodsReceipts;
@@ -39,7 +40,7 @@ class GoodsReceiptResource extends Resource
 
     protected static ?string $pluralModelLabel = 'penerimaan barang';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?int $navigationSort = 61;
 

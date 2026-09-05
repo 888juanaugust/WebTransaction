@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Launch\AttestationRecorder;
 use App\Domain\Launch\LaunchCheck;
 use App\Domain\Launch\LaunchReadiness;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -36,7 +37,7 @@ class KesiapanPeluncuran extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRocketLaunch;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     protected static ?string $navigationLabel = 'Kesiapan peluncuran';
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\FixedAssets;
 
 use App\Domain\Assets\DepreciationRunner;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\FixedAssets\Pages\ListFixedAssets;
 use App\Filament\Resources\FixedAssets\Tables\FixedAssetsTable;
 use App\Models\FixedAsset;
@@ -28,7 +29,7 @@ class FixedAssetResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Aktiva tetap';
 

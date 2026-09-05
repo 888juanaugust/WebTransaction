@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Quotations;
 
 use App\Domain\Quotes\QuotationFlow;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Quotations\Pages\CreateQuotation;
 use App\Filament\Resources\Quotations\Pages\ListQuotations;
 use App\Filament\Resources\Quotations\Pages\ViewQuotation;
@@ -36,6 +37,8 @@ class QuotationResource extends Resource
     protected static ?string $model = Quotation::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Penawaran';
 

@@ -281,6 +281,204 @@ html.dark {
 }
 
 /* ====================================================================
+   Sidebar — sections, accordion groups, the account card
+   ==================================================================== */
+
+/*
+ * Tighter than Filament's defaults (1.75rem between groups, 2rem of page
+ * padding): the menu is now seven rows and a dashboard, and generous
+ * spacing between seven rows reads as sparse rather than calm.
+ */
+.fi-sidebar-nav {
+    gap: 0.75rem;
+    padding: 1rem 1rem 1.25rem;
+}
+
+.fi-sidebar-nav-groups {
+    gap: 0.25rem;
+}
+
+/* "Utama" (a hook) and "Lainnya" (drawn below): small caps above a section. */
+.wt-sidebar-bagian,
+.fi-sidebar-group[data-group-label='Pengaturan']::before {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--wt-ink-muted);
+}
+
+/*
+ * The settings group opens the "Lainnya" section. A pseudo-element, and
+ * the only one in this file, because there is no render hook between two
+ * groups; it is decorative sectioning — the group's own label still names
+ * it — so nothing is lost on a reader that skips generated content.
+ */
+.fi-sidebar-group[data-group-label='Pengaturan'] {
+    margin-top: 1rem;
+}
+
+.fi-sidebar-group[data-group-label='Pengaturan']::before {
+    content: 'Lainnya';
+    margin-bottom: 0.25rem;
+}
+
+/*
+ * Folded to icons, the heading goes with the labels. "Utama" is a hooked
+ * element and hides itself with x-show; this one is generated content on
+ * a group that stays visible as an icon, so it needs telling — measured,
+ * the folded sidebar still read "LAINNYA" above a lone cog.
+ */
+.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group[data-group-label='Pengaturan']::before {
+    display: none;
+}
+
+.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group[data-group-label='Pengaturan'] {
+    margin-top: 0.5rem;
+}
+
+/*
+ * A group's header row reads as an item: icon, label, chevron, the same
+ * height and corner as a link. Filament styles it as a muted heading, which
+ * is right for a group that is always open and wrong for an accordion.
+ */
+.fi-sidebar-group-btn {
+    border-radius: var(--wt-radius-control);
+    padding: 0.5rem;
+    transition: background-color 75ms;
+}
+
+.fi-sidebar-group.fi-collapsible > .fi-sidebar-group-btn:hover {
+    background-color: var(--wt-ground);
+}
+
+.fi-sidebar-group-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--wt-ink);
+}
+
+.fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-sidebar-group-label {
+    color: var(--wt-indigo-dark);
+    font-weight: 600;
+}
+
+.fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-icon {
+    color: var(--wt-indigo);
+}
+
+/*
+ * The chevron points right when folded and down when open, like the
+ * reference; Filament's own points up and down.
+ *
+ * The `rotate` property, not `transform: rotate()`. Filament folds the
+ * chevron with Tailwind's `-rotate-180`, which in Tailwind 4 is the
+ * standalone `rotate` property — so a `transform` here does not replace
+ * that turn, it stacks on it: up, then −180 to down, then +90 to the left.
+ * Measured: every folded group showed "‹". Setting the same property
+ * Filament sets is what makes this an override rather than an addition.
+ */
+.fi-sidebar-group-collapse-btn {
+    rotate: 180deg;
+}
+
+.fi-sidebar-group.fi-collapsed .fi-sidebar-group-collapse-btn {
+    rotate: 90deg;
+}
+
+/* The items of an open group sit on a rule, indented under the label. */
+.fi-sidebar-group-items {
+    margin-inline-start: 1.125rem;
+    padding-inline-start: 0.75rem;
+    border-inline-start: 1px solid var(--wt-line);
+}
+
+/*
+ * The group holding the current page is opened by a script in the
+ * SIDEBAR_NAV_END hook, not here. A `display: flex !important` on the
+ * active group's items was the first attempt; it compiled, it read right,
+ * and it did nothing — x-collapse also writes `height: 0; overflow: hidden`
+ * inline, and measured, the current page's own entry stayed invisible. The
+ * stylesheet cannot argue with the store Alpine will read next, so the
+ * script corrects the store instead.
+ */
+
+/* --- the account card ---------------------------------------------- */
+
+.fi-sidebar-footer {
+    margin: 0.75rem 1rem 1rem;
+    padding: 0.375rem;
+    gap: 0;
+    border: 1px solid var(--wt-line);
+    border-radius: var(--wt-radius-control);
+    background-color: var(--wt-surface);
+}
+
+.fi-sidebar .fi-user-menu-trigger {
+    justify-content: flex-start;
+    border-radius: calc(var(--wt-radius-control) - 4px);
+}
+
+.fi-sidebar .fi-user-menu-trigger:hover {
+    background-color: var(--wt-ground);
+}
+
+.fi-sidebar .fi-user-menu-trigger-text {
+    font-weight: 600;
+    color: var(--wt-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * Rendered before the trigger by the hook, shown after it by the grid.
+ * Indented past the avatar (2rem) and its gap (0.75rem) so it sits under
+ * the name, which is what makes it read as the name's second line.
+ */
+.wt-akun-keterangan {
+    order: 2;
+    margin-top: -0.375rem;
+    padding: 0 0.5rem 0.375rem 3.25rem;
+    font-size: 0.75rem;
+    color: var(--wt-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html.dark {
+    .fi-sidebar-group-label {
+        color: var(--wt-ink-on-dark, #e5e7eb);
+    }
+
+    .fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-sidebar-group-label,
+    .fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-icon {
+        color: var(--wt-indigo-on-dark);
+    }
+
+    .fi-sidebar-group.fi-collapsible > .fi-sidebar-group-btn:hover,
+    .fi-sidebar .fi-user-menu-trigger:hover {
+        background-color: rgb(255 255 255 / 0.05);
+    }
+
+    .fi-sidebar-group-items {
+        border-inline-start-color: var(--wt-line-dark);
+    }
+
+    .fi-sidebar-footer {
+        border-color: var(--wt-line-dark);
+        background-color: var(--wt-surface-dark);
+    }
+
+    .fi-sidebar .fi-user-menu-trigger-text {
+        color: #ffffff;
+    }
+}
+
+/* ====================================================================
    Corners — one scale for the whole panel
    ==================================================================== */
 

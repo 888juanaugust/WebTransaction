@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\LandedCosts;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\LandedCosts\Pages\ListLandedCosts;
 use App\Filament\Resources\LandedCosts\Pages\ViewLandedCost;
 use App\Filament\Resources\LandedCosts\Schemas\LandedCostDetail;
@@ -40,7 +41,7 @@ class LandedCostResource extends Resource
 
     protected static ?string $pluralModelLabel = 'biaya perolehan';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?int $navigationSort = 36;
 

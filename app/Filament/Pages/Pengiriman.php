@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Orders\OrderStatus;
 use App\Filament\Actions\OrderTransitionActions;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -45,6 +46,8 @@ class Pengiriman extends Page implements HasTable
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?string $navigationLabel = 'Pengiriman';
 

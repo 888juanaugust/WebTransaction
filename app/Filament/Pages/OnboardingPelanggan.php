@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Onboarding\KesiapanOnboarding;
 use App\Domain\Onboarding\LangkahOnboarding;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Companies\CompanyResource;
 use App\Models\Company;
 use BackedEnum;
@@ -28,6 +29,8 @@ use Filament\Support\Icons\Heroicon;
 class OnboardingPelanggan extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Onboarding pelanggan';
 

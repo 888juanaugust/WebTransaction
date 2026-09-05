@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Akuntansi;
 
 use App\Domain\Accounting\ProfitAndLoss;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -21,7 +22,7 @@ class LabaRugi extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Laba rugi';
 

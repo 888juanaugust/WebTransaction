@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Access\Role;
 use App\Domain\Insight\CustomerInsight;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\Company;
 use BackedEnum;
 use Filament\Pages\Page;
@@ -25,6 +26,8 @@ use Filament\Support\Icons\Heroicon;
 class WawasanPelanggan extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLightBulb;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Pelanggan saya';
 

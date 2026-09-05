@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\PurchaseReturns;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\PurchaseReturns\Pages\EditPurchaseReturn;
 use App\Filament\Resources\PurchaseReturns\Pages\ListPurchaseReturns;
 use App\Filament\Resources\PurchaseReturns\Pages\ViewPurchaseReturn;
@@ -42,7 +43,7 @@ class PurchaseReturnResource extends Resource
 
     protected static ?string $pluralModelLabel = 'retur pembelian';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?int $navigationSort = 34;
 

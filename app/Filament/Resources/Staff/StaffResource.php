@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Staff;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Staff\Pages\CreateStaff;
 use App\Filament\Resources\Staff\Pages\EditStaff;
 use App\Filament\Resources\Staff\Pages\ListStaff;
@@ -48,7 +49,7 @@ class StaffResource extends Resource
 
     protected static ?string $pluralModelLabel = 'staf';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     /** Above the audit log at 91: you grant access here, then read what came of it there. */
     protected static ?int $navigationSort = 90;

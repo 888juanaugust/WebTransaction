@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\SupplierBills;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\SupplierBills\Pages\CreateSupplierBill;
 use App\Filament\Resources\SupplierBills\Pages\EditSupplierBill;
 use App\Filament\Resources\SupplierBills\Pages\ListSupplierBills;
@@ -35,7 +36,7 @@ class SupplierBillResource extends Resource
 
     protected static ?string $pluralModelLabel = 'tagihan pemasok';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?int $navigationSort = 62;
 

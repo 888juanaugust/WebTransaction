@@ -50,6 +50,10 @@ class DesignSystemTest extends TestCase
         'fonts.bunny.net',
         'cdn.jsdelivr.net',
         'unpkg.com',
+        // Not a font — Filament's default avatar, fetched with the
+        // account's name in the query string. Found when the sidebar
+        // card made it prominent; see InitialsAvatar.
+        'ui-avatars.com',
     ];
 
     private function theme(): string

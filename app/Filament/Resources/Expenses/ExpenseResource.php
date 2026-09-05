@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Expenses;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Expenses\Pages\ListExpenses;
 use App\Filament\Resources\Expenses\Tables\ExpensesTable;
 use App\Models\Expense;
@@ -32,7 +33,7 @@ class ExpenseResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Beban';
 

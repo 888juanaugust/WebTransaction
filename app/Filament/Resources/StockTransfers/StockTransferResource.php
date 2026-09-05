@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StockTransfers;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\StockTransfers\Pages\CreateStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\EditStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\ListStockTransfers;
@@ -36,7 +37,7 @@ class StockTransferResource extends Resource
 
     protected static ?string $pluralModelLabel = 'transfer gudang';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Gudang';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?int $navigationSort = 26;
 

@@ -6,6 +6,7 @@ namespace App\Filament\Pages\Laporan;
 
 use App\Domain\Explorer\ExplorerColumn;
 use App\Domain\Explorer\ExplorerDataset;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\Invoice;
 use App\Models\SavedView;
 use BackedEnum;
@@ -58,7 +59,7 @@ class Penjelajah extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlass;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Laporan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::LAPORAN;
 
     protected static ?string $navigationLabel = 'Penjelajah data';
 

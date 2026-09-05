@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\SalesExpenseClaims;
 
 use App\Domain\Access\Role;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\SalesExpenseClaims\Pages\ListSalesExpenseClaims;
 use App\Filament\Resources\SalesExpenseClaims\Tables\SalesExpenseClaimsTable;
 use App\Models\SalesExpenseClaim;
@@ -27,6 +28,8 @@ class SalesExpenseClaimResource extends Resource
     protected static ?string $model = SalesExpenseClaim::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Biaya ekspedisi';
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Domain\Pengaturan\PengaturanPerusahaan;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -30,7 +31,7 @@ class PengaturanPerusahaanPage extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     protected static ?string $navigationLabel = 'Pengaturan perusahaan';
 

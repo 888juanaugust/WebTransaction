@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\PurchaseOrders;
 
 use App\Domain\Purchasing\PurchaseOrderStatus;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\PurchaseOrders\Pages\CreatePurchaseOrder;
 use App\Filament\Resources\PurchaseOrders\Pages\EditPurchaseOrder;
 use App\Filament\Resources\PurchaseOrders\Pages\ListPurchaseOrders;
@@ -36,7 +37,7 @@ class PurchaseOrderResource extends Resource
 
     protected static ?string $pluralModelLabel = 'pesanan pembelian';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?int $navigationSort = 59;
 

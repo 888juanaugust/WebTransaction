@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Products;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Products\Pages\CreateProduct;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
@@ -33,6 +34,8 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?string $navigationLabel = 'Katalog';
 

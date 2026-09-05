@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Giros;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Giros\Pages\ListGiros;
 use App\Filament\Resources\Giros\Pages\ViewGiro;
 use App\Filament\Resources\Giros\Schemas\GiroDetail;
@@ -34,6 +35,8 @@ class GiroResource extends Resource
     protected static ?string $model = Giro::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTicket;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Bilyet giro';
 

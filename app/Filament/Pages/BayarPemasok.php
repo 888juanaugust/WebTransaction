@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Banking\BankAccounts;
 use App\Domain\Money;
 use App\Domain\Purchasing\SupplierLedger;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\BankAccount;
 use App\Models\Supplier;
 use App\Models\SupplierBill;
@@ -44,7 +45,7 @@ class BayarPemasok extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpOnSquare;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pembelian';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PEMBELIAN;
 
     protected static ?string $navigationLabel = 'Bayar pemasok';
 

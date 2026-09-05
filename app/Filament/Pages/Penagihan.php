@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Credit\CollectionDesk;
 use App\Domain\Credit\CollectionOutcome;
 use App\Domain\Credit\ContactMethod;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\CollectionContact;
 use App\Models\Invoice;
 use BackedEnum;
@@ -39,7 +40,7 @@ class Penagihan extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhone;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Penjualan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Penagihan';
 

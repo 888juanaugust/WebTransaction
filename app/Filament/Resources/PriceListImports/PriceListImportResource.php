@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\PriceListImports;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\PriceListImports\Pages\CreatePriceListImport;
 use App\Filament\Resources\PriceListImports\Pages\ListPriceListImports;
 use App\Filament\Resources\PriceListImports\Schemas\PriceListImportForm;
@@ -34,6 +35,8 @@ class PriceListImportResource extends Resource
     protected static ?string $model = PriceListImport::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?string $navigationLabel = 'Impor harga & barang';
 

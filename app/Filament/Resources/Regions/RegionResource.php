@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Regions;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\Regions\Pages\CreateRegion;
 use App\Filament\Resources\Regions\Pages\EditRegion;
 use App\Filament\Resources\Regions\Pages\ListRegions;
@@ -40,7 +41,7 @@ class RegionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'wilayah';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     /** Just above Staf at 90 — you create the place, then put people in it. */
     protected static ?int $navigationSort = 89;

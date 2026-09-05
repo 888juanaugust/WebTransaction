@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\CreditNotes;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\CreditNotes\Pages\CreateCreditNote;
 use App\Filament\Resources\CreditNotes\Pages\EditCreditNote;
 use App\Filament\Resources\CreditNotes\Pages\ListCreditNotes;
@@ -31,6 +32,8 @@ class CreditNoteResource extends Resource
     protected static ?string $model = CreditNote::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-receipt-refund';
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Nota kredit';
 

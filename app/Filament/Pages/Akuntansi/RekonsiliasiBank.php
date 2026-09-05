@@ -13,6 +13,7 @@ use App\Domain\Banking\StatementImporter;
 use App\Domain\Banking\StatementMatcher;
 use App\Domain\Money;
 use App\Domain\Payments\PaymentLedger;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\Account;
 use App\Models\BankAccount;
 use App\Models\BankReconciliation;
@@ -57,7 +58,7 @@ class RekonsiliasiBank extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedScale;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Rekonsiliasi bank';
 

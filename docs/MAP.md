@@ -97,6 +97,32 @@ faktur, short stock or a destructive button, and green is the "Lunas" finance
 scans a list for — a redesign that swept either into the primary would look
 tidier and read worse.
 
+### The sidebar
+
+| Piece | Decides |
+|---|---|
+| `SidebarGroups` | Seven groups, declared once with an icon each, in the order of a day's work: Penjualan, Keuangan, Pembelian, Gudang, Buku besar, Laporan, Pengaturan. Every resource and page names one as its `$navigationGroup`; only the dashboard floats free |
+| Folded by default | Filament accordion groups, remembered per browser. A group with nothing visible in it is dropped, not shown empty — a packer sees three rows, the Owner eight |
+| `sidebar-buka-grup-aktif` | The group holding the current page is un-folded in the same localStorage store Alpine reads, before Alpine boots. A `display: flex !important` was tried first and did nothing: `x-collapse` also writes `height: 0` inline |
+| "Utama" / "Lainnya" | Section headings. The first is real text in `SIDEBAR_NAV_START`; the second is a pseudo-element on the settings group, because no hook exists between two groups |
+| Account card | `UserMenuPosition::Sidebar` — avatar, name, chevron — with a caption under the name from `USER_MENU_BEFORE`: the role, the warehouse for a packer, the company for a buyer. This is where the old brand view's "which account is this open on?" went when the logo became the logo |
+| `InitialsAvatar` | Two initials on an indigo disc as an SVG data URI. Filament's default fetched the avatar from ui-avatars.com **with the account's name in the URL**, on every page, against the privacy notice's "every image from our own server". It had rendered as a broken image since the panel was stood up |
+
+Measured, the Owner's menu, 1,000px viewport:
+
+```
+before   57 items open, 2,992px of scroll, 13 screens in no group
+after     8 rows + dashboard, 828px — one screen, no scroll
+```
+
+`SidebarNavigationTest` pins the shape: the seven labels in order, nothing but
+the dashboard outside a group, every registered screen naming a constant
+rather than a string (a typo would otherwise grow the menu by a group), each
+group collapsible with an icon, the packer's three groups, the account in the
+footer and not the topbar, the caption per role, and the region switcher still
+in the topbar — it used to hang off `USER_MENU_BEFORE`, and moving the menu
+would have taken it along silently.
+
 ### Admin panel — staff, `web` guard against `users`
 
 | URL | Page | Who | What it does |

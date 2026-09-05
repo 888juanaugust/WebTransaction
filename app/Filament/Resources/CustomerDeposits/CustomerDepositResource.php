@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\CustomerDeposits;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\CustomerDeposits\Pages\ListCustomerDeposits;
 use App\Filament\Resources\CustomerDeposits\Tables\CustomerDepositsTable;
 use App\Models\CustomerDeposit;
@@ -26,7 +27,7 @@ class CustomerDepositResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Penjualan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Uang muka';
 

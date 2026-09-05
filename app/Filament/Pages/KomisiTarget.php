@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Access\Role;
 use App\Domain\Komisi\KomisiSetter;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\SalesTarget;
 use App\Models\User;
 use BackedEnum;
@@ -32,7 +33,7 @@ class KomisiTarget extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     protected static ?string $navigationLabel = 'Komisi & target';
 

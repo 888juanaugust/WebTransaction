@@ -8,6 +8,7 @@ use App\Domain\Accounting\ControlAccountCheck;
 use App\Domain\Accounting\LedgerReconciliation;
 use App\Domain\Accounting\TrialBalance;
 use App\Domain\Accounting\TrialBalanceRow;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -26,7 +27,7 @@ class NeracaSaldo extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Neraca saldo';
 

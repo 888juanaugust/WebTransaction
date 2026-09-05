@@ -9,6 +9,7 @@ use App\Domain\Accounting\PeriodCloser;
 use App\Domain\Accounting\ProfitAndLoss;
 use App\Domain\Integrity\IntegrityFinding;
 use App\Domain\Integrity\LedgerIntegrity;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\AccountingPeriod;
 use App\Models\AccountingPeriodReopening;
 use BackedEnum;
@@ -33,7 +34,7 @@ class TutupBuku extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLockClosed;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Tutup buku';
 

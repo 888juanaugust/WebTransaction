@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Banking\BankAccounts;
 use App\Domain\Money;
 use App\Domain\Payments\PaymentLedger;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\BankAccount;
 use App\Models\Company;
 use App\Models\Invoice;
@@ -50,7 +51,7 @@ class TerimaPembayaran extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Penjualan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Terima pembayaran';
 

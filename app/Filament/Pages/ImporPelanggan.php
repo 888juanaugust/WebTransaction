@@ -8,6 +8,7 @@ use App\Domain\Import\CompanyImporter;
 use App\Domain\Import\CompanyImportRow;
 use App\Domain\Import\CsvTemplate;
 use App\Domain\Import\TemplateKind;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -35,7 +36,7 @@ class ImporPelanggan extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Penjualan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Impor pelanggan';
 

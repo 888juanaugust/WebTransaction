@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\DebtRemovals;
 
 use App\Domain\Access\Role;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\DebtRemovals\Pages\ListDebtRemovals;
 use App\Filament\Resources\DebtRemovals\Tables\DebtRemovalsTable;
 use App\Models\DebtRemoval;
@@ -27,6 +28,8 @@ class DebtRemovalResource extends Resource
     protected static ?string $model = DebtRemoval::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHandRaised;
+
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::KEUANGAN;
 
     protected static ?string $navigationLabel = 'Pelunasan piutang';
 

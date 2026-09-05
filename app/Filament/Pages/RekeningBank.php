@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Access\Role;
 use App\Domain\Banking\BankAccounts;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\BankAccount;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -28,7 +29,7 @@ class RekeningBank extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     protected static ?string $navigationLabel = 'Rekening bank';
 

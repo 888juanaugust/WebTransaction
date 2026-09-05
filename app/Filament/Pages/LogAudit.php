@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Domain\Access\Role;
+use App\Filament\Navigation\SidebarGroups;
 use App\Models\AuditLog;
 use App\Models\User;
 use BackedEnum;
@@ -44,7 +45,7 @@ class LogAudit extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFingerPrint;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Pengaturan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 
     protected static ?string $navigationLabel = 'Log audit';
 

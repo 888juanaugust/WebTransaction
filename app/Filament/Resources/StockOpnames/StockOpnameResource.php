@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StockOpnames;
 
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\StockOpnames\Pages\EditStockOpname;
 use App\Filament\Resources\StockOpnames\Pages\ListStockOpnames;
 use App\Filament\Resources\StockOpnames\Schemas\StockOpnameForm;
@@ -40,7 +41,7 @@ class StockOpnameResource extends Resource
 
     protected static ?string $pluralModelLabel = 'stok opname';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Gudang';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?int $navigationSort = 27;
 

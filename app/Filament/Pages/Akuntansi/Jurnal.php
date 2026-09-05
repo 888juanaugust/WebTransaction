@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Akuntansi;
 
 use App\Domain\Money;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\GoodsReceipts\GoodsReceiptResource;
 use App\Filament\Resources\Invoices\InvoiceResource;
 use App\Filament\Resources\Orders\OrderResource;
@@ -45,7 +46,7 @@ class Jurnal extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Jurnal';
 

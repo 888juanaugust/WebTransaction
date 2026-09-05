@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Laporan;
 use App\Domain\Reporting\ReportChart;
 use App\Domain\Reporting\ReportCsv;
 use App\Domain\Reporting\ReportTable;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -28,7 +29,7 @@ abstract class ReportPage extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Laporan';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::LAPORAN;
 
     protected string $view = 'filament.pages.laporan.report';
 

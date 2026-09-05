@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Akuntansi;
 
 use App\Domain\Accounting\BalanceSheet;
+use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -22,7 +23,7 @@ class Neraca extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedScale;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Buku besar';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::BUKU_BESAR;
 
     protected static ?string $navigationLabel = 'Neraca';
 

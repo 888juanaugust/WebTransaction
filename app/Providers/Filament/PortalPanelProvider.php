@@ -12,6 +12,8 @@ use App\Filament\Portal\Widgets\TagihanTerbuka;
 use App\Http\Middleware\BindRegionContext;
 use App\Support\BrandColors;
 use App\Support\Branding;
+use App\Support\InitialsAvatar;
+use Filament\Enums\UserMenuPosition;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -20,6 +22,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -81,6 +84,25 @@ class PortalPanelProvider extends PanelProvider
             ->authPasswordBroker('customer_users')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors(BrandColors::panel())
+            /*
+             * The buyer's account at the foot of the sidebar, like the staff
+             * panel: avatar, name, and under it the company they buy for —
+             * one login can only ever belong to one company, and on a shared
+             * shop computer that line is the answer to "whose cart is this".
+             */
+            ->userMenu(position: UserMenuPosition::Sidebar)
+            // Local initials, not ui-avatars.com — see InitialsAvatar.
+            ->defaultAvatarProvider(InitialsAvatar::class)
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                function (): string {
+                    $buyer = auth('customer')->user();
+
+                    return $buyer?->company
+                        ? view('filament.akun-keterangan', ['keterangan' => $buyer->company->nama])->render()
+                        : '';
+                },
+            )
             ->discoverResources(in: app_path('Filament/Portal/Resources'), for: 'App\Filament\Portal\Resources')
             ->discoverPages(in: app_path('Filament/Portal/Pages'), for: 'App\Filament\Portal\Pages')
             ->pages([

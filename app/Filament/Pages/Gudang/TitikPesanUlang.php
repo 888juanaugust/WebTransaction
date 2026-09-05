@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Gudang;
 use App\Domain\Purchasing\SuggestedPurchaseOrder;
 use App\Domain\Stock\ReorderAdvisor;
 use App\Domain\Stock\ReorderSuggestion;
+use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\PurchaseOrders\PurchaseOrderResource;
 use App\Models\Product;
 use App\Models\Supplier;
@@ -43,7 +44,7 @@ class TitikPesanUlang extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Gudang';
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
 
     protected static ?string $navigationLabel = 'Titik pesan ulang';
 
