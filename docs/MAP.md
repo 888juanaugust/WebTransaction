@@ -103,7 +103,8 @@ tidier and read worse.
 |---|---|
 | `SidebarGroups` | Eight groups, declared once with an icon each, in the order of a day's work: Penjualan, Keuangan, Pembelian, **Inventori**, **Gudang**, Buku besar, Laporan, Pengaturan. Every resource and page names one as its `$navigationGroup`; only the dashboard floats free |
 | Inventori vs Gudang | **Two groups because they are two roles.** `Role::Warehouse` (labelled Inventori) keeps the catalogue, both imports, transfers, opname and reorder points — what the goods *are*. `Role::Storage` (labelled Gudang) gets Pengiriman and nothing else, because that is the whole of the packer's job |
-| Folded by default | Filament accordion groups, remembered per browser. A group with nothing visible in it is dropped, not shown empty — a packer sees four rows, the Owner nine |
+| Folded by default | Filament accordion groups, remembered per browser. A group with nothing visible in it is dropped, not shown empty — a packer sees five rows, the Owner nine |
+| `RataGrupSatuLayar` | **A group holding one visible screen renders as a plain row**, no heading and no chevron. Replaces Filament's navigation assembler; must flatten *after* its sort, because a blank-label group built before it is flung to the top of the menu |
 | `sidebar-buka-grup-aktif` | The group holding the current page is un-folded in the same localStorage store Alpine reads, before Alpine boots. A `display: flex !important` was tried first and did nothing: `x-collapse` also writes `height: 0` inline |
 | "Utama" / "Lainnya" | Section headings. The first is real text in `SIDEBAR_NAV_START`; the second is a pseudo-element on the settings group, because no hook exists between two groups |
 | Account card | `UserMenuPosition::Sidebar` — avatar, name, chevron — with a caption under the name from `USER_MENU_BEFORE`: the role, the warehouse for a packer, the company for a buyer. This is where the old brand view's "which account is this open on?" went when the logo became the logo |
@@ -113,10 +114,17 @@ Measured, the Owner's menu, 1,000px viewport:
 
 ```
 before   57 items open, 2,992px of scroll, 13 screens in no group
-after     9 rows folded (8 groups + dashboard), 393px of content
-          in an 828px slot — one screen, no scroll
-packer    5 rows, 200px
+after     9 rows folded, 393px of content in an 828px slot —
+          one screen, no scroll
+          7 accordions + Pengiriman as a plain row + dashboard
+packer    5 rows, 200px — all five plain, not one chevron
 ```
+
+The flattening buys **clicks, not pixels**: a packer's menu was already five
+rows, because four accordions holding one item each occupy exactly as much
+space as four plain rows. What changed is that reaching those four screens no
+longer costs four clicks to open four headings that promised more underneath
+than was there.
 
 `SidebarNavigationTest` pins the shape: the eight labels in order, nothing but
 the dashboard outside a group, every registered screen naming a constant
@@ -140,11 +148,35 @@ was making a claim about who owns what, in a place no test looked.
 Split along the line CLAUDE.md already draws. **Inventori** = `Role::Warehouse`:
 what the goods are and how many. **Gudang** = `Role::Storage`: what goes out of
 the door, which is one screen, because CLAUDE.md gives that role one job — "its
-warehouse's shipping queue — pick list, surat jalan, ship, complete". A
-one-item group looks thin and is correct; padding it out would mean handing the
-packer something that is not theirs. The test asserts the single item, so the
-next screen filed under the wrong role fails rather than quietly widening what
-the menu claims.
+warehouse's shipping queue — pick list, surat jalan, ship, complete". Padding
+it out would mean handing the packer something that is not theirs. The test
+asserts the single member off the *classes*, so the next screen filed under the
+wrong role fails rather than quietly widening what the menu claims.
+
+#### One screen, one plain row
+
+Because Gudang holds exactly one screen, **it draws no heading** — see
+`RataGrupSatuLayar`. Pengiriman renders as a plain row in Gudang's declared
+position, between Inventori and Buku besar, and in the icon rail as its own
+icon with its own tooltip.
+
+That is deliberate and it is worth being clear that the two decisions do not
+cancel out. The group still exists and still does its job: it fixes where the
+screen sits in the menu, and it is what the ownership rules and their tests are
+written against. What it stops doing is painting a heading over a single row —
+a heading whose only content is a promise of more underneath.
+
+The rule is one rule for everybody, not a special case for narrow roles:
+exactly one visible item, and no child items under it, renders flat. Visibility
+is per-account by the time it runs, so **the same group is an accordion for one
+person and a plain row for another** — Inventori is a heading for the Owner and
+a plain "Katalog" row for a packer — without either being special-cased.
+
+Measured: the Owner's Gudang heading became one row; a packer's whole menu is
+five plain rows and not one chevron. `SidebarNavigationTest` pins both the
+flattening (position kept, neighbours untouched, two-item groups keep their
+heading, the dashboard not swept in) and the filing underneath it, off the
+classes, because presentation and ownership must be allowed to disagree.
 
 ### Admin panel — staff, `web` guard against `users`
 

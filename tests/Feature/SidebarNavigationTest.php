@@ -6,6 +6,9 @@ namespace Tests\Feature;
 
 use App\Domain\Access\Role;
 use App\Filament\Navigation\SidebarGroups;
+use App\Filament\Pages\ImporBarang;
+use App\Filament\Pages\Pengiriman;
+use App\Filament\Resources\Products\ProductResource;
 use App\Models\CustomerUser;
 use App\Models\Region;
 use App\Models\User;
@@ -65,6 +68,33 @@ class SidebarNavigationTest extends TestCase
         return $out;
     }
 
+    /**
+     * The menu as it actually renders, in order, flattened rows included.
+     *
+     * A group holding one screen comes back with a null label — that is the
+     * shape Filament draws as a plain row, and `sidebarGroups()` above cannot
+     * see it, so the two helpers answer two different questions: what is
+     * grouped, and what a person looking at the sidebar sees.
+     *
+     * @return list<array{label: ?string, items: list<string>}>
+     */
+    private function sidebarRows(): array
+    {
+        return array_map(
+            fn (NavigationGroup $group): array => [
+                'label' => filled($group->getLabel()) ? $group->getLabel() : null,
+                'items' => $this->itemLabels($group),
+            ],
+            array_values(Filament::getPanel('admin')->getNavigation()),
+        );
+    }
+
+    /** @return list<?string> */
+    private function rowLabels(): array
+    {
+        return array_map(fn (array $row): ?string => $row['label'], $this->sidebarRows());
+    }
+
     /** @return list<string> */
     private function itemLabels(NavigationGroup $group): array
     {
@@ -86,27 +116,74 @@ class SidebarNavigationTest extends TestCase
 
     // --- the shape ---------------------------------------------------------
 
-    public function test_the_owner_sees_the_eight_groups_in_the_declared_order(): void
+    public function test_the_owner_sees_the_declared_groups_in_the_declared_order(): void
     {
         $this->as(Role::Owner);
 
-        $this->assertSame(SidebarGroups::labels(), array_keys($this->sidebarGroups()));
+        /*
+         * Every declared group still appears, in the declared order — except
+         * Gudang, which holds one screen for this role and so renders as a
+         * plain row. The order is what matters and it is untouched: the flat
+         * row sits exactly where the heading would have been.
+         */
+        $this->assertSame(
+            [
+                null,               // Dashboard
+                SidebarGroups::PENJUALAN,
+                SidebarGroups::KEUANGAN,
+                SidebarGroups::PEMBELIAN,
+                SidebarGroups::INVENTORI,
+                null,               // Gudang → Pengiriman, one screen
+                SidebarGroups::BUKU_BESAR,
+                SidebarGroups::LAPORAN,
+                SidebarGroups::PENGATURAN,
+            ],
+            $this->rowLabels(),
+        );
     }
 
-    public function test_only_the_dashboard_floats_outside_a_group(): void
+    public function test_a_group_with_one_screen_renders_as_a_plain_row(): void
     {
         $this->as(Role::Owner);
 
-        $floating = [];
+        $rows = $this->sidebarRows();
 
-        foreach (Filament::getPanel('admin')->getNavigation() as $group) {
-            if (blank($group->getLabel())) {
-                $floating = [...$floating, ...$this->itemLabels($group)];
+        // Position five, between Inventori and Buku besar, where the Gudang
+        // heading would be. That it keeps its place is the whole reason the
+        // flattening happens after Filament's sort rather than inside it —
+        // an unlabelled group built before the sort is flung to the top.
+        $this->assertSame(['label' => null, 'items' => ['Pengiriman']], $rows[5]);
+
+        // Its neighbours are untouched: more than one screen, still a heading.
+        $this->assertSame(SidebarGroups::INVENTORI, $rows[4]['label']);
+        $this->assertSame(SidebarGroups::BUKU_BESAR, $rows[6]['label']);
+    }
+
+    public function test_a_group_with_two_screens_keeps_its_heading(): void
+    {
+        $this->as(Role::Owner);
+
+        // The rule is about one, not about few. Every group the Owner sees
+        // with more than one screen in it still paints a heading.
+        foreach ($this->sidebarRows() as $row) {
+            if (count($row['items']) > 1) {
+                $this->assertNotNull(
+                    $row['label'],
+                    'grup dengan '.count($row['items']).' layar kehilangan judulnya: '.implode(', ', $row['items']),
+                );
             }
         }
 
-        // The one screen with no group is the one every group leads back to.
-        $this->assertSame(['Dashboard'], $floating);
+        $this->assertNotEmpty($this->sidebarGroups(), 'ada judul yang tersisa');
+    }
+
+    public function test_the_dashboard_still_stands_on_its_own(): void
+    {
+        $this->as(Role::Owner);
+
+        // It was never in a group, and flattening must not have swept it in
+        // with the rest: it is the row every group leads back to.
+        $this->assertSame(['label' => null, 'items' => ['Dashboard']], $this->sidebarRows()[0]);
     }
 
     public function test_every_registered_screen_names_a_constant_not_a_string(): void
@@ -159,30 +236,49 @@ class SidebarNavigationTest extends TestCase
     {
         $this->as(Role::Storage);
 
-        $groups = $this->sidebarGroups();
-
         /*
          * A group with nothing visible in it is dropped, not shown empty —
-         * which is how four of the eight vanish for the narrowest role. The
-         * four that remain hold exactly what the access phase left a packer:
-         * the order list (every warehouse picks from it), the catalogue they
-         * may read but not write, their own shipping queue, and the data
-         * explorer with its one dataset.
+         * which is how four of the eight vanish for the narrowest role. Each
+         * of the four that survive holds exactly one screen for this account,
+         * so every one of them flattens and the packer's menu is a flat list.
+         *
+         * This is the measured complaint the flattening rule exists for: four
+         * accordions, one item under each, four clicks to reach four screens,
+         * and every heading promising more underneath than was there.
+         *
+         * The screens themselves are what the access phase left a packer: the
+         * order list (every warehouse picks from it), the catalogue they may
+         * read but not write, their own shipping queue, and the data explorer
+         * with its one dataset. Impor barang is absent — this role could not
+         * open it wherever it sat.
          */
         $this->assertSame(
-            [SidebarGroups::PENJUALAN, SidebarGroups::INVENTORI, SidebarGroups::GUDANG, SidebarGroups::LAPORAN],
-            array_keys($groups),
+            [
+                ['label' => null, 'items' => ['Dashboard']],
+                ['label' => null, 'items' => ['Order']],
+                ['label' => null, 'items' => ['Katalog']],
+                ['label' => null, 'items' => ['Pengiriman']],
+                ['label' => null, 'items' => ['Penjelajah data']],
+            ],
+            $this->sidebarRows(),
         );
-        $this->assertSame(['Order'], $this->itemLabels($groups[SidebarGroups::PENJUALAN]));
 
-        // One item each, and both are the point of the split. Katalog is the
-        // keeper's shelf, which a packer may read; Pengiriman is the packer's
-        // own. Impor barang appears in neither — it is under Penjualan, and
-        // this role could not open it wherever it sat.
-        $this->assertSame(['Katalog'], $this->itemLabels($groups[SidebarGroups::INVENTORI]));
-        $this->assertSame(['Pengiriman'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+        // Not one heading, and so not one chevron, for this account.
+        $this->assertSame([], $this->sidebarGroups());
+    }
 
-        $this->assertSame(['Penjelajah data'], $this->itemLabels($groups[SidebarGroups::LAPORAN]));
+    public function test_the_packers_screens_are_still_grouped_underneath(): void
+    {
+        /*
+         * Flattening is presentation, not filing. The screens keep the group
+         * they declare — which is what governs the sidebar's order and what
+         * the ownership rules are written against — even for the account that
+         * never sees a heading. Asserted off the classes rather than the
+         * rendered menu, because these two must be allowed to disagree.
+         */
+        $this->assertSame(SidebarGroups::GUDANG, Pengiriman::getNavigationGroup());
+        $this->assertSame(SidebarGroups::INVENTORI, ProductResource::getNavigationGroup());
+        $this->assertSame(SidebarGroups::PENJUALAN, ImporBarang::getNavigationGroup());
     }
 
     public function test_gudang_is_the_packers_group_and_holds_only_their_one_job(): void
@@ -203,12 +299,21 @@ class SidebarNavigationTest extends TestCase
          */
         $this->as(Role::Owner);
 
-        $groups = $this->sidebarGroups();
+        // Read off the classes, not the menu: Gudang holds one screen and so
+        // renders without a heading, which is a drawing decision and must not
+        // be able to hide a screen being filed under the wrong role.
+        $inGudang = [];
 
-        $this->assertSame(['Pengiriman'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+        foreach ([...Filament::getPanel('admin')->getResources(), ...Filament::getPanel('admin')->getPages()] as $class) {
+            if ($class::getNavigationGroup() === SidebarGroups::GUDANG) {
+                $inGudang[] = class_basename($class);
+            }
+        }
+
+        $this->assertSame(['Pengiriman'], $inGudang);
 
         // And the five that moved are all present under the keeper's heading.
-        $inventori = $this->itemLabels($groups[SidebarGroups::INVENTORI]);
+        $inventori = $this->itemLabels($this->sidebarGroups()[SidebarGroups::INVENTORI]);
 
         foreach (['Katalog', 'Transfer gudang', 'Stok opname', 'Titik pesan ulang', 'Impor harga & barang'] as $label) {
             $this->assertContains($label, $inventori, "{$label} harus di Inventori");
@@ -242,8 +347,9 @@ class SidebarNavigationTest extends TestCase
             'the two importers must be adjacent, item then customer',
         );
 
-        // And not left behind in the packer's section.
-        $this->assertNotContains('Impor barang', $this->itemLabels($this->sidebarGroups()[SidebarGroups::GUDANG]));
+        // And not left behind in the packer's section. Off the class, because
+        // Gudang holds one screen and so draws no heading to look inside.
+        $this->assertSame(SidebarGroups::PENJUALAN, ImporBarang::getNavigationGroup());
     }
 
     public function test_grouping_did_not_widen_what_a_role_can_see(): void

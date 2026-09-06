@@ -17,6 +17,7 @@ use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
+use App\Filament\Navigation\RataGrupSatuLayar;
 use App\Jobs\PruneAbandonedCarts;
 use App\Jobs\PurgeVisitPhotos;
 use App\Jobs\ReleaseStaleReservations;
@@ -25,6 +26,7 @@ use App\Jobs\SweepLedgerIntegrity;
 use App\Models\Company;
 use App\Models\CustomerUser;
 use App\Observers\CompanyObserver;
+use Filament\Navigation\NavigationManager;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -41,6 +43,15 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        /*
+         * A sidebar group holding one visible screen renders as a plain row.
+         * Filament binds its navigation assembler `scoped`, so re-binding it
+         * here — this provider registers after the package's — replaces it for
+         * both panels at once. See `RataGrupSatuLayar` for why the flattening
+         * cannot happen inside the assembler itself.
+         */
+        $this->app->scoped(NavigationManager::class, fn (): NavigationManager => new RataGrupSatuLayar);
+
         // Everything else in App\Domain is constructor-injectable as-is; only
         // the tax calculator needs config to build.
         $this->app->singleton(TaxCalculator::class, fn () => TaxCalculator::fromConfig());

@@ -21,9 +21,15 @@
 --}}
 <script>
     (() => {
+        // A flattened group — one visible screen, rendered as a plain row —
+        // carries an empty data-group-label, which `[data-group-label]` still
+        // matches. It has no folded state to correct, and an empty string in
+        // the stored list would collapse every unnamed group at once.
         const active = Array.from(
             document.querySelectorAll('.fi-sidebar-group.fi-active[data-group-label]'),
-        ).map((group) => group.dataset.groupLabel)
+        )
+            .map((group) => group.dataset.groupLabel)
+            .filter((label) => label !== '')
 
         if (active.length === 0) {
             return
