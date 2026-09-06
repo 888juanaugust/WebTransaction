@@ -44,7 +44,7 @@ class TitikPesanUlang extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPath;
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::INVENTORI;
 
     protected static ?string $navigationLabel = 'Titik pesan ulang';
 

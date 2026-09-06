@@ -36,7 +36,7 @@ class PriceListImportResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::INVENTORI;
 
     protected static ?string $navigationLabel = 'Impor harga & barang';
 

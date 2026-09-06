@@ -101,8 +101,9 @@ tidier and read worse.
 
 | Piece | Decides |
 |---|---|
-| `SidebarGroups` | Seven groups, declared once with an icon each, in the order of a day's work: Penjualan, Keuangan, Pembelian, Gudang, Buku besar, Laporan, Pengaturan. Every resource and page names one as its `$navigationGroup`; only the dashboard floats free |
-| Folded by default | Filament accordion groups, remembered per browser. A group with nothing visible in it is dropped, not shown empty — a packer sees three rows, the Owner eight |
+| `SidebarGroups` | Eight groups, declared once with an icon each, in the order of a day's work: Penjualan, Keuangan, Pembelian, **Inventori**, **Gudang**, Buku besar, Laporan, Pengaturan. Every resource and page names one as its `$navigationGroup`; only the dashboard floats free |
+| Inventori vs Gudang | **Two groups because they are two roles.** `Role::Warehouse` (labelled Inventori) keeps the catalogue, both imports, transfers, opname and reorder points — what the goods *are*. `Role::Storage` (labelled Gudang) gets Pengiriman and nothing else, because that is the whole of the packer's job |
+| Folded by default | Filament accordion groups, remembered per browser. A group with nothing visible in it is dropped, not shown empty — a packer sees four rows, the Owner nine |
 | `sidebar-buka-grup-aktif` | The group holding the current page is un-folded in the same localStorage store Alpine reads, before Alpine boots. A `display: flex !important` was tried first and did nothing: `x-collapse` also writes `height: 0` inline |
 | "Utama" / "Lainnya" | Section headings. The first is real text in `SIDEBAR_NAV_START`; the second is a pseudo-element on the settings group, because no hook exists between two groups |
 | Account card | `UserMenuPosition::Sidebar` — avatar, name, chevron — with a caption under the name from `USER_MENU_BEFORE`: the role, the warehouse for a packer, the company for a buyer. This is where the old brand view's "which account is this open on?" went when the logo became the logo |
@@ -112,16 +113,38 @@ Measured, the Owner's menu, 1,000px viewport:
 
 ```
 before   57 items open, 2,992px of scroll, 13 screens in no group
-after     8 rows + dashboard, 828px — one screen, no scroll
+after     9 rows folded (8 groups + dashboard), 393px of content
+          in an 828px slot — one screen, no scroll
+packer    5 rows, 200px
 ```
 
-`SidebarNavigationTest` pins the shape: the seven labels in order, nothing but
+`SidebarNavigationTest` pins the shape: the eight labels in order, nothing but
 the dashboard outside a group, every registered screen naming a constant
 rather than a string (a typo would otherwise grow the menu by a group), each
-group collapsible with an icon, the packer's three groups, the account in the
-footer and not the topbar, the caption per role, and the region switcher still
-in the topbar — it used to hang off `USER_MENU_BEFORE`, and moving the menu
-would have taken it along silently.
+group collapsible with an icon, the packer's four groups, **Gudang holding
+Pengiriman and nothing else**, the two bulk importers adjacent under Penjualan,
+the account in the footer and not the topbar, the caption per role, and the
+region switcher still in the topbar — it used to hang off `USER_MENU_BEFORE`,
+and moving the menu would have taken it along silently.
+
+#### Why Gudang holds one screen
+
+The group was called Gudang and held six screens; `Role::Storage` is *labelled*
+Gudang. So the heading asserted that the packer owned a section containing the
+catalogue, the price import, stock transfers, opname and reorder points — five
+screens that are the catalogue-keeper's or Finance's, and one, Pengiriman, that
+is actually theirs. Nothing was broken by it, which is exactly why it survived
+the access phase that was otherwise about this precise distinction: the menu
+was making a claim about who owns what, in a place no test looked.
+
+Split along the line CLAUDE.md already draws. **Inventori** = `Role::Warehouse`:
+what the goods are and how many. **Gudang** = `Role::Storage`: what goes out of
+the door, which is one screen, because CLAUDE.md gives that role one job — "its
+warehouse's shipping queue — pick list, surat jalan, ship, complete". A
+one-item group looks thin and is correct; padding it out would mean handing the
+packer something that is not theirs. The test asserts the single item, so the
+next screen filed under the wrong role fails rather than quietly widening what
+the menu claims.
 
 ### Admin panel — staff, `web` guard against `users`
 
@@ -2372,12 +2395,9 @@ sell. `SidebarNavigationTest` pins the pair adjacent and pins Impor barang out
 of the Gudang group, because this is a one-line constant that looks fine in
 review either way.
 
-The wider version of that observation is still open: the group labelled
-**Gudang** holds Transfer gudang, Stok opname, Katalog, Titik pesan ulang and
-Impor harga & barang, all of which are Inventori's or Finance's, alongside the
-single screen that really is the packer's (Pengiriman). Renaming it *Inventori*
-would only move the misnomer onto Pengiriman, so it is left as it stands and
-noted here rather than guessed at.
+The wider version of that observation was acted on rather than left standing:
+the one Gudang group is now two, **Inventori** and **Gudang**, split along the
+role line. See *Why Gudang holds one screen* under the sidebar, above.
 
 The other half of the change is a widening. `canBrowseCatalogue()` now returns
 true for every role, Gudang included, where before it named Gudang as the

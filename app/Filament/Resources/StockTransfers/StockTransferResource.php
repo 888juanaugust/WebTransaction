@@ -37,7 +37,7 @@ class StockTransferResource extends Resource
 
     protected static ?string $pluralModelLabel = 'transfer gudang';
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::INVENTORI;
 
     protected static ?int $navigationSort = 26;
 

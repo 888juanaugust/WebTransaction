@@ -86,7 +86,7 @@ class SidebarNavigationTest extends TestCase
 
     // --- the shape ---------------------------------------------------------
 
-    public function test_the_owner_sees_the_seven_groups_in_the_declared_order(): void
+    public function test_the_owner_sees_the_eight_groups_in_the_declared_order(): void
     {
         $this->as(Role::Owner);
 
@@ -146,8 +146,8 @@ class SidebarNavigationTest extends TestCase
 
         $keuangan = $this->itemLabels($this->sidebarGroups()[SidebarGroups::KEUANGAN]);
 
-        // The reason a seventh group exists: these were under Penjualan or
-        // nowhere, and the people who use them are not sales.
+        // The reason Keuangan exists as its own group: these were under
+        // Penjualan or nowhere, and the people who use them are not sales.
         foreach (['Faktur', 'Terima pembayaran', 'Bilyet giro', 'Uang muka', 'Nota kredit', 'Pelunasan piutang', 'Biaya ekspedisi'] as $label) {
             $this->assertContains($label, $keuangan, "{$label} harus di Keuangan");
         }
@@ -163,23 +163,56 @@ class SidebarNavigationTest extends TestCase
 
         /*
          * A group with nothing visible in it is dropped, not shown empty —
-         * which is how four of the seven vanish for the narrowest role. The
-         * three that remain hold exactly what the access phase left a packer:
-         * the order list (every warehouse picks from it), their own shipping
-         * queue, and the data explorer with its one dataset. Grouping changes
-         * where those sit, not whether they are there.
+         * which is how four of the eight vanish for the narrowest role. The
+         * four that remain hold exactly what the access phase left a packer:
+         * the order list (every warehouse picks from it), the catalogue they
+         * may read but not write, their own shipping queue, and the data
+         * explorer with its one dataset.
          */
         $this->assertSame(
-            [SidebarGroups::PENJUALAN, SidebarGroups::GUDANG, SidebarGroups::LAPORAN],
+            [SidebarGroups::PENJUALAN, SidebarGroups::INVENTORI, SidebarGroups::GUDANG, SidebarGroups::LAPORAN],
             array_keys($groups),
         );
         $this->assertSame(['Order'], $this->itemLabels($groups[SidebarGroups::PENJUALAN]));
-        // Katalog joined the packer's Gudang group when reading it was opened
-        // to them. Impor barang is not here at all — not merely invisible to
-        // this role, but filed under Penjualan, because Gudang is the packer's
-        // section and a bulk catalogue writer is not the packer's screen.
-        $this->assertSame(['Pengiriman', 'Katalog'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+
+        // One item each, and both are the point of the split. Katalog is the
+        // keeper's shelf, which a packer may read; Pengiriman is the packer's
+        // own. Impor barang appears in neither — it is under Penjualan, and
+        // this role could not open it wherever it sat.
+        $this->assertSame(['Katalog'], $this->itemLabels($groups[SidebarGroups::INVENTORI]));
+        $this->assertSame(['Pengiriman'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+
         $this->assertSame(['Penjelajah data'], $this->itemLabels($groups[SidebarGroups::LAPORAN]));
+    }
+
+    public function test_gudang_is_the_packers_group_and_holds_only_their_one_job(): void
+    {
+        /*
+         * The name collision this split exists to end. `Role::Storage` is
+         * *labelled* Gudang, so a sidebar section with that heading reads as
+         * the packer's — and it used to hold six screens, five of them the
+         * catalogue-keeper's, the catalogue itself among them. Nothing was
+         * broken; the menu simply asserted that the role which may not write
+         * the catalogue owned the section the catalogue lived in.
+         *
+         * Gudang now holds Pengiriman and nothing else, which is the whole of
+         * what CLAUDE.md gives that role: "its warehouse's shipping queue —
+         * pick list, surat jalan, ship, complete". A one-item group looks thin
+         * and is correct. Anything else appearing here is a screen filed under
+         * the wrong role.
+         */
+        $this->as(Role::Owner);
+
+        $groups = $this->sidebarGroups();
+
+        $this->assertSame(['Pengiriman'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
+
+        // And the five that moved are all present under the keeper's heading.
+        $inventori = $this->itemLabels($groups[SidebarGroups::INVENTORI]);
+
+        foreach (['Katalog', 'Transfer gudang', 'Stok opname', 'Titik pesan ulang', 'Impor harga & barang'] as $label) {
+            $this->assertContains($label, $inventori, "{$label} harus di Inventori");
+        }
     }
 
     public function test_the_two_bulk_importers_stand_together_under_penjualan(): void

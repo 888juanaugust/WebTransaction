@@ -41,7 +41,7 @@ class StockOpnameResource extends Resource
 
     protected static ?string $pluralModelLabel = 'stok opname';
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::INVENTORI;
 
     protected static ?int $navigationSort = 27;
 

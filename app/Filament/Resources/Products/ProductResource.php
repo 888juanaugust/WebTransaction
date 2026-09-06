@@ -34,7 +34,7 @@ class ProductResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::INVENTORI;
 
     protected static ?string $navigationLabel = 'Katalog';
 
