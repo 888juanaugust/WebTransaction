@@ -34,20 +34,24 @@ use Throwable;
  * a catalogue and a stack trace, and the person who uploaded four hundred
  * rows has no way to tell which two hundred landed.
  *
- * Filed under Gudang beside Impor harga & barang rather than under Penjualan
- * with the customer import: both screens here are the catalogue-keeper's, and
- * the pair of them being adjacent is what makes the difference between them
- * — this one is what a thing *is*, that one is what it *costs* — legible.
+ * Filed under **Penjualan**, next to Impor pelanggan. The Gudang group is the
+ * packer's — `Role::Storage`, labelled Gudang, whose whole job is Pengiriman —
+ * and this screen is not theirs to open; putting a bulk catalogue writer in
+ * the section named after the role that may not write the catalogue is the
+ * kind of filing that teaches people the wrong shape of the system. The two
+ * bulk importers standing together instead says the true thing: same upload,
+ * same preview, same three counts, one for the register of who you sell to and
+ * one for the register of what you sell.
  */
 class ImporBarang extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
-    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::GUDANG;
+    protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENJUALAN;
 
     protected static ?string $navigationLabel = 'Impor barang';
 
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 11;
 
     protected static ?string $slug = 'impor-barang';
 

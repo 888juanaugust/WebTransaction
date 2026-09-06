@@ -175,9 +175,42 @@ class SidebarNavigationTest extends TestCase
         );
         $this->assertSame(['Order'], $this->itemLabels($groups[SidebarGroups::PENJUALAN]));
         // Katalog joined the packer's Gudang group when reading it was opened
-        // to them; Impor barang did not, being the keeper's.
+        // to them. Impor barang is not here at all — not merely invisible to
+        // this role, but filed under Penjualan, because Gudang is the packer's
+        // section and a bulk catalogue writer is not the packer's screen.
         $this->assertSame(['Pengiriman', 'Katalog'], $this->itemLabels($groups[SidebarGroups::GUDANG]));
         $this->assertSame(['Penjelajah data'], $this->itemLabels($groups[SidebarGroups::LAPORAN]));
+    }
+
+    public function test_the_two_bulk_importers_stand_together_under_penjualan(): void
+    {
+        /*
+         * Filed wrong once and worth pinning. The group is labelled **Gudang**
+         * and `Role::Storage` is labelled **Gudang** — so anything in that
+         * section reads as the packer's, and the packer is precisely the role
+         * that may not write the catalogue. Inventori's work living under a
+         * heading named after Storage is how the two roles get confused, which
+         * is the confusion the whole access phase was about.
+         *
+         * The importers are also a pair: one register of who you sell to, one
+         * of what you sell, same upload, same preview, same three counts.
+         * Adjacent is how a person learns the second from the first.
+         */
+        $this->as(Role::Owner);
+
+        $penjualan = $this->itemLabels($this->sidebarGroups()[SidebarGroups::PENJUALAN]);
+
+        $this->assertContains('Impor barang', $penjualan);
+        $this->assertContains('Impor pelanggan', $penjualan);
+
+        $this->assertSame(
+            1,
+            array_search('Impor pelanggan', $penjualan, true) - array_search('Impor barang', $penjualan, true),
+            'the two importers must be adjacent, item then customer',
+        );
+
+        // And not left behind in the packer's section.
+        $this->assertNotContains('Impor barang', $this->itemLabels($this->sidebarGroups()[SidebarGroups::GUDANG]));
     }
 
     public function test_grouping_did_not_widen_what_a_role_can_see(): void

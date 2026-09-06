@@ -156,7 +156,7 @@ would have taken it along silently.
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
 | `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
-| `/admin/impor-barang` | Impor barang | Inventori, Owner | **The only door a SKU enters by.** One CSV, every item in it; preview per row, held rows say why. Carries no HARGA and refuses a file that has one |
+| `/admin/impor-barang` | Impor barang | Inventori, Owner | **The only door a SKU enters by.** One CSV, every item in it; preview per row, held rows say why. Carries no HARGA and refuses a file that has one. Filed under Penjualan beside Impor pelanggan — **not** under Gudang, which is the packer's section |
 | `/admin/penagihan` | Penagihan | Sales, Marketing, Finance, Owner | Three queues: promises due today, promises broken, overdue nobody has called. Badge counts promises only |
 | `/admin/laporan/penjelajah` | Penjelajah data | per dataset | Rows, sorted and filtered, saved as named templates, downloadable as CSV. **No sums** — this is the register, not a report |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
@@ -2358,6 +2358,26 @@ things orders and the stock ledger do arithmetic with:
 Gated on `canManageCatalogue()` — the same capability the edit form asks for,
 so the CSV cannot be the way around the form, exactly as `LIMIT_KREDIT` is
 handled in the customer import.
+
+**Where it is filed, and why that was got wrong once.** Under **Penjualan**,
+next to Impor pelanggan. It went under Gudang first, on the reasoning that the
+Gudang group is the stock section — but the group is labelled *Gudang* and so
+is `Role::Storage`, the packer, who is exactly the role that may not write the
+catalogue. Filing a bulk catalogue writer in the section named after that role
+teaches the wrong shape of the system, and Inventori-versus-Gudang is already
+the confusion this codebase pays for most (see the access phase above). The
+two importers standing together says the true thing instead: same upload, same
+preview, same three counts — one register of who you sell to, one of what you
+sell. `SidebarNavigationTest` pins the pair adjacent and pins Impor barang out
+of the Gudang group, because this is a one-line constant that looks fine in
+review either way.
+
+The wider version of that observation is still open: the group labelled
+**Gudang** holds Transfer gudang, Stok opname, Katalog, Titik pesan ulang and
+Impor harga & barang, all of which are Inventori's or Finance's, alongside the
+single screen that really is the packer's (Pengiriman). Renaming it *Inventori*
+would only move the misnomer onto Pengiriman, so it is left as it stands and
+noted here rather than guessed at.
 
 The other half of the change is a widening. `canBrowseCatalogue()` now returns
 true for every role, Gudang included, where before it named Gudang as the
