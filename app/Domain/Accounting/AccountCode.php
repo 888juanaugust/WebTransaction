@@ -132,6 +132,19 @@ final class AccountCode
 
     public const LABA_DITAHAN = '3-9000';
 
+    /**
+     * Where the balances brought in from the old books land.
+     *
+     * An opening receivable is a customer who owes us for a sale the old
+     * system already reported: Dr Piutang Usaha, and the other side is not
+     * Penjualan — that would count the sale twice — and not PPN Keluaran,
+     * which was paid over long ago. It is this: the equity that walked in
+     * with the conversion. The accountant clears it against Laba Ditahan at
+     * the first year end, which is why it sits in the Modal group and nowhere
+     * on the laba rugi.
+     */
+    public const SALDO_AWAL = '3-8000';
+
     // Pendapatan
     public const PENJUALAN = '4-1000';
 
@@ -283,6 +296,8 @@ final class AccountCode
 
             self::header('3-0000', 'MODAL', AccountType::Modal),
             self::posting(self::MODAL_DISETOR, 'Modal Disetor', AccountType::Modal, '3-0000'),
+            self::posting(self::SALDO_AWAL, 'Saldo Awal Konversi', AccountType::Modal, '3-0000',
+                'Lawan dari piutang dan hutang yang dibawa masuk dari pembukuan lama. Dibersihkan ke Laba Ditahan saat tutup buku tahunan pertama.'),
             self::posting(self::LABA_DITAHAN, 'Laba Ditahan', AccountType::Modal, '3-0000',
                 'Laba tahun-tahun sebelumnya. Diisi saat tutup buku tahunan.'),
 

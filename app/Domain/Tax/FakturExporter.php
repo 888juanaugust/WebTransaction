@@ -205,6 +205,7 @@ class FakturExporter
         $query = FilingScope::entityWide(Invoice::class)
             ->with(['order.lines', 'company'])
             ->where('status', '!=', Invoice::STATUS_VOID)
+            ->where('saldo_awal', false)
             ->whereYear('issued_on', $tahun)
             ->whereMonth('issued_on', $masa)
             ->orderBy('issued_on')
@@ -221,6 +222,7 @@ class FakturExporter
     {
         return FilingScope::entityWide(Invoice::class)
             ->where('status', '!=', Invoice::STATUS_VOID)
+            ->where('saldo_awal', false)
             ->whereYear('issued_on', $tahun)
             ->whereMonth('issued_on', $masa)
             ->whereNotNull('faktur_exported_at')
@@ -232,6 +234,7 @@ class FakturExporter
     {
         return FilingScope::entityWide(Invoice::class)
             ->where('status', '!=', Invoice::STATUS_VOID)
+            ->where('saldo_awal', false)
             ->orderByDesc('issued_on')
             ->limit(2000)
             ->pluck('issued_on')

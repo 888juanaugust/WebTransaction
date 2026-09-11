@@ -137,6 +137,9 @@ class JournalEntry extends Model
 
     public const JENIS_PEMBALIKAN = 'pembalikan';
 
+    /** A balance brought in from the old books, against Saldo Awal Konversi. */
+    public const JENIS_SALDO_AWAL = 'saldo_awal';
+
     protected function casts(): array
     {
         return [

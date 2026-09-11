@@ -33,7 +33,7 @@ class RekeningBank extends Page
 
     protected static ?string $navigationLabel = 'Rekening bank';
 
-    protected static ?int $navigationSort = 93;
+    protected static ?int $navigationSort = 94;
 
     protected static ?string $slug = 'rekening-bank';
 

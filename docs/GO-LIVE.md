@@ -68,6 +68,25 @@ mulai impor kedua.
 
 Tanpa versi harga terbit, katalog kosong dan tak satu order pun bisa dihargai.
 
+## 4b. Saldo awal: piutang dan hutang dari pembukuan lama
+
+Pelanggan sudah punya hutang, pemasok sudah punya piutang, sebelum sistem ini
+ada. Bawa masuk lewat **Keuangan → Impor saldo awal piutang** dan
+**Pembelian → Impor saldo awal hutang**: satu baris satu dokumen yang masih
+terbuka, dengan **sisa** yang masih terhutang hari ini (bukan nilai
+aslinya), memakai nomor dari pembukuan lama. Pelanggan dan pemasoknya harus
+sudah ada — impor pelanggan dulu.
+
+Yang terjadi: setiap baris jadi faktur/tagihan terbuka yang menua dari tanggal
+aslinya dan dilunasi lewat jalur biasa, dibukukan lawan `3-8000 Saldo Awal
+Konversi` — bukan Penjualan, bukan Persediaan, bukan PPN. Tidak ikut komisi,
+tidak ikut ekspor faktur pajak. Cocokkan totalnya dengan neraca lama sebelum
+lanjut: Piutang Usaha di Neraca saldo harus sama dengan jumlah berkasnya.
+
+Akun staf juga bisa dibawa sekaligus: **Pengaturan → Impor pengguna**, satu
+baris satu orang. Baris tanpa KATA_SANDI dibuat dengan sandi acak — atur dari
+layar Staf sebelum orangnya masuk.
+
 ## 5. Cadangan pertama, lalu latihan memulihkannya
 
 ```

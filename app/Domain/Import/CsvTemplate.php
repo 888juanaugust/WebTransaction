@@ -29,6 +29,9 @@ class CsvTemplate
             TemplateKind::Harga => CanonicalColumns::COLUMNS,
             TemplateKind::Pelanggan => CompanyColumns::COLUMNS,
             TemplateKind::Barang => ProductColumns::COLUMNS,
+            TemplateKind::Pengguna => UserColumns::COLUMNS,
+            TemplateKind::Piutang => SaldoAwalColumns::PIUTANG,
+            TemplateKind::Hutang => SaldoAwalColumns::HUTANG,
         };
     }
 
@@ -41,6 +44,9 @@ class CsvTemplate
             TemplateKind::Harga => $this->keteranganHarga(),
             TemplateKind::Pelanggan => CompanyColumns::keterangan(),
             TemplateKind::Barang => ProductColumns::keterangan(),
+            TemplateKind::Pengguna => UserColumns::keterangan(),
+            TemplateKind::Piutang => SaldoAwalColumns::keteranganPiutang(),
+            TemplateKind::Hutang => SaldoAwalColumns::keteranganHutang(),
         };
     }
 
@@ -81,6 +87,9 @@ class CsvTemplate
             TemplateKind::Harga => 'contoh-impor-harga-barang.csv',
             TemplateKind::Pelanggan => 'contoh-impor-pelanggan.csv',
             TemplateKind::Barang => 'contoh-impor-barang.csv',
+            TemplateKind::Pengguna => 'contoh-impor-pengguna.csv',
+            TemplateKind::Piutang => 'contoh-saldo-awal-piutang.csv',
+            TemplateKind::Hutang => 'contoh-saldo-awal-hutang.csv',
         };
     }
 
@@ -91,6 +100,9 @@ class CsvTemplate
             TemplateKind::Harga => $this->contohHarga(),
             TemplateKind::Pelanggan => CompanyColumns::contoh(),
             TemplateKind::Barang => ProductColumns::contoh(),
+            TemplateKind::Pengguna => UserColumns::contoh(),
+            TemplateKind::Piutang => SaldoAwalColumns::contohPiutang(),
+            TemplateKind::Hutang => SaldoAwalColumns::contohHutang(),
         };
     }
 

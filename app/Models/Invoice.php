@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     // Written back after the Coretax round trip, which is the one thing that
     // legitimately changes on an already-issued invoice. `status` stays out —
     // that follows the payment ledger, not an assignment.
-    'nsfp', 'faktur_exported_at',
+    'nsfp', 'faktur_exported_at', 'saldo_awal',
 ])]
 class Invoice extends Model
 {
@@ -43,6 +43,7 @@ class Invoice extends Model
             'issued_on' => 'date',
             'due_date' => 'date',
             'faktur_exported_at' => 'datetime',
+            'saldo_awal' => 'boolean',
         ];
     }
 
@@ -147,5 +148,18 @@ class Invoice extends Model
     {
         return $query->where('status', self::STATUS_OPEN)
             ->whereDate('due_date', '<', now()->toDateString());
+    }
+
+    /**
+     * Not a balance carried in from the old books.
+     *
+     * An opening invoice is a real debt — it ages, it is chased, it is paid
+     * through the same ledger — but it is not a sale this system made: no
+     * order, no lines, no PPN of its own. Commission and the tax export ask
+     * this; ageing, statements and credit deliberately do not.
+     */
+    public function scopeBukanSaldoAwal(Builder $query): Builder
+    {
+        return $query->where($query->getModel()->getTable().'.saldo_awal', false);
     }
 }

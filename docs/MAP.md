@@ -235,6 +235,9 @@ classes, because presentation and ownership must be allowed to disagree.
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
 | `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
 | `/admin/impor-barang` | Impor barang | Inventori, Owner | **The only door a SKU enters by.** One CSV, every item in it; preview per row, held rows say why. Carries no HARGA and refuses a file that has one. Filed under Penjualan beside Impor pelanggan — **not** under Gudang, which is the packer's section |
+| `/admin/impor-pengguna` | Impor pengguna | **Owner only** | Staff accounts from a CSV, through `StaffRegistrar` — same rules as the Staf form, one audit row per person. Create-only: an existing email is held, never re-roled by a file |
+| `/admin/impor-saldo-awal-piutang` | Impor saldo awal piutang | Finance, Owner | What customers already owed on the day of conversion, one open invoice per row, booked Dr Piutang Usaha / Cr **Saldo Awal Konversi**. Real debts, not sales: they age and settle normally, earn no commission, and never reach the tax export |
+| `/admin/impor-saldo-awal-hutang` | Impor saldo awal hutang | Finance, Owner | The mirror: one open supplier bill per row, Dr Saldo Awal Konversi / Cr Utang Usaha, paid through Bayar pemasok like any other |
 | `/admin/penagihan` | Penagihan | Sales, Marketing, Finance, Owner | Three queues: promises due today, promises broken, overdue nobody has called. Badge counts promises only |
 | `/admin/laporan/penjelajah` | Penjelajah data | per dataset | Rows, sorted and filtered, saved as named templates, downloadable as CSV. **No sums** — this is the register, not a report |
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
@@ -1031,6 +1034,8 @@ The rules, all of them:
 | Document | Posting |
 |---|---|
 | Faktur terbit | Dr Piutang Usaha / Cr Penjualan + Cr PPN Keluaran |
+| **Saldo awal piutang** (impor) | Dr Piutang Usaha / Cr **Saldo Awal Konversi** `3-8000` — not Penjualan, not PPN: the old books reported that sale |
+| **Saldo awal hutang** (impor) | Dr Saldo Awal Konversi / Cr Utang Usaha — not Persediaan: the goods were valued when the stock was counted in |
 | Pengiriman | Dr HPP / Cr Persediaan, at the cost frozen on the movement |
 | Penerimaan barang | Dr Persediaan / Cr Utang Belum Ditagih |
 | Tagihan pemasok | Dr Utang Belum Ditagih + Dr Selisih Harga + Dr PPN Masukan / Cr Utang Usaha |
@@ -1112,6 +1117,33 @@ and not billed. If one drifts, a rule in `DocumentPoster` is wrong.
 Manual payments are booked to Bank, never Kas. Nothing on the row says which it
 was, and nearly all of them are transfers; Kas is in the chart for the manual
 journal that moves one when it is not.
+
+### Saldo awal — the balances that walked in
+
+Going live does not start from zero. Customers already owe money for sales
+the old system made; suppliers are already owed for goods already on the
+shelf. `SaldoAwalPiutangImporter` and `SaldoAwalHutangImporter` bring those
+in as documents — one open invoice or bill per row, at the amount still
+outstanding, under the old system's own number — so that from the first day
+they age, appear on statements, count against credit, are chased, and are
+settled through `PaymentLedger` and `SupplierLedger` exactly like documents
+this system issued.
+
+What they are **not** is sales or purchases this system made, and every
+reader that would treat them as such is told so by name: `saldo_awal` on the
+row. Commission skips them (a settled opening invoice earns nobody anything —
+whoever sold it was paid under the old scheme); the Coretax export and Rekap
+PPN skip them (the tax was reported once already); the sales and KPI reports
+never see them because they join `orders` and an opening invoice has none.
+`invoices.order_id` is nullable since 2026-09 for exactly this, and every
+walk from an invoice to its order already tolerated null.
+
+The other side of the entry is `3-8000 Saldo Awal Konversi`, an equity
+account: not Penjualan, not Persediaan, not either PPN. The accountant clears
+its net against Laba Ditahan at the first year end, and nothing in it ever
+touches the laba rugi. The test pins the whole property — Piutang Usaha ties
+to the sum of the imported invoices, Penjualan and PPN Keluaran stay at nil,
+and the two sides net in the conversion account.
 
 ### Credit
 
@@ -2412,6 +2444,10 @@ is one somebody has been told the truth about.
 | `Golongan` | **Impor / Titip impor / Lokal** — a third axis on the catalogue beside merk and kategori: how *we* source a part, which is not what it is or whose name is on the box. Read from a cell the way people type it (`TITIP IMPOR`, `titip_impor`, `Titip Impor` are one value); an unknown word holds the row and names the three choices. **Nullable on purpose** — the existing catalogue predates the distinction, and writing `lokal` on a thousand SKUs would be a claim, not a default. Unclassified reads as *Belum digolongkan* everywhere |
 | `SalesDimension::Golongan` | The sales report grouped by stream, with the unclassified in a bucket that says so — dropping them would make the report's total disagree with the ledger. A price-list publish **leaves golongan alone**: the supplier's file knows nothing about how we source, so it cannot unsay it |
 | `ProductImporter::preview` / `import` | The same shape again — look, then leap. Writes nothing until somebody has read the three counts |
+| `ReadsCsv` / `BarisImpor` | The part of an importer that is about CSV, extracted for the third, fourth and fifth: lines, header, cells, delimiter, rupiah as people type it, dates day-first. The first two importers keep their own copies — covered by their own tests, and a refactor for symmetry has no user in it |
+| `UserImporter` | Staff accounts, through `StaffRegistrar::create` so the form's rules hold: one Gudang account per warehouse, a packer's cabang is their gudang's, Marketing and the Owner carry none. A blank KATA_SANDI becomes a random one that is never shown — the row says the Owner sets it from Staf before that person can sign in |
+| `SaldoAwalPiutangImporter` / `SaldoAwalHutangImporter` | Balances brought in from the old books — see *Saldo awal* under Books. SISA, not the original total: the debt as it stands. The old system's document number, verbatim, so a remittance advice still matches; unique, so the same file twice writes nothing |
+| `ImporCsvPage` | Upload → preview → apply, the shape every import screen shares, as one abstract page and one Blade. The customer and item screens predate it and stand on their own |
 
 ### Impor barang — one door for the catalogue
 

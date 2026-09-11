@@ -39,6 +39,8 @@ class RekapPpn
     {
         $keluaranFaktur = (int) FilingScope::entityWide(Invoice::class)
             ->whereIn('status', [Invoice::STATUS_OPEN, Invoice::STATUS_PAID])
+            // Opening balances carry no PPN of their own — see saldo_awal.
+            ->where('saldo_awal', false)
             ->whereBetween('issued_on', [$period->from->toDateString(), $period->to->toDateString()])
             ->sum('ppn_rupiah');
 

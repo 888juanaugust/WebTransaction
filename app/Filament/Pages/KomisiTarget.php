@@ -37,7 +37,7 @@ class KomisiTarget extends Page
 
     protected static ?string $navigationLabel = 'Komisi & target';
 
-    protected static ?int $navigationSort = 92;
+    protected static ?int $navigationSort = 93;
 
     protected static ?string $slug = 'komisi-target';
 

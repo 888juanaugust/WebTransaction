@@ -160,6 +160,9 @@ class KomisiReport
     {
         $invoices = Invoice::query()
             ->whereIn('status', [Invoice::STATUS_PAID])
+            // A balance carried in from the old books is not a sale anybody
+            // here made; settling it earns nobody commission.
+            ->bukanSaldoAwal()
             ->with(['company.salesRep', 'company.marketingRep'])
             // The settlement moment is the last payment entry on the invoice.
             ->whereRaw('(select max(paid_at) from payment_entries where payment_entries.invoice_id = invoices.id) between ? and ?', [

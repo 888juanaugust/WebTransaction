@@ -49,7 +49,7 @@ class LogAudit extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Log audit';
 
-    protected static ?int $navigationSort = 91;
+    protected static ?int $navigationSort = 92;
 
     protected static ?string $slug = 'log-audit';
 
@@ -293,6 +293,9 @@ class LogAudit extends Page implements HasTable
             'bank_account_default_changed' => 'Rekening bawaan dipindah',
             'companies_imported' => 'Pelanggan diimpor',
             'products_imported' => 'Barang diimpor',
+            'users_imported' => 'Akun staf diimpor',
+            'saldo_awal_piutang_diimpor' => 'Saldo awal piutang diimpor',
+            'saldo_awal_hutang_diimpor' => 'Saldo awal hutang diimpor',
             'price_list_published' => 'Daftar harga diterbitkan',
             'faktur_exported' => 'Faktur pajak diekspor',
             'nsfp_recorded' => 'NSFP dicatat',

@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  */
 #[Fillable([
     'nomor', 'supplier_id', 'purchase_order_id', 'nomor_faktur_supplier',
-    'nomor_faktur_pajak', 'tanggal_faktur', 'due_date', 'catatan', 'created_by',
+    'nomor_faktur_pajak', 'tanggal_faktur', 'due_date', 'catatan', 'created_by', 'saldo_awal',
 ])]
 class SupplierBill extends Model
 {
@@ -47,6 +47,7 @@ class SupplierBill extends Model
             'ppn_rupiah' => 'integer',
             'total_rupiah' => 'integer',
             'posted_at' => 'datetime',
+            'saldo_awal' => 'boolean',
         ];
     }
 

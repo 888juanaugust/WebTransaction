@@ -186,7 +186,7 @@ final class DataInventory
                     'nomor', 'order_id', 'company_id', 'subtotal_rupiah', 'discount_rupiah',
                     'dpp_rupiah', 'ppn_rupiah', 'total_rupiah', 'issued_on', 'due_date',
                     'status', 'kode_transaksi', 'nsfp', 'faktur_exported_at',
-                    'debt_notified_at',
+                    'debt_notified_at', 'saldo_awal',
                 ],
             ],
 
@@ -323,6 +323,7 @@ final class DataInventory
                     'nomor', 'supplier_id', 'purchase_order_id', 'tanggal_faktur',
                     'due_date', 'status', 'subtotal_rupiah', 'discount_rupiah',
                     'dpp_rupiah', 'ppn_rupiah', 'total_rupiah', 'kode_transaksi', 'posted_at',
+                    'saldo_awal',
                 ],
             ],
 
