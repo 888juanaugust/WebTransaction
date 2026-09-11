@@ -76,14 +76,14 @@ final class DataInventory
             'commission_rates' => [
                 'kategori' => 'identitas_staf',
                 'personal' => ['user_id', 'basis_poin', 'set_by'],
-                'bukan' => ['berlaku_mulai'],
+                'bukan' => ['jenis', 'cabang_id', 'berlaku_mulai'],
             ],
 
             // A monthly expectation attached to a person: employment data too.
             'sales_targets' => [
                 'kategori' => 'identitas_staf',
                 'personal' => ['user_id', 'target_rupiah', 'set_by'],
-                'bukan' => ['tahun', 'bulan'],
+                'bukan' => ['jenis', 'tahun', 'bulan'],
             ],
 
             /*

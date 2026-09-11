@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace App\Domain\Reporting;
 
 use App\Domain\Access\Role;
+use App\Domain\Catalogue\Golongan;
+use App\Domain\Komisi\JenisKomisi;
+use App\Domain\Regions\RegionContext;
 use App\Models\CommissionRate;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\SalesTarget;
+use App\Models\SupplierBill;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * What the sellers earned on the month's *collected* sales — and how the
- * sales seats stand against their targets.
+ * What everybody on commission earned on the month's *collected* money —
+ * and how each stands against their target.
  *
  * Commission here is paid on settlement, not on invoicing. The operation
  * sells on credit: an invoice is a promise, and paying commission on
@@ -31,59 +35,48 @@ use Illuminate\Support\Collection;
  * they were given (`sales_targets`). The rate applied is the one effective
  * on the settlement date, so a raise never rewrites an old month.
  *
+ * Four kinds of commission, one settled-invoice list (see `JenisKomisi`):
+ *
+ * - **Penjualan** — both seats of the customer's team earn on that
+ *   customer's settled invoices, each at their own rate. Seats are read from
+ *   the company row as it stands today; reassigning a customer moves future
+ *   commission with them, and the report says so in a note.
+ * - **Supervisor** — one cabang's settled invoices, all of them, customers
+ *   with no seat included. **Manajer** — every cabang's.
+ * - **Pembelian impor** — settled supplier bills, the lines whose product is
+ *   `golongan = impor`, net of PPN. Paid when the supplier is paid, for the
+ *   same reason sellers are paid when the customer pays.
+ *
  * The base is money the business actually keeps: total minus PPN — tax
  * collected for the state is nobody's sale — minus posted credit notes
  * against the invoice, net of their own PPN. An invoice settled entirely by
  * credit note has no payment entry, no settlement date, and correctly earns
- * nothing.
- *
- * Both seats of the customer's team earn: sales at their rate, marketing at
- * theirs, each on the same base. Seats are read from the company row as it
- * stands today — reassigning a customer moves future commission with them,
- * and the report says so in a note rather than pretending otherwise.
+ * nothing. A balance carried in from the old books (`saldo_awal`) earns
+ * nobody anything on either side.
  */
 class KomisiReport
 {
     public function build(Period $period): ReportTable
     {
         $settled = $this->settledInvoices($period);
+        $rates = CommissionRate::query()->with(['user', 'region'])->orderBy('berlaku_mulai')->get();
 
-        $rows = [];
+        $rows = array_merge(
+            $this->seatRows($settled, $rates->where('jenis', JenisKomisi::Penjualan->value)->groupBy('user_id')),
+            $this->jenisRows($period, $settled, $rates->where('jenis', '!=', JenisKomisi::Penjualan->value)),
+        );
 
-        foreach ($settled->groupBy(fn (array $s) => $s['user_id'].'|'.$s['peran']) as $group) {
-            $first = $group->first();
-            $user = $first['user'];
-
-            $basis = $group->sum('basis');
-            $komisi = $group->sum('komisi');
-
-            $rows[] = [
-                'nama' => $user->name,
-                'peran' => Role::from($first['peran'])->label(),
-                'peran_raw' => $first['peran'],
-                'user_id' => $user->id,
-                'faktur' => $group->count(),
-                'basis' => $basis,
-                'tarif' => null, // per-invoice; shown per line only when uniform
-                'komisi' => $komisi,
-                'target' => null,
-                'pencapaian' => null,
-            ];
-        }
-
-        // Targets attach to the sales seat: selling is what was targeted.
+        // Targets attach per kind: the seat kind's to the sales seat (selling
+        // is what was targeted), the other kinds' to whoever holds the rate.
         $targets = SalesTarget::query()
             ->where('tahun', $period->from->year)
             ->where('bulan', $period->from->month)
+            ->with('user')
             ->get()
-            ->keyBy('user_id');
+            ->keyBy(fn (SalesTarget $t) => $t->user_id.'|'.($t->jenis ?? JenisKomisi::Penjualan->value));
 
         foreach ($rows as &$row) {
-            if ($row['peran_raw'] !== Role::Sales->value) {
-                continue;
-            }
-
-            $target = $targets->get($row['user_id']);
+            $target = $targets->get($row['user_id'].'|'.$row['jenis_target']);
 
             if ($target !== null) {
                 $row['target'] = (int) $target->target_rupiah;
@@ -94,27 +87,34 @@ class KomisiReport
         }
         unset($row);
 
-        // A sales seat with a target but no settled sales still belongs on
-        // the sheet — zero against a target is the row that starts the
+        // A person with a target but nothing settled still belongs on the
+        // sheet — zero against a target is the row that starts the
         // conversation.
-        foreach ($targets as $userId => $target) {
-            $seen = collect($rows)->contains(fn (array $r) => $r['user_id'] === (int) $userId
-                && $r['peran_raw'] === Role::Sales->value);
+        foreach ($targets as $key => $target) {
+            [$userId, $jenis] = explode('|', $key);
 
-            if (! $seen && $target->user !== null) {
-                $rows[] = [
-                    'nama' => $target->user->name,
-                    'peran' => Role::Sales->label(),
-                    'peran_raw' => Role::Sales->value,
-                    'user_id' => (int) $userId,
-                    'faktur' => 0,
-                    'basis' => 0,
-                    'tarif' => null,
-                    'komisi' => 0,
-                    'target' => (int) $target->target_rupiah,
-                    'pencapaian' => 0.0,
-                ];
+            $seen = collect($rows)->contains(fn (array $r) => $r['user_id'] === (int) $userId
+                && $r['jenis_target'] === $jenis);
+
+            if ($seen || $target->user === null) {
+                continue;
             }
+
+            $jenisKomisi = JenisKomisi::tryFrom($jenis) ?? JenisKomisi::Penjualan;
+
+            $rows[] = [
+                'nama' => $target->user->name,
+                'peran' => $jenisKomisi === JenisKomisi::Penjualan ? Role::Sales->label() : $jenisKomisi->label(),
+                'peran_raw' => $jenisKomisi === JenisKomisi::Penjualan ? Role::Sales->value : $jenisKomisi->value,
+                'jenis_target' => $jenis,
+                'user_id' => (int) $userId,
+                'faktur' => 0,
+                'basis' => 0,
+                'tarif' => null,
+                'komisi' => 0,
+                'target' => (int) $target->target_rupiah,
+                'pencapaian' => 0.0,
+            ];
         }
 
         usort($rows, fn (array $a, array $b) => [$a['peran'], -$a['basis']] <=> [$b['peran'], -$b['basis']]);
@@ -124,8 +124,8 @@ class KomisiReport
             period: $period,
             columns: [
                 ReportColumn::text('nama', 'Nama'),
-                ReportColumn::text('peran', 'Peran'),
-                ReportColumn::number('faktur', 'Faktur lunas'),
+                ReportColumn::text('peran', 'Peran / jenis'),
+                ReportColumn::number('faktur', 'Dokumen lunas'),
                 ReportColumn::money('basis', 'Dasar (tanpa PPN)'),
                 ReportColumn::money('komisi', 'Komisi'),
                 ReportColumn::money('target', 'Target'),
@@ -146,19 +146,30 @@ class KomisiReport
                 .'Tarif yang dipakai adalah tarif yang berlaku pada tanggal pelunasan.',
                 'Kursi sales/marketing dibaca dari data pelanggan saat ini — memindahkan '
                 .'pelanggan memindahkan komisi berikutnya.',
+                'Supervisor dihitung atas seluruh faktur lunas satu cabang, Manajer atas semua '
+                .'cabang, Pembelian impor atas baris tagihan pemasok lunas untuk barang golongan '
+                .'impor — semuanya tanpa PPN dan tanpa saldo awal dari pembukuan lama.',
             ],
         );
     }
 
     /**
-     * Every invoice whose settlement finished inside the period, expanded to
-     * one entry per team seat with the commission already computed.
+     * Every invoice whose settlement finished inside the period, with what
+     * it earns commission on.
      *
-     * @return Collection<int, array{user_id: int, peran: string, user: User, basis: int, komisi: int}>
+     * @return Collection<int, array{invoice: Invoice, region_id: ?int, basis: int, settled_at: Carbon}>
      */
     private function settledInvoices(Period $period): Collection
     {
+        /*
+         * Every cabang's books, not just the viewer's. A manajer is paid on
+         * all of them by definition, and a supervisor's rate names its own
+         * cabang whatever the viewer is pinned to. The seat rows keep the
+         * viewer's scope — see seatRows() — so a Finance account pinned to
+         * one cabang still sees only its own seats, as on every other report.
+         */
         $invoices = Invoice::query()
+            ->withoutGlobalScope('region')
             ->whereIn('status', [Invoice::STATUS_PAID])
             // A balance carried in from the old books is not a sale anybody
             // here made; settling it earns nobody commission.
@@ -180,11 +191,6 @@ class KomisiReport
             ->get()
             ->groupBy('invoice_id');
 
-        $rates = CommissionRate::query()
-            ->orderBy('berlaku_mulai')
-            ->get()
-            ->groupBy('user_id');
-
         $out = collect();
 
         foreach ($invoices as $invoice) {
@@ -197,6 +203,9 @@ class KomisiReport
              * month end.
              */
             $settledAt = $invoice->allocations()
+                // The allocation rows carry the region scope too; a manajer's
+                // basis spans every cabang, so it comes off here as well.
+                ->withoutGlobalScope('region')
                 ->join('payment_entries', 'payment_entries.id', '=', 'payment_allocations.payment_entry_id')
                 ->max('payment_entries.paid_at');
 
@@ -214,7 +223,36 @@ class KomisiReport
                 continue;
             }
 
-            $company = $invoice->company;
+            $out->push([
+                'invoice' => $invoice,
+                'region_id' => $invoice->region_id === null ? null : (int) $invoice->region_id,
+                'basis' => $basis,
+                'settled_at' => Carbon::parse($settledAt),
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * The seat kind: both seats of the customer's team, each at their rate.
+     *
+     * @param  Collection<int, array{invoice: Invoice, region_id: ?int, basis: int, settled_at: Carbon}>  $settled
+     * @param  Collection<int, Collection<int, CommissionRate>>  $seatRates  user_id => rates
+     * @return list<array<string, mixed>>
+     */
+    private function seatRows(Collection $settled, Collection $seatRates): array
+    {
+        $perSeat = collect();
+        $bound = app(RegionContext::class)->regionId();
+
+        foreach ($settled as $s) {
+            // The viewer's cabang only, when they have one.
+            if ($bound !== null && $s['region_id'] !== $bound) {
+                continue;
+            }
+
+            $company = $s['invoice']->company;
 
             foreach ([
                 [Role::Sales->value, $company?->salesRep],
@@ -224,21 +262,163 @@ class KomisiReport
                     continue;
                 }
 
-                $bp = $this->rateFor($rates->get($seat->id, collect()), Carbon::parse($settledAt));
+                $bp = $this->rateFor($seatRates->get($seat->id, collect()), $s['settled_at']);
 
                 if ($bp === 0) {
                     continue;
                 }
 
-                $out->push([
-                    'user_id' => (int) $seat->id,
-                    'peran' => $peran,
+                $perSeat->push([
+                    'key' => $seat->id.'|'.$peran,
                     'user' => $seat,
-                    'basis' => $basis,
+                    'peran' => $peran,
+                    'basis' => $s['basis'],
                     // Basis points on whole rupiah, rounded per invoice.
-                    'komisi' => (int) round($basis * $bp / 10_000),
+                    'komisi' => (int) round($s['basis'] * $bp / 10_000),
                 ]);
             }
+        }
+
+        $rows = [];
+
+        foreach ($perSeat->groupBy('key') as $group) {
+            $first = $group->first();
+            /** @var User $user */
+            $user = $first['user'];
+
+            $rows[] = [
+                'nama' => $user->name,
+                'peran' => Role::from($first['peran'])->label(),
+                'peran_raw' => $first['peran'],
+                // Only the sales seat is targeted on the seat kind.
+                'jenis_target' => $first['peran'] === Role::Sales->value ? JenisKomisi::Penjualan->value : '-',
+                'user_id' => (int) $user->id,
+                'faktur' => $group->count(),
+                'basis' => (int) $group->sum('basis'),
+                'tarif' => null,
+                'komisi' => (int) $group->sum('komisi'),
+                'target' => null,
+                'pencapaian' => null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Supervisor, manajer, pembelian impor: one row per (person, kind,
+     * cabang) that holds a rate, on its own basis.
+     *
+     * @param  Collection<int, array{invoice: Invoice, region_id: ?int, basis: int, settled_at: Carbon}>  $settled
+     * @param  Collection<int, CommissionRate>  $rates
+     * @return list<array<string, mixed>>
+     */
+    private function jenisRows(Period $period, Collection $settled, Collection $rates): array
+    {
+        $rows = [];
+        $importBills = null;
+
+        foreach ($rates->groupBy(fn (CommissionRate $r) => $r->user_id.'|'.$r->jenis.'|'.($r->cabang_id ?? '')) as $group) {
+            /** @var CommissionRate $first */
+            $first = $group->first();
+            $user = $first->user;
+            $jenis = $first->jenis();
+
+            if ($user === null) {
+                continue;
+            }
+
+            $items = match ($jenis) {
+                JenisKomisi::Supervisor => $settled->filter(fn (array $s) => $s['region_id'] === (int) $first->cabang_id),
+                JenisKomisi::Manajer => $settled,
+                JenisKomisi::PembelianImpor => $importBills ??= $this->settledImportBills($period),
+                default => collect(),
+            };
+
+            $basis = 0;
+            $komisi = 0;
+            $jumlah = 0;
+
+            foreach ($items as $item) {
+                $bp = $this->rateFor($group, $item['settled_at']);
+
+                if ($bp === 0 || $item['basis'] <= 0) {
+                    continue;
+                }
+
+                $jumlah++;
+                $basis += $item['basis'];
+                $komisi += (int) round($item['basis'] * $bp / 10_000);
+            }
+
+            $rows[] = [
+                'nama' => $user->name,
+                'peran' => $jenis->label().($jenis->butuhCabang() && $first->region !== null ? ' — '.$first->region->kode : ''),
+                'peran_raw' => $jenis->value,
+                'jenis_target' => $jenis->value,
+                'user_id' => (int) $user->id,
+                'faktur' => $jumlah,
+                'basis' => $basis,
+                'tarif' => null,
+                'komisi' => $komisi,
+                'target' => null,
+                'pencapaian' => null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Supplier bills whose settlement finished inside the period, with the
+     * import lines' worth as the basis.
+     *
+     * Settled the way the receivable side is settled: through the
+     * allocations, on the date of the last money. A bill discharged wholly
+     * by a purchase return has no money on it and correctly earns nothing;
+     * one discharged partly by a return is counted at its import lines'
+     * full worth — the return is the supplier's mistake, not the buyer's.
+     *
+     * @return Collection<int, array{basis: int, settled_at: Carbon}>
+     */
+    private function settledImportBills(Period $period): Collection
+    {
+        $bills = SupplierBill::query()
+            ->withoutGlobalScope('region')
+            ->where('status', SupplierBill::STATUS_PAID)
+            ->where('saldo_awal', false)
+            ->whereRaw(
+                '(select max(spe.paid_at) from supplier_payment_allocations spa '
+                .'join supplier_payment_entries spe on spe.id = spa.supplier_payment_entry_id '
+                .'where spa.supplier_bill_id = supplier_bills.id) between ? and ?',
+                [$period->from, $period->to],
+            )
+            ->get();
+
+        $out = collect();
+
+        foreach ($bills as $bill) {
+            $settledAt = $bill->allocations()
+                ->withoutGlobalScope('region')
+                ->join('supplier_payment_entries', 'supplier_payment_entries.id', '=', 'supplier_payment_allocations.supplier_payment_entry_id')
+                ->max('supplier_payment_entries.paid_at');
+
+            if ($settledAt === null) {
+                continue;
+            }
+
+            // Only the import lines, net of PPN: line_total_rupiah is the
+            // goods amount, the bill's PPN sits beside it.
+            $basis = (int) $bill->lines()
+                ->join('products', 'products.kode', '=', 'supplier_bill_lines.sku')
+                ->where('products.golongan', Golongan::Impor->value)
+                ->sum('supplier_bill_lines.line_total_rupiah');
+
+            if ($basis <= 0) {
+                continue;
+            }
+
+            $out->push(['basis' => $basis, 'settled_at' => Carbon::parse($settledAt)]);
         }
 
         return $out;

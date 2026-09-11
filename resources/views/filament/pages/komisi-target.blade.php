@@ -21,7 +21,7 @@
                       dark:border-white/10 dark:bg-gray-800 dark:text-gray-100" />
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Tarif berlaku dari tanggalnya ke depan dan tidak pernah mengubah bulan lampau.
-            Target dipasang per sales per bulan.
+            Target dipasang per orang per jenis per bulan.
         </p>
     </div>
 
@@ -72,6 +72,61 @@
                         <tr>
                             <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 Belum ada akun Sales atau Marketing yang aktif.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- The three other kinds: supervisor of a cabang, manajer, pembelian impor. --}}
+    <div class="rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900">
+        <div class="border-b border-gray-100 px-4 py-3 dark:border-white/5">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Supervisor, manajer, pembelian impor</h2>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                Dibayar atas uang yang masuk atau keluar — seluruh faktur lunas satu cabang, semua cabang,
+                atau tagihan pemasok lunas untuk barang impor — bukan atas pelanggan yang dipegang.
+            </p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-xs uppercase tracking-wide
+                               text-gray-500 dark:border-white/10 dark:text-gray-400">
+                        <th class="px-4 py-2 text-left">Nama</th>
+                        <th class="px-4 py-2 text-left">Jenis</th>
+                        <th class="px-4 py-2 text-left">Cabang</th>
+                        <th class="px-4 py-2 text-right">Tarif saat ini</th>
+                        <th class="px-4 py-2 text-right">Target bulan ini</th>
+                        <th class="px-4 py-2 text-left"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($this->lainnya() as $row)
+                        @php $seat = $row['user']; @endphp
+                        <tr class="border-b border-gray-100 last:border-0 dark:border-white/5">
+                            <td class="px-4 py-2">{{ $seat->name }} <span class="text-xs text-gray-400">{{ $seat->role()->label() }}</span></td>
+                            <td class="px-4 py-2">
+                                <span class="inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs
+                                             font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                                    {{ $row['jenis']->label() }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-300">{{ $row['region']?->kode ?? '— semua —' }}</td>
+                            <td class="px-4 py-2 text-right font-mono">{{ number_format($row['tarif'] / 100, 2, ',', '.') }}%</td>
+                            <td class="px-4 py-2 text-right font-mono">{{ $row['target'] !== null ? Money::format((int) $row['target']) : '—' }}</td>
+                            <td class="px-4 py-2">
+                                <div class="flex justify-end gap-2">
+                                    {{ ($this->ubahTarifAction)(['user' => $seat->id, 'jenis' => $row['jenis']->value, 'region' => $row['region']?->id]) }}
+                                    {{ ($this->aturTargetAction)(['user' => $seat->id, 'jenis' => $row['jenis']->value]) }}
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                Belum ada. Tambahkan lewat tombol di kanan atas.
                             </td>
                         </tr>
                     @endforelse

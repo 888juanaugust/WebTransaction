@@ -1577,8 +1577,9 @@ itself.
 | `Role::Warehouse` (label **Inventori**) | Stock work plus the catalogue and price list; sees cost now |
 | `Role::Storage` (label **Gudang**) | The packer's seat: bound to one warehouse via `users.warehouse_id`, one active account per warehouse (`StaffRegistrar` refuses a second). Sees its own gudang's shipping queue and nothing else — no cost, no credit, no catalogue. Region follows the warehouse |
 | `StaffRegistrar::assignWarehouse` | Move a packer to another gudang — audited, sessions ended, region re-pinned |
-| `KomisiSetter` | Owner's two levers: rate rows (append-only, effective-dated, basis points) and monthly targets — both audited |
-| `KomisiReport` | Komisi derived from **settled** invoices at the rate effective on the settlement date; base = total − PPN − credit notes. A reversal claws back by the invoice simply dropping out |
+| `KomisiSetter` | Owner's two levers: rate rows (append-only, effective-dated, basis points) and monthly targets — both audited. Since 2026-09 the **kind** is part of the key (`JenisKomisi`): a sales seat who is also the cabang's supervisor holds two rates, and a supervisor's rate names its cabang |
+| `JenisKomisi` | Four bases, one rule — **paid on money that moved, never on paperwork**. *Penjualan*: the customer's team on that customer's settled invoices. *Supervisor*: one cabang's settled invoices, customers with no seat included. *Manajer*: every cabang's. *Pembelian impor*: settled supplier bills, the lines whose product is `golongan = impor`, net of PPN — the import book is paid on what it cost, once the supplier is paid |
+| `KomisiReport` | Komisi derived from **settled** invoices at the rate effective on the settlement date; base = total − PPN − credit notes. A reversal claws back by the invoice simply dropping out. Opening balances (`saldo_awal`) earn nobody anything on either side. The seat rows keep the viewer's cabang; the manajer and supervisor kinds read every cabang's books, because that is what they are paid on |
 | `RekapPpn` | Keluaran (faktur − nota kredit) − Masukan (tagihan − retur − nota kredit pemasok) per masa |
 | `Role::canApproveOrders` | Marketing and Owner — never Sales, who are paid on the sale |
 | `Role::canManagePriceList` | Inventori and Owner — pricing moved out of Sales' hands |
