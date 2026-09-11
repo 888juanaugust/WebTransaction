@@ -93,7 +93,7 @@ class StaffForm
                          * one account that must not be pinned.
                          */
                         Select::make('region_id')
-                            ->label('Wilayah')
+                            ->label('Cabang')
                             /*
                              * Defaults to the region the person filling the
                              * form is looking at — with one region that makes
@@ -116,7 +116,7 @@ class StaffForm
                             ->hidden(fn (callable $get) => in_array($get('role'), [Role::Owner->value, Role::Marketing->value, Role::Storage->value], true))
                             ->disabled(fn (?User $record) => $record !== null
                                 && $record->getKey() === auth()->id())
-                            ->helperText('Akun ini hanya melihat data wilayah tersebut: '
+                            ->helperText('Akun ini hanya melihat data cabang tersebut: '
                                 .'stok, pelanggan, order, dan pembukuannya.'),
 
                         /*
@@ -136,8 +136,8 @@ class StaffForm
                             ->required(fn (callable $get) => $get('role') === Role::Storage->value)
                             ->native(false)
                             ->hidden(fn (callable $get) => $get('role') !== Role::Storage->value)
-                            ->helperText('Satu gudang satu akun Gudang. Wilayah akun ini mengikuti '
-                                .'wilayah gudangnya.'),
+                            ->helperText('Satu gudang satu akun Gudang. Cabang akun ini mengikuti '
+                                .'cabang gudangnya.'),
                     ]),
             ]);
     }
@@ -151,10 +151,10 @@ class StaffForm
     private static function ringkasanPeran(): string
     {
         return 'Sales: kunjungan, buat order untuk pelanggan (menunggu persetujuan marketing), ajukan pelunasan tunai. '
-            .'Marketing: global semua wilayah — setujui/tolak transaksi, pantau piutang pelanggannya, ajukan pelunasan. '
+            .'Marketing: global semua cabang — setujui/tolak transaksi, pantau piutang pelanggannya, ajukan pelunasan. '
             .'Inventori: stok, katalog, dan daftar harga — tidak melihat piutang pelanggan. '
             .'Gudang: satu akun per gudang — antrean packing, pick list, surat jalan gudangnya sendiri. '
             .'Keuangan: konfirmasi pembayaran, verifikasi pelunasan piutang, pembukuan. '
-            .'Pemilik: semuanya, termasuk log audit, wilayah, dan pengelolaan staf.';
+            .'Pemilik: semuanya, termasuk log audit, cabang, dan pengelolaan staf.';
     }
 }

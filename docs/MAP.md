@@ -240,7 +240,7 @@ classes, because presentation and ownership must be allowed to disagree.
 | `/admin/beban` | Beban | Finance, Owner | Rent, wages, fuel, freight out. Posted on record, reversed rather than edited |
 | `/admin/aktiva-tetap` | Aktiva tetap | Finance, Owner | Register, monthly depreciation, disposal. Badge counts months nobody has run |
 | `/admin/kesiapan-peluncuran` | Kesiapan peluncuran | **Owner only** | The launch checklist, most of it checking itself. Badge counts what is outstanding |
-| `/admin/wilayah` | Wilayah | **Owner only** | Each region a complete separate set of books. Create, deactivate — never delete |
+| `/admin/wilayah` | **Cabang** | **Owner only** | Each cabang (region) a complete separate set of books, and its place on the map. Create, deactivate — never delete. Labelled *cabang* everywhere a person reads it (2026-09); the identifier stays `region`/`wilayah` |
 | `/admin/staf` | Staf | **Owner only** | Hire, change a role, set a password, pin to a region, switch a leaver off. Nothing here deletes |
 | `/admin/rekening-bank` | Rekening bank | **Owner only** | Open a rekening (mints its GL account), move the default. Never deletes — an account with history is history |
 | `/admin/log-audit` | Log audit | **Owner only** | Who did what, and what it used to be. Read-only, with no resource behind it |
@@ -1371,7 +1371,7 @@ return.
 | `LapsedCustomers::build` | Customers silent for more than twice **their own** median ordering interval |
 | `StockAgeing::build` | On-hand value and months of cover, never-sold first |
 | `ReportChart` | A report's picture: labelled bars, drawn server-side as one Blade partial — no script, so the chart prints with the report |
-| `SalesReport::chart` / `regionChart` | Top rows of the table (calendar order by month); sales per wilayah for viewers who already see all regions |
+| `SalesReport::chart` / `regionChart` | Top rows of the table (calendar order by month); sales per cabang for viewers who already see all regions |
 | `ReceivablesAgeing::chart` / `LapsedCustomers::chart` / `StockAgeing::chart` | Buckets from the totals row · monthly value going quiet · shelf value by idle band |
 | `ReceivablesAgeing::bucketTotals` | The totals row's buckets **signed** — unmatched payments and giro negative, so the seven values sum to Piutang Usaha. The chart clamps them for bars; anything shown beside the balance reads these |
 | `PayablesAgeing::build` | The mirror: whom **we** owe, per supplier per bill, same 30/60/90 buckets. Unattached payments, returns + credit notes, and giro keluar beredar each in their own negative column |

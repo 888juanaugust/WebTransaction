@@ -96,7 +96,7 @@ class OrderDetail
                  */
                 Section::make('Pecahan pengiriman')
                     ->description('Barangnya tersebar, jadi order ini dipecah satu transaksi per gudang '
-                        .'pengirim — masing-masing dibukukan di wilayah gudangnya sendiri.')
+                        .'pengirim — masing-masing dibukukan di cabang gudangnya sendiri.')
                     ->visible(fn (Order $record) => app(OrderFamily::class)->isSplit($record))
                     ->schema([
                         View::make('filament.partials.pecahan-pengiriman')

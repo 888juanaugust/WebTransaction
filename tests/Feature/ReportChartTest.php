@@ -200,7 +200,7 @@ class ReportChartTest extends TestCase
             ->assertSee('Rp 7.000.000')
             // Pinned means pinned: the cross-region comparison stays off the
             // page, or this screen quietly undoes the region scope.
-            ->assertDontSee('Penjualan per wilayah');
+            ->assertDontSee('Penjualan per cabang');
     }
 
     public function test_the_owner_across_all_regions_gets_the_region_comparison(): void
@@ -219,7 +219,7 @@ class ReportChartTest extends TestCase
             ->set('sampai', now()->toDateString())
             ->set('dari', now()->startOfMonth()->toDateString())
             ->assertOk()
-            ->assertSee('Penjualan per wilayah')
+            ->assertSee('Penjualan per cabang')
             ->assertSee('JKT')
             ->assertSee('Rp 3.000.000');
     }

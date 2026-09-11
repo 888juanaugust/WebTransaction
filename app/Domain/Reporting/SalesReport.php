@@ -163,10 +163,10 @@ class SalesReport
             ->get();
 
         return new ReportChart(
-            judul: 'Penjualan per wilayah',
+            judul: 'Penjualan per cabang',
             labels: $rows->pluck('kode')->map(fn ($k) => (string) $k)->all(),
             values: $rows->pluck('nilai')->map(fn ($v) => (int) $v)->all(),
-            catatan: 'Semua wilayah, sebelum nota kredit.',
+            catatan: 'Semua cabang, sebelum nota kredit.',
         );
     }
 

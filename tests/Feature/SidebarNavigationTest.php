@@ -387,6 +387,31 @@ class SidebarNavigationTest extends TestCase
         $this->assertSame(SidebarGroups::PENJUALAN, ImporBarang::getNavigationGroup());
     }
 
+    public function test_the_region_screen_is_called_cabang_everywhere_a_person_reads_it(): void
+    {
+        /*
+         * The owner's word for a place with its own stock, customers and
+         * books is *cabang*. The identifier stays `region`/`wilayah` — a
+         * rename would touch thirty models for no change in meaning — so the
+         * label is the only thing that says cabang, and a label is exactly
+         * the kind of string that gets half-renamed. Pinned across the menu,
+         * the list, the switcher and the staff form.
+         */
+        $this->as(Role::Owner);
+
+        $pengaturan = $this->itemLabels($this->sidebarGroups()[SidebarGroups::PENGATURAN]);
+        $this->assertContains('Cabang', $pengaturan);
+        $this->assertNotContains('Wilayah', $pengaturan);
+
+        $this->get('/admin/wilayah')->assertOk()
+            ->assertSee('Cabang baru')
+            ->assertDontSee('Wilayah baru');
+
+        $this->get('/admin/staf')->assertOk()
+            ->assertSee('Semua cabang')
+            ->assertDontSee('Semua wilayah');
+    }
+
     public function test_grouping_did_not_widen_what_a_role_can_see(): void
     {
         // Sales: no books, no settings, no purchasing — same as before the

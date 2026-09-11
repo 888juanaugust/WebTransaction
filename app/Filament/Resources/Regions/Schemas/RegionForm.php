@@ -18,7 +18,7 @@ class RegionForm
         return $schema
             ->columns(1)
             ->components([
-                Section::make('Identitas wilayah')
+                Section::make('Identitas cabang')
                     ->columns(3)
                     ->schema([
                         TextInput::make('kode')
@@ -36,7 +36,7 @@ class RegionForm
                             ->dehydrateStateUsing(fn (?string $state) => strtoupper((string) $state))
                             ->disabledOn('edit')
                             ->helperText(fn (string $operation) => $operation === 'edit'
-                                ? 'Tidak bisa diubah: kode ini sudah tercetak di setiap nomor dokumen wilayah ini.'
+                                ? 'Tidak bisa diubah: kode ini sudah tercetak di setiap nomor dokumen cabang ini.'
                                 : 'Singkat, mis. JKT atau SBY. Masuk ke setiap nomor dokumen dan tidak bisa diubah lagi.'),
 
                         TextInput::make('nama')
@@ -51,7 +51,7 @@ class RegionForm
                         Toggle::make('aktif')
                             ->label('Aktif')
                             ->default(true)
-                            ->helperText('Wilayah nonaktif hilang dari pilihan, datanya tetap tersimpan.'),
+                            ->helperText('Cabang nonaktif hilang dari pilihan, datanya tetap tersimpan.'),
                     ]),
 
                 Section::make('Lokasi di peta')
@@ -70,8 +70,8 @@ class RegionForm
                     ]),
 
                 Section::make('Identitas pajak')
-                    ->description('Kosongkan bila wilayah ini menerbitkan faktur atas nama pusat. '
-                        .'Isi hanya bila wilayah ini badan usaha sendiri dengan NPWP sendiri.')
+                    ->description('Kosongkan bila cabang ini menerbitkan faktur atas nama pusat. '
+                        .'Isi hanya bila cabang ini badan usaha sendiri dengan NPWP sendiri.')
                     ->columns(2)
                     ->schema([
                         TextInput::make('npwp')->label('NPWP')->maxLength(25),

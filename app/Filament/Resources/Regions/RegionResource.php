@@ -18,7 +18,13 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 /**
- * Wilayah — each one a complete, separate set of books.
+ * Cabang — each one a complete, separate set of books.
+ *
+ * Labelled *cabang* (branch) everywhere a person reads it, 2026-09, at the
+ * owner's request: that is the word the business uses for a place with its
+ * own stock, its own customers and its own books. The class, the table and
+ * the slug keep `region`/`wilayah` — a rename of the identifier would touch
+ * thirty models for no change in meaning.
  *
  * Owner only, like the staff screen and for the same reason: creating a
  * region creates a place data can live, and assigning people to one decides
@@ -35,11 +41,11 @@ class RegionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
-    protected static ?string $navigationLabel = 'Wilayah';
+    protected static ?string $navigationLabel = 'Cabang';
 
-    protected static ?string $modelLabel = 'wilayah';
+    protected static ?string $modelLabel = 'cabang';
 
-    protected static ?string $pluralModelLabel = 'wilayah';
+    protected static ?string $pluralModelLabel = 'cabang';
 
     protected static \UnitEnum|string|null $navigationGroup = SidebarGroups::PENGATURAN;
 

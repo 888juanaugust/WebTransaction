@@ -39,7 +39,7 @@ class GantiWilayahController
             ->where('aktif', true)
             ->find((int) $pilihan);
 
-        abort_if($region === null, 422, 'Wilayah tidak dikenal.');
+        abort_if($region === null, 422, 'Cabang tidak dikenal.');
 
         $request->session()->put(BindRegionContext::SESSION_KEY, (int) $region->getKey());
 

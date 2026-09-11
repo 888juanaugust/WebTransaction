@@ -18,7 +18,7 @@
         @if ($bolehGanti)
             <form method="post" action="{{ route('admin.wilayah-aktif') }}">
                 @csrf
-                <label class="sr-only" for="wilayah-aktif">Wilayah</label>
+                <label class="sr-only" for="wilayah-aktif">Cabang</label>
                 <select
                     id="wilayah-aktif"
                     name="wilayah"
@@ -33,7 +33,7 @@
                         </option>
                     @endforeach
                     <option value="{{ \App\Http\Middleware\BindRegionContext::SEMUA }}" @selected($semua)>
-                        Semua wilayah — hanya membaca
+                        Semua cabang — hanya membaca
                     </option>
                 </select>
             </form>
@@ -42,7 +42,7 @@
                   style="background: rgb(7 49 133 / .08); color: #073185">
                 {{-- Marketing reads open-to-all with no switcher: their badge
                      names that state instead of a single region. --}}
-                {{ $semua ? 'Semua wilayah' : ($context->region()?->label() ?? 'Wilayah') }}
+                {{ $semua ? 'Semua cabang' : ($context->region()?->label() ?? 'Cabang') }}
             </span>
         @endif
     </div>

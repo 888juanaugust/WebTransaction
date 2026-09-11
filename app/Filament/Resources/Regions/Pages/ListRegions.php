@@ -14,11 +14,11 @@ class ListRegions extends ListRecords
 
     public function getTitle(): string
     {
-        return 'Wilayah';
+        return 'Cabang';
     }
 
     protected function getHeaderActions(): array
     {
-        return [CreateAction::make()->label('Wilayah baru')];
+        return [CreateAction::make()->label('Cabang baru')];
     }
 }

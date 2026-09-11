@@ -65,7 +65,7 @@
         </div>
     @empty
         <div class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-white/10 dark:bg-gray-900 dark:text-gray-400">
-            Belum ada pelanggan untuk di-onboard di wilayah ini.
+            Belum ada pelanggan untuk di-onboard di cabang ini.
         </div>
     @endforelse
 

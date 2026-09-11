@@ -13,7 +13,7 @@ class CreateRegion extends CreateRecord
 
     public function getTitle(): string
     {
-        return 'Wilayah baru';
+        return 'Cabang baru';
     }
 
     protected function getRedirectUrl(): string

@@ -40,14 +40,14 @@ class StaffTable
                     ->sortable(),
 
                 TextColumn::make('region.kode')
-                    ->label('Wilayah')
+                    ->label('Cabang')
                     ->badge()
                     ->color('info')
                     /*
                      * The Owner's blank is a grant, not an omission, and a
                      * blank cell would read as data entry someone forgot.
                      */
-                    ->placeholder('Semua wilayah')
+                    ->placeholder('Semua cabang')
                     ->toggleable(),
 
                 TextColumn::make('warehouse.nama')
