@@ -230,6 +230,41 @@ class SidebarNavigationTest extends TestCase
         }
     }
 
+    public function test_the_two_groupings_people_look_for_have_a_row_of_their_own(): void
+    {
+        /*
+         * "Laporan penjualan per sales" and "barang paling laku" — asked for
+         * as reports in the owner's revision list, and both had existed for
+         * months behind the Penjualan report's grouping dropdown. One page,
+         * three rows: the plain report, then the two groupings, each a deep
+         * link that opens the sheet already grouped.
+         */
+        $this->as(Role::Owner);
+
+        $laporan = $this->sidebarGroups()[SidebarGroups::LAPORAN];
+        $labels = $this->itemLabels($laporan);
+
+        $penjualan = array_search('Penjualan', $labels, true);
+        $this->assertNotFalse($penjualan);
+
+        $this->assertSame(
+            ['Penjualan', 'Omset per sales', 'Barang paling laku', 'KPI'],
+            array_slice($labels, $penjualan, 4),
+            'the plain report, its two shortcuts, then KPI — in that order',
+        );
+
+        $urls = [];
+
+        foreach (collect($laporan->getItems()) as $item) {
+            $urls[$item->getLabel()] = $item->getUrl();
+        }
+
+        // The rows are the same page, told which grouping to open on.
+        $this->assertStringEndsWith('/admin/laporan/penjualan', $urls['Penjualan']);
+        $this->assertStringEndsWith('/admin/laporan/penjualan?dimensi=sales', $urls['Omset per sales']);
+        $this->assertStringEndsWith('/admin/laporan/penjualan?dimensi=barang', $urls['Barang paling laku']);
+    }
+
     // --- per role ----------------------------------------------------------
 
     public function test_a_packer_sees_only_the_groups_with_something_in_them(): void

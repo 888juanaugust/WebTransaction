@@ -9,6 +9,7 @@ use App\Domain\Reporting\KpiSubjek;
 use App\Domain\Reporting\Period;
 use App\Domain\Reporting\ReportTable;
 use Illuminate\Support\Carbon;
+use Livewire\Attributes\Url;
 
 /**
  * KPI per sales, per toko, per barang.
@@ -26,14 +27,19 @@ class Kpi extends ReportPage
 {
     protected static ?string $navigationLabel = 'KPI';
 
-    protected static ?int $navigationSort = 11;
+    protected static ?int $navigationSort = 13;
 
     protected static ?string $slug = 'laporan/kpi';
 
+    #[Url(except: '')]
     public string $dari = '';
 
+    #[Url(except: '')]
     public string $sampai = '';
 
+    // Deep-linkable for the same reason the sales report's grouping is: the
+    // sheet per toko and per barang are reports in their own right.
+    #[Url(except: 'sales')]
     public string $subjek = KpiSubjek::Sales->value;
 
     public function mount(): void
@@ -42,6 +48,10 @@ class Kpi extends ReportPage
 
         $this->dari = $this->dari ?: $default->from->toDateString();
         $this->sampai = $this->sampai ?: $default->to->toDateString();
+
+        if (KpiSubjek::tryFrom($this->subjek) === null) {
+            $this->subjek = KpiSubjek::Sales->value;
+        }
     }
 
     public function getTitle(): string

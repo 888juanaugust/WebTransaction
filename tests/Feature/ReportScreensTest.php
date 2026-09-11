@@ -185,6 +185,42 @@ class ReportScreensTest extends TestCase
             ->assertSee('SUSPENSION PART');
     }
 
+    public function test_the_grouping_is_in_the_url_so_a_menu_row_can_open_it_grouped(): void
+    {
+        /*
+         * The owner's revision list asked for "laporan penjualan per sales"
+         * and "barang paling laku" as reports. They had existed for months
+         * behind the grouping dropdown — a report nobody can find is a report
+         * that does not exist for the person looking. Deep-linked now, so a
+         * sidebar row can land on the grouped sheet directly.
+         */
+        $this->soldTo('CV Satu', 10);
+        $this->actingAs($this->finance);
+
+        $dari = now()->subMonths(2)->toDateString();
+        $sampai = now()->toDateString();
+
+        $this->get("/admin/laporan/penjualan?dimensi=sales&dari={$dari}&sampai={$sampai}")
+            ->assertOk()
+            ->assertSee('Belum ada sales')
+            ->assertDontSee('CV Satu');
+
+        $this->get("/admin/laporan/penjualan?dimensi=barang&dari={$dari}&sampai={$sampai}")
+            ->assertOk()
+            ->assertSee(self::SKU)
+            ->assertSee('Unit');
+
+        // A typo in the address bar falls back to the default grouping
+        // rather than throwing an enum error at a report reader.
+        $this->get("/admin/laporan/penjualan?dimensi=ngawur&dari={$dari}&sampai={$sampai}")
+            ->assertOk()
+            ->assertSee('CV Satu');
+
+        $this->get("/admin/laporan/kpi?subjek=toko&dari={$dari}&sampai={$sampai}")
+            ->assertOk()
+            ->assertSee('Terakhir belanja');
+    }
+
     public function test_the_grouping_switch_reaches_the_new_seat_and_item_views(): void
     {
         // The two views the testers asked for, reached from the same screen

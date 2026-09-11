@@ -229,8 +229,10 @@ classes, because presentation and ownership must be allowed to disagree.
 | `/admin/akuntansi/tutup-buku` | Tutup buku | Finance, Owner | Close a month; **Owner only** may reopen one, or close one whose books have not been explained |
 | `/admin/akuntansi/rekonsiliasi-bank` | Rekonsiliasi bank | Finance, Owner | Tick each rekening's GL account against its own statement — a picker chooses which. Badge shows the worst of all accounts |
 | `/admin/akuntansi/faktur-pajak` | Faktur pajak | Finance, Owner | Export a masa pajak, and record the NSFPs that come back |
-| `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it — grouped per pelanggan, **sales**, **barang**, merk, kategori or bulan. **Cost and margin columns vanish for Sales** |
-| `/admin/laporan/kpi` | Laporan KPI | Sales, Finance, Owner | Per sales / toko / barang. Carries no cost at all, so a sales seat reads the same sheet everyone else does |
+| `/admin/laporan/penjualan` | Laporan penjualan | Sales, Finance, Owner | Who bought, and the margin on it — grouped per pelanggan, **sales**, **barang**, merk, kategori or bulan. **Cost and margin columns vanish for Sales**. The grouping and the period are in the URL |
+| `…/penjualan?dimensi=sales` | **Omset per sales** | same | The same page, opened grouped per sales seat. Its own row in the Laporan menu |
+| `…/penjualan?dimensi=barang` | **Barang paling laku** | same | The same page, opened per item, sorted by units that left the shelf — not by rupiah. Its own row in the menu |
+| `/admin/laporan/kpi` | Laporan KPI | Sales, Finance, Owner | Per sales / toko / barang (`?subjek=`). Carries no cost at all, so a sales seat reads the same sheet everyone else does |
 | `/admin/laporan/umur-piutang` | Umur piutang | Sales, Finance, Owner | Ageing that ties to Piutang Usaha, and shouts when it doesn't |
 | `/admin/laporan/umur-hutang` | Umur hutang | Finance, Owner | The payables mirror: whom **we** owe, by age, tied to Hutang Usaha |
 | `/admin/laporan/rekening-pelanggan` | Rekening pelanggan | Sales, Finance, Owner | One customer's account, and the statement to send them |
