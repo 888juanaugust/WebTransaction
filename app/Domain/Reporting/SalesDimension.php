@@ -19,6 +19,7 @@ enum SalesDimension: string
     case Barang = 'barang';
     case Merk = 'merk';
     case Kategori = 'kategori';
+    case Golongan = 'golongan';
     case Bulan = 'bulan';
 
     public function label(): string
@@ -29,6 +30,7 @@ enum SalesDimension: string
             self::Barang => 'Barang',
             self::Merk => 'Merk',
             self::Kategori => 'Kategori',
+            self::Golongan => 'Golongan',
             self::Bulan => 'Bulan',
         };
     }
@@ -41,6 +43,7 @@ enum SalesDimension: string
             self::Barang => 'Barang mana yang paling laku.',
             self::Merk => 'Merk mana yang jalan.',
             self::Kategori => 'Kategori mana yang jalan.',
+            self::Golongan => 'Barang impor, titip impor, atau lokal — mana yang jalan.',
             self::Bulan => 'Naik atau turun dari bulan ke bulan.',
         };
     }

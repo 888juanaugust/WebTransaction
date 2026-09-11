@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domain\Catalogue\Golongan;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -35,6 +36,12 @@ class ProductFactory extends Factory
     public function soldAsSet(): static
     {
         return $this->state(fn () => ['satuan_dasar' => 'SET']);
+    }
+
+    /** Which stream the part came through. Left null by default, as the real catalogue is. */
+    public function golongan(Golongan $golongan): static
+    {
+        return $this->state(fn () => ['golongan' => $golongan->value]);
     }
 
     public function perCarton(int $qty): static

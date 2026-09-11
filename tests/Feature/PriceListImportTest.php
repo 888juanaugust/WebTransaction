@@ -11,6 +11,7 @@ use App\Models\PriceListImport;
 use App\Models\PriceListImportRow;
 use App\Models\PriceListItem;
 use App\Models\PriceListVersion;
+use App\Models\Product;
 use App\Models\User;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -702,6 +703,33 @@ class PriceListImportTest extends TestCase
             PriceListVersion::STATUS_SUPERSEDED,
             $previous->refresh()->status,
         );
+    }
+
+    public function test_publishing_a_price_list_leaves_golongan_alone(): void
+    {
+        /*
+         * The supplier's price list knows nothing about how *we* source a
+         * part, so it must not be able to unsay it. `upsertProduct` writes
+         * only the columns the file carries; this pins that a column it does
+         * not carry survives a publish — the one-line regression would be
+         * somebody adding `'golongan' => null` to that array for symmetry.
+         */
+        $previous = PriceListVersion::factory()->published()->create([
+            'effective_from' => now()->subMonth()->toDateString(),
+        ]);
+        PriceListItem::factory()->create(['version_id' => $previous->id, 'kode' => 'YH-1', 'harga' => 100_000]);
+        Product::factory()->create(['kode' => 'YH-1', 'merk' => 'YUHOLI', 'golongan' => 'titip_impor']);
+
+        // The same price again: the upsert still runs, and the safety brake
+        // — which would rightly stop a one-row file moving 100% of prices —
+        // stays out of a test about a different thing.
+        app(PriceListImporter::class)->publish(
+            $this->stage([['HYDRAULIC PART'], $this->headerRow(), $this->dataRow('YH-1', harga: 100000)]),
+            User::factory()->owner()->create(),
+            now(),
+        );
+
+        $this->assertSame('titip_impor', Product::query()->whereKey('YH-1')->sole()->golongan);
     }
 
     public function test_blocker_rows_are_never_published(): void

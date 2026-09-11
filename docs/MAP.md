@@ -2385,7 +2385,9 @@ is one somebody has been told the truth about.
 | `CompanyColumns::COLUMNS` / `keterangan` | The customer format, and what each column is for, shown beside the download |
 | `CompanyImporter::preview` | What each line *would* do — new, update, or held with a reason. **Writes nothing** |
 | `CompanyImporter::import` | Re-reads the same file and writes the rows that were not held. A known KODE updates; a bad row is skipped, never guessed at |
-| `ProductColumns::COLUMNS` / `keterangan` | The item format: the canonical price-list columns **minus HARGA**, so the example file cannot teach anyone to paste prices in |
+| `ProductColumns::COLUMNS` / `keterangan` | The item format: the canonical price-list columns **minus HARGA** and **plus GOLONGAN**, so the example file cannot teach anyone to paste prices in, and does teach them the three sourcing streams |
+| `Golongan` | **Impor / Titip impor / Lokal** — a third axis on the catalogue beside merk and kategori: how *we* source a part, which is not what it is or whose name is on the box. Read from a cell the way people type it (`TITIP IMPOR`, `titip_impor`, `Titip Impor` are one value); an unknown word holds the row and names the three choices. **Nullable on purpose** — the existing catalogue predates the distinction, and writing `lokal` on a thousand SKUs would be a claim, not a default. Unclassified reads as *Belum digolongkan* everywhere |
+| `SalesDimension::Golongan` | The sales report grouped by stream, with the unclassified in a bucket that says so — dropping them would make the report's total disagree with the ledger. A price-list publish **leaves golongan alone**: the supplier's file knows nothing about how we source, so it cannot unsay it |
 | `ProductImporter::preview` / `import` | The same shape again — look, then leap. Writes nothing until somebody has read the three counts |
 
 ### Impor barang — one door for the catalogue

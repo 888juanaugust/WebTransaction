@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reporting;
 
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Stock\MovementReason;
 use App\Models\CreditNote;
 use App\Models\Invoice;
@@ -57,7 +58,7 @@ class SalesReport
             $hpp = (int) ($cost[$key] ?? 0);
 
             $rows[] = [
-                'dimensi' => (string) ($revenue[$key]['label'] ?? $key),
+                'dimensi' => $this->kata($dimension, (string) ($revenue[$key]['label'] ?? $key)),
                 'faktur' => (int) ($revenue[$key]['jumlah'] ?? 0),
                 // Goods returned leave with their units, so the quantity nets
                 // off the same way the money does.
@@ -246,6 +247,7 @@ class SalesReport
             SalesDimension::Barang => 'credit_note_lines.sku',
             SalesDimension::Merk => 'products.merk',
             SalesDimension::Kategori => 'products.kategori',
+            SalesDimension::Golongan => "COALESCE(products.golongan, '-')",
             SalesDimension::Bulan => "to_char(credit_notes.posted_at, 'YYYY-MM')",
         };
 
@@ -278,6 +280,7 @@ class SalesReport
             SalesDimension::Barang => 'stock_movements.sku',
             SalesDimension::Merk => 'products.merk',
             SalesDimension::Kategori => 'products.kategori',
+            SalesDimension::Golongan => "COALESCE(products.golongan, '-')",
             SalesDimension::Bulan => "to_char(invoices.issued_on, 'YYYY-MM')",
         };
 
@@ -307,6 +310,22 @@ class SalesReport
     }
 
     /** @return array{0: string, 1: string} group expression, label expression */
+    /**
+     * The stored value, in the words the screen uses.
+     *
+     * Only golongan needs it: the other dimensions carry their own label out
+     * of SQL, but golongan is stored as `impor` / `titip_impor` / `lokal` and
+     * reads better as the enum's label — and its null bucket needs a name.
+     */
+    private function kata(SalesDimension $dimension, string $label): string
+    {
+        if ($dimension !== SalesDimension::Golongan) {
+            return $label;
+        }
+
+        return Golongan::tryFrom($label)?->label() ?? Golongan::BELUM;
+    }
+
     private function grouping(SalesDimension $dimension): array
     {
         return match ($dimension) {
@@ -321,6 +340,10 @@ class SalesReport
             ],
             SalesDimension::Merk => ['products.merk', 'products.merk'],
             SalesDimension::Kategori => ['products.kategori', 'products.kategori'],
+            // Keyed on the stored value; the label is put into words after
+            // the three maps have been joined, so a SKU nobody has classified
+            // sits in one bucket that says so rather than vanishing.
+            SalesDimension::Golongan => ["COALESCE(products.golongan, '-')", "COALESCE(products.golongan, '-')"],
             SalesDimension::Bulan => [
                 "to_char(invoices.issued_on, 'YYYY-MM')",
                 "to_char(invoices.issued_on, 'YYYY-MM')",

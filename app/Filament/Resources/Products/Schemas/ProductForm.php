@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use App\Domain\Catalogue\Golongan;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -46,6 +47,14 @@ class ProductForm
                                 config('pricelist.known_categories'),
                             ))
                             ->required(),
+
+                        // Impor / titip impor / lokal. Not required: blank is
+                        // the honest state for a SKU nobody has classified.
+                        Select::make('golongan')
+                            ->label('Golongan')
+                            ->options(Golongan::pilihan())
+                            ->placeholder(Golongan::BELUM)
+                            ->helperText('Asal barang: diimpor sendiri, titip impor, atau beli lokal.'),
 
                         TextInput::make('tipe_produk')->label('Tipe produk'),
                         TextInput::make('mobil')->label('Mobil'),

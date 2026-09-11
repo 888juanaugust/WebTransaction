@@ -12,6 +12,7 @@ use App\Domain\Billing\CreditNoteIssuer;
 use App\Domain\Billing\CreditNotePoster;
 use App\Domain\Billing\CreditNoteType;
 use App\Domain\Billing\OutstandingReceivables;
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Payments\PaymentLedger;
 use App\Domain\Purchasing\GoodsReceiptPoster;
@@ -300,6 +301,48 @@ class ReportingTest extends TestCase
         // Biggest first — the report is ordered by what matters.
         $this->assertSame('OSBORN', app(SalesReport::class)
             ->build(Period::month('2026-05'), SalesDimension::Merk)->rows[0]['dimensi']);
+    }
+
+    public function test_sales_by_golongan_tells_the_three_streams_apart_and_names_the_unclassified(): void
+    {
+        /*
+         * Impor, titip impor, lokal — the owner wanted the three sourcing
+         * streams told apart in what sold. A is imported, B is lokal, and a
+         * third SKU nobody has classified sells too: it must land in a bucket
+         * that says so, because dropping it would make this report's total
+         * disagree with the ledger.
+         */
+        Product::query()->whereKey(self::SKU_A)->update(['golongan' => Golongan::Impor->value]);
+        Product::query()->whereKey(self::SKU_B)->update(['golongan' => Golongan::Lokal->value]);
+
+        Product::factory()->create([
+            'kode' => 'YH-BELUM', 'qty_per_ctn' => 10, 'satuan_dasar' => 'PCS',
+            'merk' => 'YUHOLI', 'kategori' => 'SUSPENSION PART', 'golongan' => null,
+        ]);
+        PriceListItem::factory()->create([
+            'version_id' => PriceListVersion::query()->latest('id')->value('id'),
+            'kode' => 'YH-BELUM', 'harga' => 100_000,
+        ]);
+        $this->stockUp('YH-BELUM', 100, 50_000);
+
+        $this->travelTo('2026-05-10 09:00:00');
+        $this->shippedOrder($this->customer('CV Satu'), self::SKU_A, 10);
+        $this->shippedOrder($this->customer('CV Dua'), self::SKU_B, 25);
+        $this->shippedOrder($this->customer('CV Tiga'), 'YH-BELUM', 3);
+
+        $report = app(SalesReport::class)->build(Period::month('2026-05'), SalesDimension::Golongan);
+        $rows = collect($report->rows)->keyBy('dimensi');
+
+        // In words, not stored values: "Lokal", not "lokal".
+        $this->assertSame(2_500_000, $rows['Lokal']['penjualan']);
+        $this->assertSame(1_000_000, $rows['Impor']['penjualan']);
+        $this->assertSame(300_000, $rows[Golongan::BELUM]['penjualan']);
+
+        // And the three still add up to the ledger's Penjualan.
+        $this->assertSame(
+            app(Ledger::class)->balanceOf(AccountCode::PENJUALAN),
+            $report->totals['penjualan'],
+        );
     }
 
     public function test_cost_columns_disappear_for_whoever_may_not_see_cost(): void

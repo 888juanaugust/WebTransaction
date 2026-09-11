@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Import;
 
 use App\Domain\Audit\AuditLogger;
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Uom\Unit;
 use App\Models\Product;
 use App\Models\User;
@@ -198,6 +199,24 @@ class ProductImporter
         }
 
         /*
+         * Optional, and blank is a real answer: the existing catalogue
+         * predates the distinction, and forcing a value here would make
+         * people type LOKAL on a thousand rows to get the file through. An
+         * unknown word is not blank, though — "IMPORT" is somebody meaning
+         * impor, and a held row with the three choices named is the reply.
+         */
+        $golonganRaw = $this->teks($cells, 'GOLONGAN');
+        $golongan = $golonganRaw === '' ? null : Golongan::dariTeks($golonganRaw);
+
+        if ($golonganRaw !== '' && $golongan === null) {
+            $alasan[] = sprintf(
+                "GOLONGAN '%s' tidak dikenal (%s, atau kosong)",
+                $golonganRaw,
+                implode(', ', array_map(fn (Golongan $g) => strtoupper($g->label()), Golongan::cases())),
+            );
+        }
+
+        /*
          * The base unit is invariant 5's hinge: the stock ledger counts in it
          * and every order converts through it. CTN is a valid Unit but never
          * a base unit — a product measured in cartons would make "one carton
@@ -260,6 +279,7 @@ class ProductImporter
             'kode' => $kode,
             'merk' => $merk,
             'kategori' => $kategori,
+            'golongan' => $golongan?->value,
             'tipe_produk' => $this->teks($cells, 'TIPE_PRODUK'),
             'mobil' => $this->teks($cells, 'MOBIL'),
             'part_number' => $this->teks($cells, 'PART_NUMBER'),

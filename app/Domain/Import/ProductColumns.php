@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Domain\Import;
 
+use App\Domain\Catalogue\Golongan;
+
 /**
- * The item import format: the catalogue's canonical columns, without HARGA.
+ * The item import format: the catalogue's canonical columns, without HARGA
+ * and with GOLONGAN.
  *
  * The one deliberate difference from `CanonicalColumns`, and the reason this
  * is a separate list rather than a reuse. That format is the price list's,
@@ -21,6 +24,11 @@ namespace App\Domain\Import;
  * Everything else follows the price list's column names exactly, because the
  * supplier workbook people copy from uses them and a second vocabulary for
  * the same fields is how a KODE ends up in a MERK column.
+ *
+ * GOLONGAN is the one column this format has that the price list's does not.
+ * Impor, titip impor or lokal is a fact about how *we* source a part, and the
+ * supplier's price list — the thing the other format is shaped around — has
+ * no reason to know it. It lives here, on the catalogue's own door.
  */
 final class ProductColumns
 {
@@ -29,6 +37,7 @@ final class ProductColumns
         'KODE',
         'MERK',
         'KATEGORI',
+        'GOLONGAN',
         'TIPE_PRODUK',
         'MOBIL',
         'PART_NUMBER',
@@ -51,11 +60,17 @@ final class ProductColumns
     {
         $merk = implode(', ', config('pricelist.known_brands', []));
         $kategori = implode(', ', config('pricelist.known_categories', []));
+        $golongan = implode(', ', array_map(
+            fn (Golongan $g) => strtoupper($g->label()),
+            Golongan::cases(),
+        ));
 
         return [
             'KODE' => 'Wajib. Kode barang, unik — satu baris satu kode. Kode yang sudah ada akan memperbarui barang itu.',
             'MERK' => "Wajib. Salah satu dari: {$merk}.",
             'KATEGORI' => "Wajib. Salah satu dari: {$kategori}.",
+            'GOLONGAN' => "Asal barangnya: {$golongan}. Boleh kosong — barang yang belum digolongkan "
+                .'tampil sebagai "'.Golongan::BELUM.'" di laporan sampai diisi.',
             'TIPE_PRODUK' => 'Jenis barangnya, mis. Master rem.',
             'MOBIL' => 'Mobil yang cocok.',
             'PART_NUMBER' => 'Nomor part pabrikan.',
@@ -79,9 +94,9 @@ final class ProductColumns
     public static function contoh(): array
     {
         return [
-            ['YH-1001', 'YUHOLI', 'HYDRAULIC PART', 'Master rem', 'Avanza', 'MC-1001',
+            ['YH-1001', 'YUHOLI', 'HYDRAULIC PART', 'IMPOR', 'Master rem', 'Avanza', 'MC-1001',
                 'Master rem depan', '10', 'PCS', 'Y', ''],
-            ['OS-2001', 'OSBORN', 'SUSPENSION PART', 'Shock absorber', 'Innova', 'SA-2001',
+            ['OS-2001', 'OSBORN', 'SUSPENSION PART', 'LOKAL', 'Shock absorber', 'Innova', 'SA-2001',
                 'Shock absorber depan (sepasang)', '4', 'SET', 'Y', 'Dijual per set'],
         ];
     }

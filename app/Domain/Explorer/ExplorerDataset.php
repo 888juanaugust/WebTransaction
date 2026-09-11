@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Explorer;
 
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Stock\MovementReason;
 use App\Models\Company;
@@ -143,6 +144,7 @@ enum ExplorerDataset: string
                 ExplorerColumn::text('kode', 'Kode'),
                 ExplorerColumn::text('merk', 'Merk'),
                 ExplorerColumn::text('kategori', 'Kategori'),
+                ExplorerColumn::text('golongan', 'Golongan', value: fn (Product $r) => $r->golonganLabel()),
                 ExplorerColumn::text('description', 'Deskripsi'),
                 ExplorerColumn::text('part_number', 'Part number'),
                 ExplorerColumn::text('mobil', 'Mobil'),
@@ -209,6 +211,8 @@ enum ExplorerDataset: string
                 'kategori' => ['label' => 'Kategori', 'type' => 'select', 'column' => 'kategori',
                     'options' => ['HYDRAULIC PART' => 'HYDRAULIC PART', 'SUSPENSION PART' => 'SUSPENSION PART',
                         'ELECTRIC PART' => 'ELECTRIC PART', 'BEARING PART' => 'BEARING PART']],
+                'golongan' => ['label' => 'Golongan', 'type' => 'select', 'column' => 'golongan',
+                    'options' => Golongan::pilihan()],
                 'aktif' => ['label' => 'Hanya yang aktif', 'type' => 'toggle'],
             ],
             self::Stok => [

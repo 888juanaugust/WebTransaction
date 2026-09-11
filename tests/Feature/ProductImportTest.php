@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Access\Role;
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Import\CsvTemplate;
 use App\Domain\Import\ProductImporter;
 use App\Domain\Import\ProductImportRow;
@@ -186,6 +187,65 @@ class ProductImportTest extends TestCase
         $this->assertSame(ProductImportRow::BARU, $rows[0]->status);
         $this->assertTrue($rows[1]->tertahan());
         $this->assertStringContainsString('muncul dua kali', implode(' ', $rows[1]->alasan));
+    }
+
+    // --- golongan: impor, titip impor, lokal -------------------------------
+
+    public function test_golongan_is_read_from_the_file_the_way_people_type_it(): void
+    {
+        $keeper = $this->keeper();
+        $header = 'KODE,MERK,KATEGORI,GOLONGAN,TIPE_PRODUK,MOBIL,PART_NUMBER,DESCRIPTION,QTY_PER_CTN,SATUAN_DASAR,AKTIF,CATATAN';
+
+        // Three spellings people actually use for the middle one, and the
+        // other two in whatever case the spreadsheet left them.
+        $this->importer()->import($this->csv([
+            'GOL-1,YUHOLI,HYDRAULIC PART,IMPOR,Master rem,Avanza,MC-1,Barang 1,10,PCS,Y,',
+            'GOL-2,YUHOLI,HYDRAULIC PART,Titip Impor,Master rem,Avanza,MC-2,Barang 2,10,PCS,Y,',
+            'GOL-3,YUHOLI,HYDRAULIC PART,titip_impor,Master rem,Avanza,MC-3,Barang 3,10,PCS,Y,',
+            'GOL-4,YUHOLI,HYDRAULIC PART,lokal,Master rem,Avanza,MC-4,Barang 4,10,PCS,Y,',
+            'GOL-5,YUHOLI,HYDRAULIC PART,,Master rem,Avanza,MC-5,Barang 5,10,PCS,Y,',
+        ], $header), $keeper);
+
+        $this->assertSame('impor', Product::query()->whereKey('GOL-1')->sole()->golongan);
+        $this->assertSame('titip_impor', Product::query()->whereKey('GOL-2')->sole()->golongan);
+        $this->assertSame('titip_impor', Product::query()->whereKey('GOL-3')->sole()->golongan);
+        $this->assertSame('lokal', Product::query()->whereKey('GOL-4')->sole()->golongan);
+
+        // Blank is a real answer — not yet classified — and it reads as such.
+        $belum = Product::query()->whereKey('GOL-5')->sole();
+        $this->assertNull($belum->golongan);
+        $this->assertSame(Golongan::BELUM, $belum->golonganLabel());
+    }
+
+    public function test_a_golongan_nobody_recognises_holds_the_row_and_names_the_choices(): void
+    {
+        $keeper = $this->keeper();
+        $header = 'KODE,MERK,KATEGORI,GOLONGAN,TIPE_PRODUK,MOBIL,PART_NUMBER,DESCRIPTION,QTY_PER_CTN,SATUAN_DASAR,AKTIF,CATATAN';
+
+        // "IMPORT" is somebody meaning impor. Held rather than guessed at,
+        // and the reason lists the three words that would have worked.
+        $rows = $this->importer()->preview($this->csv([
+            'GOL-X,YUHOLI,HYDRAULIC PART,IMPORT,Master rem,Avanza,MC-1,Barang 1,10,PCS,Y,',
+        ], $header), $keeper);
+
+        $this->assertTrue($rows[0]->tertahan());
+        $alasan = implode(' ', $rows[0]->alasan);
+        $this->assertStringContainsString("GOLONGAN 'IMPORT' tidak dikenal", $alasan);
+        $this->assertStringContainsString('IMPOR, TITIP IMPOR, LOKAL', $alasan);
+    }
+
+    public function test_a_file_without_the_golongan_column_still_imports(): void
+    {
+        // The column is new; every file made before it exists lacks it, and
+        // those files must not start failing. Default header, no GOLONGAN.
+        $keeper = $this->keeper();
+
+        $hasil = $this->importer()->import($this->csv([
+            'LAMA-1,YUHOLI,HYDRAULIC PART,Master rem,Avanza,MC-1,Barang 1,10,PCS,Y,',
+        ]), $keeper);
+
+        $this->assertSame(['baru' => 1, 'diperbarui' => 0, 'tertahan' => 0], $hasil);
+        $this->assertNull(Product::query()->whereKey('LAMA-1')->sole()->golongan);
     }
 
     public function test_a_blank_carton_size_defaults_to_one_and_says_so(): void

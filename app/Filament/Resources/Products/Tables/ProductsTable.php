@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Products\Tables;
 
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Money;
 use App\Domain\Pricing\PriceResolver;
 use App\Filament\Resources\Products\ProductResource;
@@ -30,6 +31,11 @@ class ProductsTable
                 TextColumn::make('kode')->label('KODE')->searchable()->sortable(),
                 TextColumn::make('merk')->label('Merk')->searchable()->sortable(),
                 TextColumn::make('kategori')->label('Kategori')->searchable()->toggleable(),
+                TextColumn::make('golongan')->label('Golongan')
+                    ->formatStateUsing(fn (?string $state) => Golongan::tryFrom((string) $state)?->label() ?? Golongan::BELUM)
+                    ->placeholder(Golongan::BELUM)
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('tipe_produk')->label('Tipe')->searchable()->toggleable(),
                 TextColumn::make('mobil')->label('Mobil')->searchable()->toggleable(),
                 TextColumn::make('part_number')->label('Part number')->searchable()->toggleable(),
@@ -79,6 +85,10 @@ class ProductsTable
                         config('pricelist.known_categories'),
                         config('pricelist.known_categories'),
                     )),
+
+                SelectFilter::make('golongan')
+                    ->label('Golongan')
+                    ->options(Golongan::pilihan()),
             ])
             ->recordActions([
                 // Same reason as the create button: the edit route already

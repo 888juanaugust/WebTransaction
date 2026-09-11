@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Catalogue\Golongan;
 use App\Domain\Uom\Unit;
 use DomainException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -30,7 +31,7 @@ use Illuminate\Support\Facades\DB;
  * nobody to notice.
  */
 #[Fillable([
-    'kode', 'merk', 'kategori', 'tipe_produk', 'mobil', 'part_number',
+    'kode', 'merk', 'kategori', 'golongan', 'tipe_produk', 'mobil', 'part_number',
     'description', 'qty_per_ctn', 'satuan_dasar', 'aktif', 'catatan',
     'titik_pesan_ulang_manual', 'jangan_pesan_ulang',
 ])]
@@ -129,6 +130,19 @@ class Product extends Model
             'titik_pesan_ulang_manual' => 'integer',
             'jangan_pesan_ulang' => 'boolean',
         ];
+    }
+
+    /**
+     * Impor / Titip impor / Lokal — or the honest word for not yet said.
+     *
+     * A plain string column rather than an enum cast: the reports read it
+     * straight from SQL, the explorer prints it, and an enum object in either
+     * place is one more thing to unwrap. The enum is the validator and the
+     * dictionary, not the storage type.
+     */
+    public function golonganLabel(): string
+    {
+        return Golongan::tryFrom((string) $this->golongan)?->label() ?? Golongan::BELUM;
     }
 
     public function baseUnit(): Unit
