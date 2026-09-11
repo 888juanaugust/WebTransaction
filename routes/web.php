@@ -12,6 +12,7 @@ use App\Http\Controllers\RekeningPelangganController;
 use App\Http\Controllers\ReturPembelianController;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Middleware\PublicContentSecurityPolicy;
+use App\Http\Middleware\PublicLocale;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,7 +32,23 @@ use Illuminate\Support\Facades\Route;
  * the panels do not (see the middleware for why), which is exactly why it
  * is a route group here rather than a global header.
  */
-Route::middleware(PublicContentSecurityPolicy::class)->group(function () {
+Route::middleware([PublicContentSecurityPolicy::class, PublicLocale::class])->group(function () {
+
+    /*
+     * The language switch. A plain link, not a form: it has to work from a
+     * page that has no JavaScript running and must not require a POST for
+     * something as harmless as choosing a language. Sets the cookie for a
+     * year and sends the visitor back to the page they were reading — on
+     * this host only, so the referer cannot turn it into an open redirect.
+     */
+    Route::get('/bahasa/{kode}', function (string $kode) {
+        abort_unless(in_array($kode, PublicLocale::SUPPORTED, true), 404);
+
+        $kembali = url()->previous();
+        $tujuan = str_starts_with($kembali, url('/')) ? $kembali : url('/');
+
+        return redirect($tujuan)->withCookie(cookie()->forever(PublicLocale::COOKIE, $kode));
+    })->name('publik.bahasa');
 
     Route::view('/', 'publik.beranda')->name('publik.beranda');
     Route::view('/tentang-kami', 'publik.tentang')->name('publik.tentang');

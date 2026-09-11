@@ -56,13 +56,20 @@
     --color-brand-900: #011547;
 
     /* Neutrals: one cool-tinted grey family, never mixed with warm greys. */
-    --color-ground: #f8f8f7;      /* the page */
-    --color-ground-2: #eef0f4;    /* a tinted surface on the page */
-    --color-ink: #16181d;         /* headings and primary text */
-    --color-ink-muted: #5f6470;   /* supporting text */
-    --color-ink-faint: #8a8f99;   /* captions, legal lines */
-    --color-line: rgb(22 24 29 / 0.08);
-    --color-line-strong: rgb(22 24 29 / 0.14);
+    /*
+     * Black on white (2026-09, at the owner's request): the page is pure
+     * white and primary text pure black. The supporting greys stay greys —
+     * a caption in the same black as a heading is a page with no hierarchy
+     * — but they are darker than they were, so the whole page reads as
+     * black text rather than as shades of slate.
+     */
+    --color-ground: #ffffff;      /* the page */
+    --color-ground-2: #f2f2f2;    /* a tinted surface on the page */
+    --color-ink: #000000;         /* headings and primary text */
+    --color-ink-muted: #3d3d3d;   /* supporting text */
+    --color-ink-faint: #6b6b6b;   /* captions, legal lines */
+    --color-line: rgb(0 0 0 / 0.10);
+    --color-line-strong: rgb(0 0 0 / 0.18);
 
     /* Shadows carry the blue of the brand, never plain black. */
     --shadow-card: 0 1px 2px rgb(22 24 29 / 0.04), 0 8px 24px rgb(7 49 133 / 0.06);
@@ -94,6 +101,73 @@ html {
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
+    }
+}
+
+/*
+ * The promo carousel. A scroll-snap row: swipeable with no script at all,
+ * which is what makes it safe to enhance with one. The scrollbar is hidden
+ * because the dots are the scrollbar.
+ */
+@layer components {
+    .promo-track {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .promo-track::-webkit-scrollbar {
+        display: none;
+    }
+
+    .promo-slide {
+        flex: 0 0 100%;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+    }
+
+    .promo-arrow {
+        position: absolute;
+        top: 50%;
+        display: inline-flex;
+        height: 2.5rem;
+        width: 2.5rem;
+        translate: 0 -50%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background: rgb(255 255 255 / 0.9);
+        color: var(--color-ink);
+        box-shadow: var(--shadow-card);
+        transition: background 150ms;
+    }
+
+    .promo-arrow:hover {
+        background: #fff;
+    }
+
+    .promo-dots {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0.75rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.375rem;
+    }
+
+    .promo-dot {
+        height: 0.5rem;
+        width: 0.5rem;
+        border-radius: 9999px;
+        background: rgb(255 255 255 / 0.55);
+        transition: width 200ms, background 200ms;
+    }
+
+    .promo-dot[aria-selected='true'] {
+        width: 1.25rem;
+        background: #fff;
     }
 }
 

@@ -76,10 +76,17 @@ class PengaturanPerusahaan
         // relationship, and the Owner must be able to make — or retract —
         // that claim from the screen, not from a config file over SSH.
         'mitra_json' => 'perusahaan.mitra',
+
+        // The promo carousel on the landing page, stored as a JSON array of
+        // {judul, teks, gambar, tautan, aktif}. `gambar` is a path on the
+        // `public` disk. Same reasoning as the partners: what the shopfront
+        // advertises is the Owner's to change from a screen, today, and not
+        // a deploy.
+        'promo_json' => 'perusahaan.promo',
     ];
 
     /** Keys whose stored value is a JSON document, not a scalar string. */
-    private const KUNCI_JSON = ['mitra_json'];
+    private const KUNCI_JSON = ['mitra_json', 'promo_json'];
 
     /**
      * What the Owner has stored, from the cache if it is there and from the

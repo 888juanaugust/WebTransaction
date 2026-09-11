@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * table, so a global scope here would be a query that filters itself.
  */
 #[Fillable([
-    'kode', 'nama', 'alamat', 'telepon',
+    'kode', 'nama', 'alamat', 'telepon', 'lintang', 'bujur',
     'npwp', 'nama_wajib_pajak', 'alamat_pajak',
     'aktif', 'catatan',
 ])]
@@ -26,7 +26,17 @@ class Region extends Model
 
     protected function casts(): array
     {
-        return ['aktif' => 'boolean'];
+        return [
+            'aktif' => 'boolean',
+            'lintang' => 'float',
+            'bujur' => 'float',
+        ];
+    }
+
+    /** Both coordinates present — the branch can be "nearest". */
+    public function punyaKoordinat(): bool
+    {
+        return $this->lintang !== null && $this->bujur !== null;
     }
 
     public function warehouses(): HasMany

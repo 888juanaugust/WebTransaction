@@ -176,7 +176,7 @@
 
         <h2 id="cookie">7. Cookie dan pelacakan</h2>
         <p>
-            Kami memasang <strong>dua cookie, dan keduanya bersifat teknis</strong>. Tidak ada
+            Kami memasang <strong>tiga cookie, dan ketiganya bersifat teknis</strong>. Tidak ada
             cookie pelacakan, cookie iklan, maupun cookie profil di situs ini.
         </p>
         <ul class="mt-4 space-y-3">
@@ -195,11 +195,26 @@
                     lain yang bisa mengirim perintah atas nama Anda.
                 </p>
             </li>
+            <li class="rounded-[12px] border border-line p-4">
+                <strong class="text-ink font-mono text-sm">{{ \App\Http\Middleware\PublicLocale::COOKIE }}</strong>
+                <p class="!mt-1 text-sm">
+                    Mengingat bahasa yang Anda pilih untuk situs publik (Indonesia atau Inggris).
+                    Hanya dipasang bila Anda menekan tombol ganti bahasa, berlaku satu tahun, dan
+                    isinya hanya kode bahasa itu.
+                </p>
+            </li>
         </ul>
         <p>
-            Keduanya diperlukan agar situs berfungsi, karena itu tidak tersedia pilihan untuk
-            menolaknya selain dengan tidak memakai situs ini. Keduanya tidak dipakai untuk mengenali
-            Anda antar kunjungan maupun antar situs.
+            Dua yang pertama diperlukan agar situs berfungsi, karena itu tidak tersedia pilihan untuk
+            menolaknya selain dengan tidak memakai situs ini. Yang ketiga hanya ada bila Anda
+            memintanya. Tidak satu pun dipakai untuk mengenali Anda antar kunjungan maupun antar
+            situs.
+        </p>
+        <p>
+            <strong>Lokasi.</strong> Halaman Kontak dapat menunjukkan cabang kami yang terdekat dari
+            Anda. Itu hanya terjadi bila Anda menekan tombolnya dan peramban Anda mengizinkan; posisi
+            Anda dihitung di peramban Anda sendiri terhadap daftar alamat cabang yang memang ada di
+            halaman itu, <strong>tidak dikirim ke server kami dan tidak disimpan</strong>.
         </p>
         <p>
             Kami <strong>tidak memasang layanan analitik, piksel iklan, tombol media sosial, maupun

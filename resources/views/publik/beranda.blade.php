@@ -1,6 +1,6 @@
 @extends('layouts.publik')
 
-@section('judul', 'Home')
+@section('judul', __('publik.beranda.judul'))
 @section('deskripsi', \App\Support\Perusahaan::text('ringkasan'))
 
 @php
@@ -34,6 +34,9 @@
 
 @section('konten')
 
+    {{-- Promotions first, when there are any: the one thing that changes week to week. --}}
+    @include('publik.partials.promo')
+
     {{--
         Hero: the company, and nothing but the company. A centred statement,
         one primary action, and below it a panel that puts the mark next to
@@ -55,7 +58,7 @@
         <div class="relative mx-auto max-w-6xl px-4 pt-16 pb-20 sm:pt-24 sm:pb-24">
             <div class="mx-auto max-w-3xl text-center">
                 <h1 class="text-[2.35rem] font-semibold leading-[1.05] tracking-[-0.035em] text-ink text-balance sm:text-6xl">
-                    Wholesale automotive parts, priced per customer.
+                    {{ __('publik.beranda.hero') }}
                 </h1>
 
                 <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-muted text-pretty">
@@ -67,13 +70,13 @@
                        class="rounded-btn bg-brand-600 px-5 py-3 text-[15px] font-semibold text-white shadow-btn
                               transition duration-200 hover:bg-brand-500 active:scale-[0.98]
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-                        Sign in to your account
+                        {{ __('publik.beranda.masuk_akun') }}
                     </a>
                     <a href="{{ route('publik.kontak') }}"
                        class="rounded-btn border border-line-strong bg-white px-5 py-3 text-[15px] font-semibold text-ink
                               transition duration-200 hover:border-ink/30 hover:bg-ground active:scale-[0.98]
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-                        Contact us
+                        {{ __('publik.beranda.hubungi') }}
                     </a>
                 </div>
             </div>
@@ -93,18 +96,18 @@
                             <p class="text-xl font-semibold tracking-tight text-ink">{{ config('perusahaan.nama') }}</p>
                             <p class="mt-1 text-[15px] text-ink-muted">{{ Perusahaan::text('tagline') }}</p>
                             <p class="mt-4 text-sm leading-relaxed text-ink-muted">
-                                We supply <strong class="font-semibold text-ink">workshops, parts shops and
-                                distributors</strong>, not retail buyers. Wholesale prices are for registered customers only.
+                                {{-- Our own sentence with our own <strong>; nothing user-typed is inside it. --}}
+                                {!! __('publik.beranda.melayani', ['siapa' => '<strong class="font-semibold text-ink">'.e(__('publik.beranda.melayani_siapa')).'</strong>']) !!}
                             </p>
                         </div>
                     </div>
 
                     <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-4">
                         @foreach ([
-                            [count($kategori), 'Product categories'],
-                            [count(config('perusahaan.merk')), 'Brands supplied'],
-                            [config('perusahaan.kontak.kota'), 'Main warehouse'],
-                            ['30 days', 'Standard credit term'],
+                            [count($kategori), __('publik.beranda.fakta.kategori')],
+                            [count(config('perusahaan.merk')), __('publik.beranda.fakta.merk')],
+                            [config('perusahaan.kontak.kota'), __('publik.beranda.fakta.gudang')],
+                            [__('publik.beranda.fakta.tempo_nilai'), __('publik.beranda.fakta.tempo')],
                         ] as [$angka, $label])
                             {{-- dt before dd for the markup; the number reads first on screen. --}}
                             <div class="flex flex-col-reverse justify-end bg-white px-4 py-4">
@@ -121,8 +124,8 @@
     {{-- Categories, straight after the hero: what we actually sell. Four items, four cells. --}}
     <section class="reveal mx-auto max-w-6xl px-4 py-20 sm:py-28">
         @include('publik.partials.kicker', [
-            'judul' => 'Product categories',
-            'lede' => 'The four categories workshops need most often, kept in stock.',
+            'judul' => __('publik.beranda.kategori_judul'),
+            'lede' => __('publik.beranda.kategori_lede'),
         ])
 
         <div class="mt-10 grid gap-3.5 md:grid-cols-12">
@@ -164,13 +167,13 @@
 
         {{-- No SKU list and no prices: wholesale pricing is per customer. --}}
         <p class="mt-6 text-sm text-ink-muted">
-            The full product list, with prices, is available to registered customers after signing in.
+            {{ __('publik.beranda.daftar_lengkap') }}
         </p>
     </section>
 
     {{-- Brands: the names are the content. Wordmark tiles until the real brand logos are supplied. --}}
     <section class="reveal mx-auto max-w-6xl px-4 py-4 text-center sm:py-8">
-        <p class="text-[15px] font-medium text-ink-muted">Brands we carry, available for delivery across Indonesia</p>
+        <p class="text-[15px] font-medium text-ink-muted">{{ __('publik.beranda.merk_judul') }}</p>
 
         <ul class="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
             @foreach (config('perusahaan.merk') as $merk)
@@ -187,21 +190,17 @@
         <div class="grid gap-10 rounded-panel border border-line bg-white p-7 shadow-[0_1px_2px_rgb(22_24_29/0.03)] sm:p-12 lg:grid-cols-[4fr_8fr] lg:gap-16">
             <div>
                 @include('publik.partials.kicker', [
-                    'judul' => 'Become a customer in three steps',
-                    'lede' => 'A wholesale account opens once your business details are verified. There is no self-service sign-up.',
+                    'judul' => __('publik.beranda.langkah_judul'),
+                    'lede' => __('publik.beranda.langkah_lede'),
                 ])
                 <a href="{{ route('publik.kontak') }}"
                    class="mt-6 inline-flex items-center gap-1.5 text-[15px] font-semibold text-brand-600 transition hover:text-brand-700 hover:gap-2.5">
-                    Contact us <span aria-hidden="true">&rarr;</span>
+                    {{ __('publik.beranda.hubungi') }} <span aria-hidden="true">&rarr;</span>
                 </a>
             </div>
 
             <ol class="divide-y divide-line">
-                @foreach ([
-                    ['Send your business details', 'Business name, address and tax number (NPWP) by WhatsApp or email. The account opens after the details are verified.'],
-                    ['Agree prices and a credit limit', 'Our team sets your price tier and credit limit to the scale of your business, with clear payment terms.'],
-                    ['Order through the portal', 'A catalogue at your prices, routine orders repeated in one click, and your invoices whenever you need them.'],
-                ] as $i => [$judul, $isi])
+                @foreach (__('publik.beranda.langkah') as $i => [$judul, $isi])
                     <li class="grid grid-cols-[44px_1fr] gap-5 py-7 first:pt-0 last:pb-0">
                         <span @class([
                             'flex h-10 w-10 items-center justify-center rounded-[12px] text-[15px] font-semibold',
@@ -222,7 +221,7 @@
     <section class="reveal mx-auto max-w-6xl px-4 py-12 sm:py-16">
         <div class="grid gap-12 lg:grid-cols-[5fr_7fr] lg:gap-24">
             <div>
-                @include('publik.partials.kicker', ['judul' => 'About the company'])
+                @include('publik.partials.kicker', ['judul' => __('publik.beranda.tentang_judul')])
 
                 <div class="mt-5 space-y-4">
                     @foreach (array_slice(Perusahaan::list('profil'), 0, 2) as $paragraf)
@@ -232,15 +231,15 @@
 
                 <a href="{{ route('publik.tentang') }}"
                    class="mt-6 inline-flex items-center gap-1.5 text-[15px] font-semibold text-brand-600 transition hover:text-brand-700 hover:gap-2.5">
-                    More about us <span aria-hidden="true">&rarr;</span>
+                    {{ __('publik.beranda.tentang_lanjut') }} <span aria-hidden="true">&rarr;</span>
                 </a>
             </div>
 
             <div>
                 <div class="flex items-baseline justify-between gap-4 pb-3">
-                    <h3 class="text-[15px] font-semibold text-ink">Partners</h3>
+                    <h3 class="text-[15px] font-semibold text-ink">{{ __('publik.beranda.mitra_judul') }}</h3>
                     <a href="{{ route('publik.mitra') }}" class="text-sm font-medium text-brand-600 transition hover:text-brand-700">
-                        See all partners <span aria-hidden="true">&rarr;</span>
+                        {{ __('publik.beranda.mitra_semua') }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
 
@@ -253,7 +252,7 @@
                             </div>
                             <p class="text-sm text-ink-muted">{{ $item['bidang'] }}</p>
                             @if (! empty($item['sejak']))
-                                <p class="text-sm text-ink-muted sm:text-right">since {{ $item['sejak'] }}</p>
+                                <p class="text-sm text-ink-muted sm:text-right">{{ __('publik.beranda.sejak') }} {{ $item['sejak'] }}</p>
                             @endif
                         </li>
                     @endforeach
@@ -268,16 +267,16 @@
             <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_40%_80%_at_90%_50%,rgb(255_255_255/0.10),transparent_70%)]" aria-hidden="true"></div>
             <div class="relative flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
                 <div>
-                    <h2 class="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Already a customer?</h2>
+                    <h2 class="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">{{ __('publik.beranda.sudah_pelanggan') }}</h2>
                     <p class="mt-2 max-w-lg text-[17px] leading-relaxed text-white/80">
-                        Sign in to see your prices, your remaining credit limit, invoices and order history.
+                        {{ __('publik.beranda.sudah_pelanggan_lede') }}
                     </p>
                 </div>
                 <a href="{{ route('masuk') }}"
                    class="shrink-0 rounded-btn bg-white px-5 py-3 text-[15px] font-semibold text-brand-600 whitespace-nowrap
                           transition duration-200 hover:bg-brand-50 active:scale-[0.98]
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                    Sign in to your account
+                    {{ __('publik.beranda.masuk_akun') }}
                 </a>
             </div>
         </div>

@@ -7,9 +7,11 @@ namespace App\Filament\Pages;
 use App\Domain\Pengaturan\PengaturanPerusahaan;
 use App\Filament\Navigation\SidebarGroups;
 use BackedEnum;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
@@ -143,6 +145,38 @@ class PengaturanPerusahaanPage extends Page
                                 TextInput::make('bidang')->label('Bidang')->maxLength(80),
                                 Textarea::make('deskripsi')->label('Deskripsi singkat')
                                     ->rows(2)->maxLength(300)->columnSpanFull(),
+                            ]),
+                    ]),
+
+                Section::make('Promo di beranda')
+                    ->description(
+                        'Slide yang berjalan di bagian atas halaman depan situs publik. Satu '
+                        .'gambar per slide, lebar — kira-kira 3:1 — dengan judul dan satu kalimat '
+                        .'di atasnya. Slide yang tidak aktif disimpan tapi tidak tampil; tanpa '
+                        .'slide aktif, beranda tampil tanpa promo, bukan dengan kotak kosong.'
+                    )
+                    ->schema([
+                        Repeater::make('promo_json')
+                            ->label('Daftar promo')
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->reorderable()
+                            ->addActionLabel('Tambah promo')
+                            ->schema([
+                                TextInput::make('judul')->label('Judul')
+                                    ->required()->maxLength(80),
+                                TextInput::make('tautan')->label('Tautan (opsional)')
+                                    ->url()->maxLength(200)
+                                    ->helperText('Alamat lengkap, mis. https://… Tombol "Selengkapnya" tampil bila diisi.'),
+                                Textarea::make('teks')->label('Satu kalimat')
+                                    ->rows(2)->maxLength(200)->columnSpanFull(),
+                                FileUpload::make('gambar')->label('Gambar')
+                                    ->disk('public')->directory('promo')
+                                    ->image()->maxSize(2048)
+                                    ->imagePreviewHeight('120')
+                                    ->required()
+                                    ->helperText('JPG atau PNG, maksimal 2 MB. Dilayani dari server kami sendiri.'),
+                                Toggle::make('aktif')->label('Tampilkan')->default(true),
                             ]),
                     ]),
             ]);

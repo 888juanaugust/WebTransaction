@@ -110,6 +110,10 @@ fi
 
 php artisan migrate --force
 
+# public/storage → storage/app/public, for the promo images the Owner uploads
+# in Pengaturan. Idempotent: an existing link is left alone.
+php artisan storage:link --force >/dev/null 2>&1 || php artisan storage:link
+
 ##
 # Clear the cached config *before* rebuilding it.
 #

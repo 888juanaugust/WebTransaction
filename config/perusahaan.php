@@ -17,17 +17,19 @@ declare(strict_types=1);
 | LANGUAGE
 | --------
 | The copy in this file is what the public site prints, and the public site
-| is in English (2026-08): it introduces the company to buyers and to the
-| overseas suppliers and partners it deals with. The panels and every printed
-| document stay in Bahasa Indonesia — they are for staff and buyers, in the
-| words staff and buyers actually use — and they never read these sentences.
+| is bilingual (2026-09): Bahasa Indonesia by default, English on request —
+| a switch in the header, remembered in a cookie. Everything the company
+| says about itself is therefore a pair, `['id' => …, 'en' => …]`, and
+| App\Support\Perusahaan picks the side the visitor asked for. The panels
+| and every printed document stay in Bahasa Indonesia and never read these.
 |
-| One copy of each sentence. The file once held ['id' => ..., 'en' => ...]
-| pairs, and the two versions had begun to drift; they were collapsed and
-| stay collapsed. The one deliberate exception is `kontak.jam_operasional`
-| next to `kontak.business_hours`: the same hours, but one is printed on
-| Indonesian documents and the other on the English site, so they are two
-| facts for two audiences rather than two copies of one.
+| A pair must carry both sides. The file once held pairs that drifted apart
+| and was collapsed to English for a year; it is bilingual again because the
+| owner asked for the option, and this time a test walks the file and fails
+| the build on a pair with a side missing — drift is caught, not tolerated.
+| The one non-pair by design is `kontak.jam_operasional` beside
+| `kontak.business_hours`: the same hours, but one is printed on Indonesian
+| documents whatever the site speaks, so they are two facts, not one pair.
 |
 | Note: no prices anywhere on the public site. Public price display is
 | explicitly out of scope for v1.
@@ -61,26 +63,47 @@ return [
      */
     'logo' => env('PERUSAHAAN_LOGO', 'images/logo.svg'),
 
-    'tagline' => 'Wholesale distributor of automotive spare parts',
+    'tagline' => [
+        'id' => 'Distributor grosir suku cadang otomotif',
+        'en' => 'Wholesale distributor of automotive spare parts',
+    ],
 
     /*
      | One paragraph for the hero. Written for workshops, parts shops and
      | distributors, not retail buyers.
      */
-    'ringkasan' => 'We supply automotive spare parts wholesale to workshops, parts shops '
-        .'and distributors across Indonesia. Stock ready to ship, prices set per customer, '
-        .'and invoicing kept in order.',
+    'ringkasan' => [
+        'id' => 'Kami memasok suku cadang otomotif secara grosir ke bengkel, toko sparepart, '
+            .'dan distributor di seluruh Indonesia. Stok siap kirim, harga ditetapkan per '
+            .'pelanggan, dan penagihan yang tertib.',
+        'en' => 'We supply automotive spare parts wholesale to workshops, parts shops '
+            .'and distributors across Indonesia. Stock ready to ship, prices set per customer, '
+            .'and invoicing kept in order.',
+    ],
 
     'profil' => [
-        'We are a wholesale distributor of automotive spare parts. We serve workshops, '
-            .'parts shops and distributors, not retail buyers.',
+        'id' => [
+            'Kami adalah distributor grosir suku cadang otomotif. Kami melayani bengkel, '
+                .'toko sparepart, dan distributor — bukan pembeli eceran.',
 
-        'Through a supplier network built over many years, we keep stock of the categories '
-            .'workshops need most often: hydraulic parts, suspension parts, electric parts '
-            .'and bearings.',
+            'Lewat jaringan pemasok yang dibangun bertahun-tahun, kami menyediakan stok '
+                .'kategori yang paling sering dibutuhkan bengkel: hydraulic part, suspension '
+                .'part, electric part, dan bearing.',
 
-        'Every registered customer gets prices set by agreement, a clear credit limit, '
-            .'and tax invoices that meet the applicable regulations.',
+            'Setiap pelanggan terdaftar mendapat harga yang disepakati, limit kredit yang '
+                .'jelas, dan faktur pajak yang sesuai ketentuan.',
+        ],
+        'en' => [
+            'We are a wholesale distributor of automotive spare parts. We serve workshops, '
+                .'parts shops and distributors, not retail buyers.',
+
+            'Through a supplier network built over many years, we keep stock of the categories '
+                .'workshops need most often: hydraulic parts, suspension parts, electric parts '
+                .'and bearings.',
+
+            'Every registered customer gets prices set by agreement, a clear credit limit, '
+                .'and tax invoices that meet the applicable regulations.',
+        ],
     ],
 
     // Legal identity. Required on the site once PSE registration is done.
@@ -133,19 +156,31 @@ return [
     'kategori' => [
         [
             'nama' => 'HYDRAULIC PART',
-            'deskripsi' => 'Hydraulic system components for passenger and commercial vehicles.',
+            'deskripsi' => [
+                'id' => 'Komponen sistem hidraulik untuk kendaraan penumpang dan niaga.',
+                'en' => 'Hydraulic system components for passenger and commercial vehicles.',
+            ],
         ],
         [
             'nama' => 'SUSPENSION PART',
-            'deskripsi' => 'Undercarriage and suspension system components.',
+            'deskripsi' => [
+                'id' => 'Komponen kaki-kaki dan sistem suspensi.',
+                'en' => 'Undercarriage and suspension system components.',
+            ],
         ],
         [
             'nama' => 'ELECTRIC PART',
-            'deskripsi' => 'Vehicle electrical components.',
+            'deskripsi' => [
+                'id' => 'Komponen kelistrikan kendaraan.',
+                'en' => 'Vehicle electrical components.',
+            ],
         ],
         [
             'nama' => 'BEARING PART',
-            'deskripsi' => 'Bearings and rotating components.',
+            'deskripsi' => [
+                'id' => 'Bearing dan komponen berputar.',
+                'en' => 'Bearings and rotating components.',
+            ],
         ],
     ],
 
@@ -181,6 +216,17 @@ return [
     ],
 
     /*
+     | Promo — the carousel at the top of the landing page.
+     |
+     | Empty here on purpose: promotions are typed by the Owner in Pengaturan
+     | perusahaan and overlaid at boot, exactly like the partners. Each entry
+     | is {judul, teks, gambar, tautan, aktif}; `gambar` is a path on the
+     | `public` disk. With no active entry the landing page simply has no
+     | carousel — there is no placeholder slide to forget to remove.
+     */
+    'promo' => [],
+
+    /*
      | Rencana pengembangan — the "future works" page.
      |
      | This is public, so it has to stay honest: an item marked `rencana` that
@@ -189,37 +235,58 @@ return [
      */
     'rencana' => [
         [
-            'judul' => 'Internal operations system',
+            'judul' => ['id' => 'Sistem operasional internal', 'en' => 'Internal operations system'],
             'status' => 'berjalan',
-            'deskripsi' => 'Orders, stock and invoicing recorded directly by our own team.',
+            'deskripsi' => [
+                'id' => 'Pesanan, stok, dan penagihan dicatat langsung oleh tim kami sendiri.',
+                'en' => 'Orders, stock and invoicing recorded directly by our own team.',
+            ],
         ],
         [
-            'judul' => 'Credit sales with orderly collection',
+            'judul' => ['id' => 'Penjualan kredit dengan penagihan tertib', 'en' => 'Credit sales with orderly collection'],
             'status' => 'berjalan',
-            'deskripsi' => 'Payment by bank transfer, cash or giro, confirmed and reconciled '
-                .'by our finance team.',
+            'deskripsi' => [
+                'id' => 'Pembayaran lewat transfer bank, tunai, atau giro, dikonfirmasi dan '
+                    .'direkonsiliasi oleh tim keuangan kami.',
+                'en' => 'Payment by bank transfer, cash or giro, confirmed and reconciled '
+                    .'by our finance team.',
+            ],
         ],
         [
-            'judul' => 'Customer portal',
+            'judul' => ['id' => 'Portal pelanggan', 'en' => 'Customer portal'],
             'status' => 'berjalan',
-            'deskripsi' => 'Registered customers can follow their credit, invoices and order history.',
+            'deskripsi' => [
+                'id' => 'Pelanggan terdaftar dapat memantau kredit, faktur, dan riwayat pesanannya.',
+                'en' => 'Registered customers can follow their credit, invoices and order history.',
+            ],
         ],
         [
-            'judul' => 'Self-service ordering through the portal',
+            'judul' => ['id' => 'Pemesanan mandiri lewat portal', 'en' => 'Self-service ordering through the portal'],
             'status' => 'berjalan',
-            'deskripsi' => 'Customers can repeat a previous order, build a cart and submit '
-                .'orders themselves.',
+            'deskripsi' => [
+                'id' => 'Pelanggan dapat mengulang pesanan sebelumnya, menyusun keranjang, dan '
+                    .'mengirim pesanan sendiri.',
+                'en' => 'Customers can repeat a previous order, build a cart and submit '
+                    .'orders themselves.',
+            ],
         ],
         [
-            'judul' => 'Online product catalogue',
+            'judul' => ['id' => 'Katalog produk daring', 'en' => 'Online product catalogue'],
             'status' => 'berjalan',
-            'deskripsi' => 'The full catalogue at each customer\'s own prices, searchable '
-                .'by brand, category and vehicle type.',
+            'deskripsi' => [
+                'id' => 'Katalog lengkap dengan harga masing-masing pelanggan, bisa dicari '
+                    .'menurut merk, kategori, dan jenis kendaraan.',
+                'en' => 'The full catalogue at each customer\'s own prices, searchable '
+                    .'by brand, category and vehicle type.',
+            ],
         ],
         [
-            'judul' => 'Electronic tax invoices (Coretax)',
+            'judul' => ['id' => 'Faktur pajak elektronik (Coretax)', 'en' => 'Electronic tax invoices (Coretax)'],
             'status' => 'rencana',
-            'deskripsi' => 'Tax invoice export in the Coretax import format.',
+            'deskripsi' => [
+                'id' => 'Ekspor faktur pajak dalam format impor Coretax.',
+                'en' => 'Tax invoice export in the Coretax import format.',
+            ],
         ],
     ],
 

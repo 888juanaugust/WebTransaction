@@ -5,28 +5,37 @@
     appear anywhere on it: public price display is out of scope for v1, and
     wholesale pricing is per-customer by definition.
 
-    English throughout the shopfront (2026-08): the site introduces the company
-    to buyers and to overseas suppliers and partners, so it speaks the language
-    both read. The two legal pages are the exception — they are instruments
-    under Indonesian law and stay in Bahasa Indonesia, declaring their own
-    `lang`. The panels and every printed document stay Indonesian too: they are
-    for staff and buyers, in the words staff and buyers actually use.
+    Bilingual (2026-09): Bahasa Indonesia by default, English on request via
+    the switch in the header, remembered in a cookie for a year. Every word of
+    chrome comes from lang/{id,en}/publik.php; every word about the company
+    comes from config/perusahaan.php as a pair, resolved by App\Support\
+    Perusahaan. The two legal pages are the exception — instruments under
+    Indonesian law, they stay in Bahasa Indonesia and declare their own
+    `lang` whatever the visitor chose. The panels and every printed document
+    stay Indonesian too: they are for staff and buyers, in the words staff and
+    buyers actually use.
 
-    The visual language, deliberately: an off-white ground, white surfaces
-    with a hairline border, and company blue as the only accent. The mark and
-    the name carry the brand; red is the panels' danger colour and never shows
-    up here as decoration. No section flips to a dark background — the page
-    reads as one surface from the top to the footer.
+    The visual language, deliberately: a white ground, white surfaces with a
+    hairline border, black text, and company blue as the only accent. The
+    mark and the name carry the brand; red is the panels' danger colour and
+    never shows up here as decoration. No section flips to a dark background
+    — the page reads as one surface from the top to the footer.
 --}}
+@php
+    use App\Http\Middleware\PublicLocale;
+
+    $bahasa = app()->getLocale();
+    $bahasaLain = PublicLocale::lainnya();
+@endphp
 <!DOCTYPE html>
-<html lang="@yield('lang', 'en')" class="scroll-smooth">
+<html lang="@yield('lang', $bahasa)" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {{-- The shopfront commits to light; see color-scheme in app.css. --}}
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#f8f8f7">
+    <meta name="theme-color" content="#ffffff">
 
     <title>@yield('judul', config('perusahaan.nama')) · {{ config('perusahaan.nama') }}</title>
     <meta name="description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
@@ -35,7 +44,7 @@
     <meta property="og:site_name" content="{{ config('perusahaan.nama') }}">
     <meta property="og:title" content="@yield('judul', config('perusahaan.nama'))">
     <meta property="og:description" content="@yield('deskripsi', \App\Support\Perusahaan::text('ringkasan'))">
-    <meta property="og:locale" content="en_ID">
+    <meta property="og:locale" content="{{ $bahasa === 'en' ? 'en_US' : 'id_ID' }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
     @if (\App\Support\Branding::hasLogo())
@@ -86,16 +95,16 @@
 
     <a href="#konten" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50
         focus:rounded-btn focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white">
-        Skip to content
+        {{ __('publik.menu.lewati') }}
     </a>
 
     @php
         $menu = [
-            'publik.beranda' => 'Home',
-            'publik.tentang' => 'About Us',
-            'publik.mitra' => 'Partners',
-            'publik.rencana' => 'Roadmap',
-            'publik.kontak' => 'Contact',
+            'publik.beranda' => __('publik.menu.beranda'),
+            'publik.tentang' => __('publik.menu.tentang'),
+            'publik.mitra' => __('publik.menu.mitra'),
+            'publik.rencana' => __('publik.menu.rencana'),
+            'publik.kontak' => __('publik.menu.kontak'),
         ];
     @endphp
 
@@ -107,7 +116,7 @@
     <header class="sticky top-0 z-40 px-4 pt-3 sm:pt-5">
         <nav class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 rounded-[14px] border
                     border-line bg-white/80 pr-2 pl-4 shadow-card backdrop-blur-md sm:h-[60px] sm:pl-5"
-             aria-label="Main">
+             aria-label="{{ __('publik.menu.utama') }}">
             {{-- The mark if there is one, the wordmark either way. --}}
             <a href="{{ route('publik.beranda') }}" class="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight text-ink">
                 @if (\App\Support\Branding::hasLogo())
@@ -132,18 +141,34 @@
             </div>
 
             <div class="flex items-center gap-1.5">
+                {{--
+                    The language switch: one link, to the other language. A
+                    two-way toggle would show the language you are already
+                    reading as a button, which is a button that does nothing.
+                --}}
+                <a href="{{ route('publik.bahasa', $bahasaLain) }}"
+                   hreflang="{{ $bahasaLain }}"
+                   lang="{{ $bahasaLain }}"
+                   aria-label="{{ __('publik.ganti_bahasa_label') }}"
+                   class="hidden rounded-[9px] px-2.5 py-2 text-sm font-medium text-ink-muted transition
+                          hover:bg-ground-2 hover:text-ink sm:inline-block"
+                   id="ganti-bahasa">
+                    {{ strtoupper($bahasaLain) }}
+                </a>
+
                 <a href="{{ route('masuk') }}"
                    class="rounded-[9px] bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-btn
                           transition duration-200 hover:bg-brand-500 active:scale-[0.98]
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-                    Sign in
+                    {{ __('publik.menu.masuk') }}
                 </a>
 
                 {{-- Hamburger. Plain button + hidden panel: no framework, no fetch. --}}
                 <button id="tombol-menu" type="button"
                         class="inline-flex h-10 w-10 items-center justify-center rounded-[9px] text-ink-muted
                                transition hover:bg-ground-2 hover:text-ink md:hidden"
-                        aria-expanded="false" aria-controls="menu-seluler" aria-label="Open menu">
+                        aria-expanded="false" aria-controls="menu-seluler" aria-label="{{ __('publik.menu.buka') }}"
+                        data-label-buka="{{ __('publik.menu.buka') }}" data-label-tutup="{{ __('publik.menu.tutup') }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
                     </svg>
@@ -161,6 +186,10 @@
                            'text-ink-muted hover:bg-ground hover:text-ink' => ! request()->routeIs($rute),
                        ])>{{ $label }}</a>
                 @endforeach
+                <a href="{{ route('publik.bahasa', $bahasaLain) }}" hreflang="{{ $bahasaLain }}" lang="{{ $bahasaLain }}"
+                   class="rounded-[9px] px-3 py-2.5 text-sm font-medium text-ink-muted hover:bg-ground hover:text-ink">
+                    {{ __('publik.ganti_bahasa') }}
+                </a>
             </div>
         </div>
     </header>
@@ -189,7 +218,7 @@
                 </div>
 
                 <div>
-                    <p class="text-sm font-semibold text-ink">Pages</p>
+                    <p class="text-sm font-semibold text-ink">{{ __('publik.kaki.halaman') }}</p>
                     <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
                         @foreach (array_slice($menu, 1, null, true) as $rute => $label)
                             <li><a class="transition-colors hover:text-ink" href="{{ route($rute) }}">{{ $label }}</a></li>
@@ -198,15 +227,15 @@
                 </div>
 
                 <div>
-                    <p class="text-sm font-semibold text-ink">Legal</p>
+                    <p class="text-sm font-semibold text-ink">{{ __('publik.kaki.hukum') }}</p>
                     <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
-                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.privasi') }}">Privacy Policy</a></li>
-                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.syarat') }}">Terms of Sale</a></li>
+                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.privasi') }}">{{ __('publik.kaki.privasi') }}</a></li>
+                        <li><a class="transition-colors hover:text-ink" href="{{ route('publik.syarat') }}">{{ __('publik.kaki.syarat') }}</a></li>
                     </ul>
                 </div>
 
                 <div>
-                    <p class="text-sm font-semibold text-ink">Contact</p>
+                    <p class="text-sm font-semibold text-ink">{{ __('publik.kaki.kontak') }}</p>
                     <ul class="mt-3 space-y-2.5 text-sm text-ink-muted">
                         <li>{{ config('perusahaan.kontak.telepon') }}</li>
                         <li>
@@ -220,11 +249,15 @@
             </div>
 
             <div class="mt-10 flex flex-col gap-2 border-t border-line pt-6 text-xs text-ink-faint sm:flex-row sm:justify-between">
-                <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. All rights reserved.</p>
-                <p>Wholesale prices are for registered customers only.</p>
+                <p>&copy; {{ date('Y') }} {{ config('perusahaan.nama') }}. {{ __('publik.kaki.hak_cipta') }}</p>
+                <p>{{ __('publik.kaki.harga_grosir') }}</p>
             </div>
         </div>
     </footer>
+
+    @include('publik.partials.persetujuan')
+
+    @stack('kaki')
 
     <script nonce="{{ $cspNonce ?? '' }}">
         (() => {
@@ -234,7 +267,7 @@
                 panel.hidden = ! panel.hidden;
                 panel.classList.toggle('hidden', panel.hidden);
                 tombol.setAttribute('aria-expanded', String(! panel.hidden));
-                tombol.setAttribute('aria-label', panel.hidden ? 'Open menu' : 'Close menu');
+                tombol.setAttribute('aria-label', panel.hidden ? tombol.dataset.labelBuka : tombol.dataset.labelTutup);
             });
 
             // Scroll-entry reveal: settle each .reveal once it is a fifth in view.

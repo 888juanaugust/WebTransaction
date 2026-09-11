@@ -54,6 +54,21 @@ class RegionForm
                             ->helperText('Wilayah nonaktif hilang dari pilihan, datanya tetap tersimpan.'),
                     ]),
 
+                Section::make('Lokasi di peta')
+                    ->description('Dua angka dari peta, supaya halaman Kontak situs publik bisa '
+                        .'menunjukkan cabang terdekat ke pengunjung. Buka Google Maps, klik kanan '
+                        .'titik cabang, salin angkanya. Kosongkan bila belum tahu — cabang tetap '
+                        .'tampil di daftar, hanya tidak ikut dihitung jaraknya.')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('lintang')->label('Lintang (latitude)')
+                            ->numeric()->minValue(-90)->maxValue(90)->step(0.000001)
+                            ->placeholder('-7.257472'),
+                        TextInput::make('bujur')->label('Bujur (longitude)')
+                            ->numeric()->minValue(-180)->maxValue(180)->step(0.000001)
+                            ->placeholder('112.752090'),
+                    ]),
+
                 Section::make('Identitas pajak')
                     ->description('Kosongkan bila wilayah ini menerbitkan faktur atas nama pusat. '
                         .'Isi hanya bila wilayah ini badan usaha sendiri dengan NPWP sendiri.')

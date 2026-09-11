@@ -22,8 +22,12 @@ Three surfaces over one shared domain core:
 ## Language
 
 Bahasa Indonesia is the UI language of both panels and every printed document. The
-**public site is English** (its copy is in `config/perusahaan.php`); its two legal pages
-stay Indonesian and declare `lang="id"` themselves.
+**public site is bilingual** (2026-09): Bahasa Indonesia by default, English as an option
+chosen from a switch in the header and remembered in a cookie. Its chrome lives in
+`lang/{id,en}/publik.php`; the company's own copy in `config/perusahaan.php` as
+`['id' => …, 'en' => …]` pairs, and a test fails the build on a pair with a side missing.
+Its two legal pages stay Indonesian whatever the visitor chose and declare `lang="id"`
+themselves.
 
 Domain terms stay in Indonesian where that's what staff and buyers actually say: `surat
 jalan`, `faktur pajak`, `harga`, `kode`, `merk`, `gudang`, `dus`, `karton`. Code identifiers

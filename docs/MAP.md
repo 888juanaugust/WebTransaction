@@ -15,14 +15,15 @@ computes a price, moves stock, or writes an order status.
 
 | URL | Page | What it does |
 |---|---|---|
-| `/` | Home | The company at a glance, categories, brands, how an account opens, partners, call to action |
-| `/tentang-kami` | About Us | Profile, who we serve, how it works, company details |
-| `/mitra` | Partners | Joint-venture partners |
-| `/kontak` | Contact | Address, phone, WhatsApp, email, business hours |
+| `/` | Beranda / Home | **Promo carousel** when the Owner has an active slide, then the company at a glance, categories, brands, how an account opens, partners, call to action |
+| `/tentang-kami` | Tentang Kami / About Us | Profile, who we serve, how it works, company details |
+| `/mitra` | Mitra / Partners | Joint-venture partners |
+| `/kontak` | Kontak / Contact | Address, phone, WhatsApp, email, business hours — and **Cabang kami**: every active cabang listed, with a button that finds the nearest one in the visitor's own browser |
+| `/bahasa/{id\|en}` | — | The language switch: sets a year-long `bahasa` cookie and sends the visitor back to the page they were on (this host only). A link, not a form |
 | `/kebijakan-privasi` | Kebijakan Privasi | UU PDP 27/2022. Renders from `DataInventory` |
 | `/syarat-penjualan` | Syarat Penjualan | B2B terms: credit, late payment, delivery, returns |
 | `/rencana-pengembangan` | Roadmap | What is running and what is planned |
-| `/masuk` | Sign in | Pick the customer portal or the staff panel (URL slugs unchanged; the pages are English) |
+| `/masuk` | Masuk / Sign in | Pick the customer portal or the staff panel (URL slugs unchanged) |
 | `/robots.txt` | — | Route, not a file: disallows `/admin`, `/portal`, `/dokumen`; names the sitemap by absolute URL |
 | `/sitemap.xml` | — | The eight public pages, absolute URLs from `route()` |
 
@@ -30,9 +31,10 @@ All content comes from `config/perusahaan.php` through `App\Support\Perusahaan`.
 **The shipped text is placeholder** — especially the partners, since naming a
 company in public is a claim about a real business relationship.
 
-The visual language (2026-08 redesign): one off-white ground from the top
-of the page to the footer, white surfaces with a 1px hairline and a faintly
-blue shadow, and company blue as the only accent — red is a panel colour
+The visual language (2026-08 redesign, black-on-white 2026-09): one white
+ground from the top of the page to the footer, black primary text with dark
+grey supporting text, white surfaces with a 1px hairline and a faintly blue
+shadow, and company blue as the only accent — red is a panel colour
 (overdue, short, destroy) and never decoration here. The header is a floating
 bar; the home hero is a centred statement over a faint, oversized copy of the
 mark, followed by a "company at a glance" panel (the mark, the name, four
@@ -48,11 +50,32 @@ redesign and the shopfront did not, see §The panel design system. The logo show
 `PERUSAHAAN_LOGO` points at a file that exists; otherwise every surface falls
 back to the wordmark.
 
-Language: the shopfront is **English** — it introduces the company to buyers
-and to the overseas suppliers and partners it deals with. The two legal pages
-stay in Bahasa Indonesia (instruments under Indonesian law) and declare
-`lang="id"` on their own; everything behind a login, and every printed
-document, stays Indonesian.
+Language: the shopfront is **bilingual** (2026-09) — Bahasa Indonesia by
+default, English on request. The switch in the header is one link to the
+*other* language (a toggle that shows the language you are reading is a
+button that does nothing); it sets a `bahasa` cookie for a year and
+`PublicLocale` reads it on every public request. Chrome strings live in
+`lang/{id,en}/publik.php`; what the company says about itself lives in
+`config/perusahaan.php` as `['id' => …, 'en' => …]` pairs, and
+`App\Support\Perusahaan` picks the side being spoken (a plain string — the
+Owner-typed partners — stays itself in both). `PublicLanguageTest` walks both
+files and the config and fails the build on a key or a pair with a side
+missing: the drift that got the site collapsed to one language for a year is
+caught, not tolerated. The two legal pages stay in Bahasa Indonesia whatever
+the visitor chose (instruments under Indonesian law) and declare `lang="id"`
+on their own; everything behind a login, and every printed document, stays
+Indonesian.
+
+| Piece | Decides |
+|---|---|
+| `PublicLocale` | Which language: the cookie if it names a supported one, Indonesian otherwise. Public routes only |
+| `Perusahaan::text` / `list` / `records` | A pair resolved to the current language; a plain value passed through; a record's bilingual fields resolved one by one |
+| `Perusahaan::jamOperasional` | Two facts for two audiences rather than a pair: the Indonesian hours are printed on Indonesian documents whatever the site speaks |
+| `publik/partials/promo` | The carousel. Rendered only when the Owner has an active slide with an image; a scroll-snap row that swipes with no script, enhanced by a nonced script for arrows, dots and a six-second auto-advance that pauses under the pointer and never runs for `prefers-reduced-motion`. Images by `asset()`, not `Storage::url()` — the public disk builds its URL from `APP_URL`, and an image from a host that is not the page's own is not `'self'`: the CSP refused every slide the first time this ran |
+| `Pengaturan perusahaan › Promo di beranda` | Where slides come from: a repeater with title, one sentence, an image on the `public` disk (`deploy.sh` runs `storage:link`), an optional link, and a Tampilkan toggle. Stored as `promo_json`, overlaid at boot like the partners |
+| `publik/partials/persetujuan` | The cookie-and-location notice. Honest about there being nothing to opt out of — three technical cookies, and location only on a button press — so the one control is *Mengerti*. Acknowledged in localStorage, which is why it is not a fourth cookie |
+| `Cabang kami` on `/kontak` | Active regions with name, address, phone, and a JSON data block of the ones that have coordinates. The nearest-branch answer is a haversine in the visitor's browser: **their position never leaves the page**, which is what lets the privacy notice say so. `Permissions-Policy: geolocation=(self)` names the one capability the site uses |
+| `regions.lintang` / `bujur` | Two numbers the Owner copies from a map into the cabang form. Nullable: a branch without them is listed, never "nearest" |
 
 ### The panel design system
 

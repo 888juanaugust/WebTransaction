@@ -51,6 +51,14 @@ class PublicContentSecurityPolicy
             "frame-ancestors 'none'",
         ]));
 
+        /*
+         * The one browser capability the public site asks for, and only on
+         * its own origin: the contact page's nearest-branch button. Named
+         * here so the policy is a statement of what the site does, not a
+         * default it inherited. Everything else stays off.
+         */
+        $response->headers->set('Permissions-Policy', 'geolocation=(self), camera=(), microphone=(), payment=()');
+
         return $response;
     }
 }
