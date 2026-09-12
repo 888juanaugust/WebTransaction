@@ -286,6 +286,15 @@ CACHE_STORE=redis
 # types them into Pengaturan → Pengaturan perusahaan, audited, and the
 # faktur/portal/launch checklist read them the same second. The env keys
 # remain as fallbacks only.
+
+# Faktur pajak. The format and Coretax's four reference codes have no screen —
+# they are release-level decisions checked once with the accountant. §7b.
+PAJAK_FORMAT_EKSPOR=coretax_xml            # the Coretax bulk-import XML
+PAJAK_NEGARA_PEMBELI=IDN                   # ISO 3166-1 alpha-3. IND is India
+PAJAK_KODE_BARANG=000000                   # goods with no specific classification
+PAJAK_SATUAN_PCS=UM.0001                   # Coretax unit code for our PCS
+PAJAK_SATUAN_SET=UM.0001                   # …and for SET
+
 BACKUP_ENCRYPTION_KEY=…                    # php artisan backup:key
 BACKUP_DISK=…                              # NOT this machine — see docs/BACKUP.md
 SESSION_SECURE_COOKIE=true                 # the cookie never travels plain http
@@ -383,6 +392,63 @@ berita. That reference is what lets finance match a statement line to an
 invoice in the **Pembayaran belum cocok** queue instead of ringing the
 customer to ask what the money was for.
 
+---
+
+## 7b. The faktur pajak export (Coretax XML)
+
+There is no Coretax API. Finance makes a file on **Buku besar → Faktur pajak**,
+uploads it to Coretax by hand, and pastes the returned serials back in. The
+file is the Coretax bulk-import XML, written to the template the accountant
+provided. Deploy owns two things about it: **who the seller is**, and **the
+layout plus four reference codes that belong to Coretax rather than to us**.
+
+### The seller, on a screen
+
+`Pengaturan → Pengaturan perusahaan → Identitas penjual` — NPWP, nama wajib
+pajak, and **ID TKU penjual (NITKU)**. Owner only, audited, no SSH. The export
+refuses to write a file at all while the NPWP is empty, with that sentence on
+screen rather than a stack trace, because a faktur with no seller on it is not
+a file anybody should be uploading.
+
+ID TKU is 22 digits: the 16-digit NPWP plus a six-digit place-of-business code.
+**Leave it empty unless the fakturs are issued from a registered branch** — the
+system then derives the head office form, NPWP + `000000`, which is right for
+almost everybody. A 15-digit NPWP gains its leading zero automatically; that is
+the published conversion, not a guess.
+
+The same field exists per customer, on the customer form, for a buyer who
+purchases through their own registered branch. Empty means head office there
+too.
+
+### The layout and the four codes, in `.env`
+
+These have no screen on purpose: each one changes every future filing, and the
+right moment to set them is once, with the accountant, at deploy time.
+
+| Key | Ships as | What it is |
+|---|---|---|
+| `PAJAK_FORMAT_EKSPOR` | `coretax_xml` | The layout. `efaktur_csv` is the old desktop e-Faktur CSV and exists only so a filing made under it stays reproducible |
+| `PAJAK_NEGARA_PEMBELI` | `IDN` | Buyer country, ISO 3166-1 alpha-3. **The sample template read `IND`, which in that standard is India** — hence the default here, and hence this row |
+| `PAJAK_KODE_BARANG` | `000000` | The goods code Coretax accepts for goods with no specific classification |
+| `PAJAK_SATUAN_PCS` | `UM.0001` | Coretax's unit code for a line counted in PCS |
+| `PAJAK_SATUAN_SET` | `UM.0001` | …and for SET. The template carried `UM.0001` for a line of goods; whether SET has its own code is the accountant's answer, not ours |
+
+**The filing screen prints all four**, under the format banner, in the words
+the accountant will recognise. That is the check: open
+`/admin/akuntansi/faktur-pajak` as Finance and read the line beginning *Kode
+rujukan yang dipakai*. If it disagrees with the accountant, change `.env` and
+`php artisan optimize` — nothing else moves, because nothing else reads them.
+
+### What is deliberately not configurable
+
+The rate, the DPP factor and the transaction code (`PPN_*`) are law, not
+preference, and changing them changes what a customer was billed. Per-line DPP
+and PPN are snapshots taken when the price was locked: the writer copies them
+and never recomputes, so a filed month prints the same figures forever whatever
+the rate does afterwards. `CLAUDE.md` says to confirm with the accountant
+before touching any of it, and that still holds.
+
+---
 
 ## 8. Backups
 
@@ -437,11 +503,11 @@ Everything below is a launch blocker, and only the first two are code.
 - [ ] The two commercial values marked `>>> PUTUSKAN` in `config/legal.php`:
       the late-payment rate (default 2%/month) and the claim window (default 3
       days). Both are defaults nobody has agreed to yet
-- [ ] The Coretax reference codes in `config/pajak.php` (`coretax.*`) checked
-      with the accountant — buyer country `IDN`, goods code `000000`, and the
-      unit codes for PCS and SET (the sample template carried `UM.0001`). The
-      filing screen prints the values in use. `PAJAK_FORMAT_EKSPOR` is
-      `coretax_xml` unless the accountant asks for the old e-Faktur CSV
+- [ ] The four Coretax reference codes read back to the accountant from the
+      Faktur pajak screen and confirmed — buyer country, goods code, and the
+      unit code for PCS and for SET. **§7b** has the table and what each
+      default rests on; none of them can be verified from inside this
+      repository, which is why they are on a screen and on this list
 - [ ] Staff passwords changed from the seeded `password`
 - [ ] One real order taken end to end by staff, on the real system, before any
       buyer has a login — that is what build order phase 1 is for
@@ -488,6 +554,67 @@ come back shortly is honest; a stack trace on every URL is not.
 — followed by an informational `launch:check`. The first deploy uses
 `bash deploy/deploy.sh --first`, which builds, writes a fresh `.env`, and
 stops for you to fill it rather than migrating against an empty password.
+
+## 10a. Upgrading a box that is already live (2026-09 release)
+
+A routine `deploy/deploy.sh` carries all of this except the `.env` lines —
+those are the only hand work, and nothing breaks while they are missing:
+the defaults in `config/pajak.php` are the same values, so the export works
+before you touch `.env` and the file is honest about which codes it used.
+
+```bash
+cd /var/www/webtransaction
+bash deploy/deploy.sh                 # pull, build, migrate, storage:link, restart
+```
+
+What that migration adds is one nullable column, `companies.id_tku` — the
+buyer's place-of-business code for the XML. Additive, like every other, so
+there is nothing to plan around.
+
+Then, once, as `deploy`:
+
+```bash
+cd /var/www/webtransaction
+cat >> .env <<'ENV'
+
+# Faktur pajak — Coretax XML (docs/DEPLOY.md §7b)
+PAJAK_FORMAT_EKSPOR=coretax_xml
+PAJAK_NEGARA_PEMBELI=IDN
+PAJAK_KODE_BARANG=000000
+PAJAK_SATUAN_PCS=UM.0001
+PAJAK_SATUAN_SET=UM.0001
+ENV
+
+php artisan optimize                  # .env is only read when the cache is built
+```
+
+`php artisan optimize` is not optional here. Production caches the config, so
+an edited `.env` changes nothing at all until it is rebuilt — which looks
+exactly like the setting being ignored.
+
+Appending is safe on a box that has never carried these keys, which is every
+box before this release. Running it a second time is not: **if a key is
+already in the file, edit that line** rather than leaving two copies of it.
+
+Three things to check afterwards, in this order:
+
+1. **`/admin/akuntansi/faktur-pajak`, as Finance.** The banner says *File XML
+   impor Coretax*, and the line under it prints the four codes. If it still
+   says *Pastikan dulu formatnya*, the config cache did not get rebuilt.
+2. **`Pengaturan → Pengaturan perusahaan → Identitas penjual`, as the Owner.**
+   NPWP and nama filled; ID TKU only for a branch. Export refuses without the
+   NPWP.
+3. **Export one past month and open the file.** `<TIN>` is the company, 16
+   digits; `<RefDesc>` is our own faktur number on each `TaxInvoice`. Upload a
+   single-faktur month to Coretax first, not the backlog — a rejected batch
+   tells you less than a rejected one.
+
+Two more changes in this release need no deploy work, and are here so nobody
+goes looking for a setting: **Impor pelanggan** now takes the accounting
+package's own customer workbook (.xlsx or the same columns as CSV), and
+**Komisi & target** now opens for Finance as well as the Owner.
+
+---
 
 ## 10b. The pipeline: push to `production`, and the rest is mechanical
 

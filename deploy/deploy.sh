@@ -24,7 +24,8 @@ if $FIRST; then
         php artisan key:generate
         echo
         echo "Fresh .env written. Fill the production values (docs/DEPLOY.md §4)"
-        echo "— DB password, APP_URL, PERUSAHAAN_*, backups — then run:"
+        echo "— DB password, APP_URL, PERUSAHAAN_*, PAJAK_* (§7b), backups —"
+        echo "then run:"
         echo
         echo "  php artisan migrate --force && php artisan filament:assets"
         echo "  php artisan optimize && php artisan filament:optimize"

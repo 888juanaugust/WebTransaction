@@ -155,8 +155,14 @@ because the DPP is `11/12 × harga jual` (PMK 131/2024). In Coretax this is tran
 code 04, not 01.
 
 - Compute and store DPP and PPN **per line item**, never only on the order total.
-- Buyer company record holds `npwp`, `nama_wajib_pajak`, `alamat_pajak`.
-- Faktur output is a **CSV export matching Coretax import format**. No API integration.
+- Buyer company record holds `npwp`, `id_tku`, `nama_wajib_pajak`, `alamat_pajak`.
+- Faktur output is the **Coretax bulk-import XML** (`TaxInvoiceBulk`, 2026-09), written
+  to the accountant's template by `CoretaxXmlWriter`. No API integration — a person
+  uploads the file and pastes the serials back. The older e-Faktur CSV stays selectable
+  via `pajak.format_ekspor` so a filing made under it can be reproduced.
+- Coretax's own reference codes (buyer country, goods code, unit codes) live in
+  `config/pajak.php` under `coretax` and are printed on the filing screen. See
+  `docs/DEPLOY.md` §7b.
 - Store the returned NSFP back onto the invoice record.
 
 Confirm specifics with the accountant before changing any tax logic.
