@@ -26,8 +26,9 @@ use Illuminate\Support\Collection;
  * key: a sales seat who is also the cabang's supervisor holds two rates,
  * one per kind, and a supervisor's rate names the cabang it supervises.
  *
- * Owner only. What a colleague earns per rupiah collected is exactly the
- * kind of number the role matrix exists to fence.
+ * Finance and the Owner (`Role::canSetCommission`). What a colleague earns
+ * per rupiah collected is exactly the kind of number the role matrix exists
+ * to fence: the seats that are paid on it never set it.
  */
 class KomisiSetter
 {
@@ -41,7 +42,7 @@ class KomisiSetter
         JenisKomisi $jenis = JenisKomisi::Penjualan,
         ?int $regionId = null,
     ): CommissionRate {
-        $this->assertOwner($actor);
+        $this->assertMaySet($actor);
         $this->assertPenerima($seat, $jenis);
 
         if ($basisPoin < 0 || $basisPoin > 10_000) {
@@ -96,7 +97,7 @@ class KomisiSetter
         User $actor,
         JenisKomisi $jenis = JenisKomisi::Penjualan,
     ): SalesTarget {
-        $this->assertOwner($actor);
+        $this->assertMaySet($actor);
 
         // The seat kind's target is a *selling* target, and selling is what
         // the sales seat does; the other kinds are targeted on their own basis.
@@ -172,10 +173,10 @@ class KomisiSetter
             ]);
     }
 
-    private function assertOwner(User $actor): void
+    private function assertMaySet(User $actor): void
     {
-        if ($actor->role() !== Role::Owner) {
-            throw new DomainException('Hanya Pemilik yang mengatur tarif komisi dan target.');
+        if (! $actor->role()->canSetCommission()) {
+            throw new DomainException('Hanya Keuangan dan Pemilik yang mengatur tarif komisi dan target.');
         }
     }
 

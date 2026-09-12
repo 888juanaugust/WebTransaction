@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Access\Role;
 use App\Domain\Import\CompanyImporter;
 use App\Domain\Import\CompanyImportRow;
+use App\Domain\Import\CompanyWorkbookLayout;
 use App\Domain\Import\CsvTemplate;
 use App\Domain\Import\TemplateKind;
 use App\Filament\Pages\ImporPelanggan;
@@ -18,6 +19,9 @@ use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Tests\TestCase;
 
 /**
@@ -28,6 +32,10 @@ use Tests\TestCase;
  * can check it, so most of what follows is about the reading half: a bad row
  * is held back with a reason, the rest of the file still lands, and nothing
  * is written until somebody has seen what would be.
+ *
+ * Two layouts, one rule set: the canonical CSV the rules are written in, and
+ * the accounting package's customer workbook (the last section), which is
+ * translated into it. Whatever a row arrives in, it is judged the same way.
  */
 class CompanyImportTest extends TestCase
 {
@@ -341,22 +349,251 @@ class CompanyImportTest extends TestCase
             ->assertSee('JENIS_USAHA');
     }
 
-    public function test_the_example_file_downloads_from_the_screen(): void
+    public function test_the_example_workbook_downloads_from_the_screen_and_imports_as_it_is(): void
     {
+        /*
+         * The file a person downloads is the accounting package's own
+         * layout, and its own example rows must import — the whole point of
+         * generating the template from the list the parser recognises.
+         */
         $page = Livewire::actingAs($this->finance)->test(ImporPelanggan::class)->instance();
 
         $response = $page->unduhContoh();
 
         $this->assertStringContainsString(
-            'contoh-impor-pelanggan.csv',
+            'contoh-impor-pelanggan.xlsx',
             (string) $response->headers->get('content-disposition'),
         );
 
         ob_start();
         $response->sendContent();
-        $csv = (string) ob_get_clean();
+        $xlsx = (string) ob_get_clean();
 
-        $this->assertStringContainsString('KODE,NAMA,JENIS_USAHA', $csv);
+        $this->assertStringStartsWith("PK\x03\x04", $xlsx, 'An .xlsx, not a CSV renamed.');
+
+        $rows = app(CompanyImporter::class)->preview($xlsx, $this->finance);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame([], $rows[0]->alasan);
+        $this->assertSame('PLG-001', $rows[0]->kode);
+        $this->assertSame('bengkel', $rows[0]->nilai['jenis_usaha']);
+        $this->assertSame(50_000_000, $rows[0]->nilai['credit_limit_rupiah']);
+        $this->assertSame([], $rows[1]->alasan);
+
+        // And the heading row is the package's, verbatim.
+        $sheet = $this->sheetOf($xlsx);
+        $this->assertSame(CompanyWorkbookLayout::NAMA_SHEET, $sheet->getTitle());
+        $this->assertSame(CompanyWorkbookLayout::JUDUL, array_map('strval', $sheet->toArray()[0]));
+    }
+
+    // ------------------------------------------------- the accounting workbook
+
+    public function test_the_packages_own_template_is_recognised_and_its_sample_rows_are_held_with_reasons(): void
+    {
+        /*
+         * The template exactly as ACCURATE ships it, three sample customers
+         * with no ID and categories of its own (Umum, Member, Corporate).
+         * It must be read as that layout — not refused for lacking KODE —
+         * and each row held for the two things a person has to fill in,
+         * named in the template's own words.
+         */
+        $rows = app(CompanyImporter::class)->preview(
+            (string) file_get_contents(base_path('tests/Fixtures/accurate-template-impor-pelanggan.xlsx')),
+            $this->finance,
+        );
+
+        $this->assertCount(3, $rows);
+
+        foreach ($rows as $row) {
+            $this->assertTrue($row->tertahan());
+            $this->assertContains('ID Pelanggan kosong', $row->alasan);
+        }
+
+        $this->assertSame('Pelanggan Umum 01', $rows[0]->nama);
+        $this->assertContains("Kategori 'umum' tidak dikenal (bengkel, toko_sparepart, distributor)", $rows[0]->alasan);
+        $this->assertSame(2, $rows[0]->baris, 'Numbered as the person sees it in Excel.');
+    }
+
+    public function test_a_filled_workbook_lands_with_every_column_this_system_reads(): void
+    {
+        $tier = PriceTier::factory()->create(['nama' => 'Bengkel']);
+
+        $xlsx = $this->workbook([[
+            'Kategori' => 'Toko Sparepart',
+            'ID Pelanggan' => 'C-0007',
+            'Nama' => 'Toko Makmur Jaya',
+            'Kontak' => 'Ibu Sri',
+            'No. Telp. Bisnis' => '',
+            'Handphone' => '0812-9876-5432',
+            'Email' => 'makmur@contoh.id',
+            'Alamat Penagihan' => 'Jl. Tagih 1',
+            'Kota' => 'Sidoarjo',
+            'Alamat (Pengiriman)' => 'Jl. Pahlawan No. 5',
+            'Kota (Pengiriman)' => 'Sidoarjo',
+            'Provinsi (Pengiriman)' => 'Jawa Timur',
+            'Kode Pos (Pengiriman)' => '61200',
+            'Kategori Harga' => 'Bengkel',
+            'Syarat Pembayaran' => 'Net 30',
+            'Tipe Wajib Pajak' => 'NPWP',
+            'Nomor Wajib Pajak' => '01.234.567.8-901.000',
+            'Nama Wajib Pajak' => 'CV Makmur Jaya',
+            'ID TKU' => '0012345678901000000123',
+            'Alamat (Pajak)' => 'Jl. Pajak 9',
+            'Kota (Pajak)' => 'Sidoarjo',
+            'Kode Pos (Pajak)' => '61200',
+            'Jumlah Limit Piutang' => '75000000',
+            'Catatan' => 'Langganan lama',
+            'Non Aktif' => 'TIDAK',
+        ]]);
+
+        $hasil = app(CompanyImporter::class)->import($xlsx, $this->finance);
+        $this->assertSame(['baru' => 1, 'diperbarui' => 0, 'tertahan' => 0], $hasil);
+
+        $c = Company::query()->where('kode', 'C-0007')->firstOrFail();
+        $this->assertSame('Toko Makmur Jaya', $c->nama);
+        $this->assertSame('toko_sparepart', $c->jenis_usaha);
+        $this->assertSame('Ibu Sri', $c->nama_kontak);
+        $this->assertSame('0812-9876-5432', $c->telepon, 'Handphone when the business line is blank.');
+        $this->assertSame('makmur@contoh.id', $c->email);
+        $this->assertSame('Sidoarjo', $c->kota);
+        $this->assertSame('Jl. Pahlawan No. 5, Sidoarjo, Jawa Timur, 61200', $c->alamat_kirim);
+        $this->assertSame('01.234.567.8-901.000', $c->npwp);
+        $this->assertSame('CV Makmur Jaya', $c->nama_wajib_pajak);
+        $this->assertSame('0012345678901000000123', $c->id_tku);
+        $this->assertSame('Jl. Pajak 9, Sidoarjo, 61200', $c->alamat_pajak);
+        $this->assertSame($tier->id, $c->price_tier_id);
+        $this->assertSame(30, $c->payment_terms_days, '"Net 30" is thirty days.');
+        $this->assertSame(75_000_000, $c->credit_limit_rupiah);
+        $this->assertSame('Langganan lama', $c->catatan);
+        $this->assertSame(Company::STATUS_PENDING, $c->status, 'New, and nobody approved it yet.');
+    }
+
+    public function test_the_workbooks_edges_are_noted_or_refused_rather_than_guessed(): void
+    {
+        $xlsx = $this->workbook([
+            [
+                'Kategori' => 'Bengkel', 'ID Pelanggan' => 'C-1', 'Nama' => 'Nonaktif',
+                'Non Aktif' => 'YA', 'Saldo awal' => '12500000', 'Nilai Umur Piutang (hari)' => '45',
+            ],
+            [
+                'Kategori' => 'Bengkel', 'ID Pelanggan' => 'C-2', 'Nama' => 'Pakai NIK',
+                'Tipe Wajib Pajak' => 'NIK', 'Nomor Wajib Pajak' => '3515011234560001',
+            ],
+            [
+                'Kategori' => 'Bengkel', 'ID Pelanggan' => 'C-3', 'Nama' => 'TKU salah',
+                'Nomor Wajib Pajak' => '01.234.567.8-901.000', 'ID TKU' => '12345',
+            ],
+        ]);
+
+        $rows = app(CompanyImporter::class)->preview($xlsx, $this->finance);
+
+        // Non Aktif → suspended; an opening balance is not a customer attribute;
+        // the aging days stand in for a blank payment term.
+        $this->assertFalse($rows[0]->tertahan());
+        $this->assertSame(Company::STATUS_SUSPENDED, $rows[0]->nilai['status']);
+        $this->assertSame(45, $rows[0]->nilai['payment_terms_days']);
+        $this->assertStringContainsString('Saldo awal 12500000 diabaikan', implode(' ', $rows[0]->catatan));
+
+        // A NIK is not an NPWP; the number is not silently stored as one.
+        $this->assertFalse($rows[1]->tertahan());
+        $this->assertSame('', $rows[1]->nilai['npwp']);
+        $this->assertStringContainsString('Tipe Wajib Pajak NIK', implode(' ', $rows[1]->catatan));
+
+        // An ID TKU is 22 digits or it is a typo.
+        $this->assertTrue($rows[2]->tertahan());
+        $this->assertStringContainsString("ID TKU '12345' bukan 22 digit", $rows[2]->alasan[0]);
+    }
+
+    public function test_the_workbook_layout_saved_as_csv_reads_the_same(): void
+    {
+        // Somebody will save the sheet as CSV. Same headings, same result.
+        $csv = implode("\n", [
+            'Kategori;ID Pelanggan;Nama;Handphone;Jumlah Limit Piutang',
+            'Distributor;D-1;PT Distribusi Utama;0811;100000000',
+        ])."\n";
+
+        $rows = app(CompanyImporter::class)->preview($csv, $this->finance);
+
+        $this->assertFalse($rows[0]->tertahan());
+        $this->assertSame('distributor', $rows[0]->nilai['jenis_usaha']);
+        $this->assertSame(100_000_000, $rows[0]->nilai['credit_limit_rupiah']);
+    }
+
+    public function test_the_credit_guard_names_the_workbooks_own_column(): void
+    {
+        $xlsx = $this->workbook([[
+            'Kategori' => 'Bengkel', 'ID Pelanggan' => 'C-1', 'Nama' => 'Toko', 'Jumlah Limit Piutang' => '5000000',
+        ]]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageMatches('/Jumlah Limit Piutang/');
+
+        app(CompanyImporter::class)->preview($xlsx, $this->marketing);
+    }
+
+    public function test_a_blank_status_on_a_known_customer_leaves_their_status_alone(): void
+    {
+        /*
+         * The update file is last month's list with a phone number fixed.
+         * A blank status there is not a decision to send an approved
+         * customer back to the approval queue.
+         */
+        Company::factory()->create(['kode' => 'PLG-1', 'status' => Company::STATUS_ACTIVE]);
+
+        $csv = "KODE,NAMA,JENIS_USAHA,TELEPON\nPLG-1,Toko A,bengkel,0819\n";
+
+        $row = app(CompanyImporter::class)->preview($csv, $this->finance)[0];
+        app(CompanyImporter::class)->import($csv, $this->finance);
+
+        $this->assertSame(Company::STATUS_ACTIVE, Company::query()->first()->status);
+        $this->assertStringContainsString('status lama dipertahankan', implode(' ', $row->catatan));
+    }
+
+    /**
+     * A workbook in the package's layout with the given cells, every other
+     * column blank — as ACCURATE would export it.
+     *
+     * @param  list<array<string, string>>  $rows  heading → value
+     */
+    private function workbook(array $rows): string
+    {
+        $data = [CompanyWorkbookLayout::JUDUL];
+
+        foreach ($rows as $row) {
+            $line = array_fill(0, count(CompanyWorkbookLayout::JUDUL), '');
+
+            foreach ($row as $judul => $nilai) {
+                $i = array_search($judul, CompanyWorkbookLayout::JUDUL, true);
+                $this->assertNotFalse($i, "Test names a heading the template does not have: {$judul}");
+                $line[$i] = $nilai;
+            }
+
+            $data[] = $line;
+        }
+
+        $workbook = new Spreadsheet;
+        $workbook->getActiveSheet()->setTitle(CompanyWorkbookLayout::NAMA_SHEET)->fromArray($data, null, 'A1', true);
+
+        $path = tempnam(sys_get_temp_dir(), 'uji-');
+        IOFactory::createWriter($workbook, 'Xlsx')->save($path);
+
+        try {
+            return (string) file_get_contents($path);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    private function sheetOf(string $xlsx): Worksheet
+    {
+        $path = tempnam(sys_get_temp_dir(), 'uji-');
+        file_put_contents($path, $xlsx);
+
+        try {
+            return IOFactory::load($path)->getSheet(0);
+        } finally {
+            @unlink($path);
+        }
     }
 
     public function test_previewing_writes_nothing(): void

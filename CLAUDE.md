@@ -125,7 +125,7 @@ the team in charge of them.
 | Marketing | **Global — reads every region, no pin.** Approve/reject pending orders, watch their customers' debt, file pelunasan claims, erase draft/submitted orders | Set prices, confirm payment, see cost |
 | Inventori | Stock work, catalogue, price list, stock statistics (incl. cost), **verify returs** (their posting is the goods-are-back confirmation) | See customer credit data |
 | Gudang (storage) | **Bound to exactly one warehouse, one active account per warehouse.** Its warehouse's shipping queue — approved orders land there for packing — pick list, surat jalan, ship, complete | Anything outside its own warehouse; cost; credit; catalogue; orders |
-| Finance | Confirm payments, verify pelunasan-piutang and biaya-ekspedisi claims, manage credit + AR, books (incl. entering other expenses) | Edit prices, issue credit notes |
+| Finance | Confirm payments, verify pelunasan-piutang and biaya-ekspedisi claims, manage credit + AR, books (incl. entering other expenses), **set commission rates and targets** (with the Owner), export faktur pajak | Edit prices, issue credit notes |
 | Owner (admin) | Everything + audit log, regions, staff, teams | Verify a claim they themselves filed |
 
 One sales + one marketing form the **team** in charge of a customer

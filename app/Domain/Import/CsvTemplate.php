@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Import;
 
 use App\Domain\PriceList\CanonicalColumns;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 /**
  * The example file, generated from the format itself.
@@ -79,6 +81,74 @@ class CsvTemplate
         } finally {
             fclose($handle);
         }
+    }
+
+    /**
+     * The customer workbook, as the accounting package lays it out.
+     *
+     * Two sheets, like the package's own template: the data sheet with the
+     * ninety-four headings and two example customers, and a legend that
+     * says which of those headings this system reads and what each becomes.
+     * The heading row is `CompanyWorkbookLayout::JUDUL` itself, so the file
+     * a person downloads is the file the importer recognises.
+     */
+    public function toXlsx(TemplateKind $kind): string
+    {
+        if ($kind !== TemplateKind::Pelanggan) {
+            throw new \InvalidArgumentException('Hanya template pelanggan yang berbentuk workbook.');
+        }
+
+        $workbook = new Spreadsheet;
+
+        $data = $workbook->getActiveSheet();
+        $data->setTitle(CompanyWorkbookLayout::NAMA_SHEET);
+        $data->fromArray([CompanyWorkbookLayout::JUDUL, ...CompanyWorkbookLayout::contoh()], null, 'A1', true);
+        $data->getStyle('1:1')->getFont()->setBold(true);
+        $data->freezePane('A2');
+
+        $legenda = $workbook->createSheet();
+        $legenda->setTitle('Penjelasan Kolom');
+        $dibaca = CompanyWorkbookLayout::keterangan();
+        $rows = [
+            ['Hanya sheet pertama yang diimpor. Kolom yang tidak disebut di bawah ini diterima dan diabaikan.'],
+            [],
+            ['Nama Kolom', 'Dibaca?', 'Keterangan'],
+        ];
+
+        foreach (CompanyWorkbookLayout::JUDUL as $judul) {
+            $rows[] = [
+                $judul,
+                isset($dibaca[trim($judul)]) ? 'Ya' : 'Tidak',
+                $dibaca[trim($judul)] ?? '',
+            ];
+        }
+
+        $legenda->fromArray($rows, null, 'A1', true);
+        $legenda->getStyle('3:3')->getFont()->setBold(true);
+        $legenda->getColumnDimension('A')->setWidth(42);
+        $legenda->getColumnDimension('B')->setWidth(10);
+        $legenda->getColumnDimension('C')->setWidth(110);
+
+        $workbook->setActiveSheetIndex(0);
+
+        $path = tempnam(sys_get_temp_dir(), 'contoh-pelanggan-');
+
+        if ($path === false) {
+            throw new \RuntimeException('Tidak bisa menyiapkan template.');
+        }
+
+        try {
+            IOFactory::createWriter($workbook, 'Xlsx')->save($path);
+
+            return (string) file_get_contents($path);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function namaBerkasXlsx(TemplateKind $kind): string
+    {
+        return str_replace('.csv', '.xlsx', $this->namaBerkas($kind));
     }
 
     public function namaBerkas(TemplateKind $kind): string

@@ -425,8 +425,10 @@ Everything below is a launch blocker, and only the first two are code.
 - [ ] Real company details replacing the placeholders in `config/perusahaan.php`
       — the profile text, and above all the **partners**, which are invented
 - [ ] `PERUSAHAAN_NPWP`, `PERUSAHAAN_NIB`, `PAJAK_PENJUAL_NPWP` and
-      `PAJAK_PENJUAL_NAMA` set in `.env`. Every one is empty by default, and
-      the faktur pajak export needs the last two before a single filing
+      `PAJAK_PENJUAL_NAMA` set in `.env` (or from Pengaturan perusahaan). Every
+      one is empty by default, and the faktur pajak export needs the last two
+      before a single filing. `PAJAK_PENJUAL_ID_TKU` only if the fakturs are
+      issued from a registered branch rather than the head office
 - [ ] A real price list imported and published — `php artisan migrate --seed`
       deliberately ships no prices, because a seeded price is a price nobody
       approved
@@ -435,8 +437,11 @@ Everything below is a launch blocker, and only the first two are code.
 - [ ] The two commercial values marked `>>> PUTUSKAN` in `config/legal.php`:
       the late-payment rate (default 2%/month) and the claim window (default 3
       days). Both are defaults nobody has agreed to yet
-- [ ] `PAJAK_FORMAT_EKSPOR` confirmed with the accountant — CSV or Coretax XML.
-      Only the serialisation is in doubt, but it is in doubt
+- [ ] The Coretax reference codes in `config/pajak.php` (`coretax.*`) checked
+      with the accountant — buyer country `IDN`, goods code `000000`, and the
+      unit codes for PCS and SET (the sample template carried `UM.0001`). The
+      filing screen prints the values in use. `PAJAK_FORMAT_EKSPOR` is
+      `coretax_xml` unless the accountant asks for the old e-Faktur CSV
 - [ ] Staff passwords changed from the seeded `password`
 - [ ] One real order taken end to end by staff, on the real system, before any
       buyer has a login — that is what build order phase 1 is for

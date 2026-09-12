@@ -35,6 +35,8 @@ final class FakturLine
         public readonly int $diskonRupiah,
         public readonly int $dppRupiah,
         public readonly int $ppnRupiah,
+        /** The base unit the quantity is counted in — PCS or SET. */
+        public readonly string $satuan = 'PCS',
     ) {}
 
     public static function fromOrderLine(OrderLine $line): self
@@ -68,6 +70,9 @@ final class FakturLine
             diskonRupiah: max(0, $gross - $net),
             dppRupiah: (int) $line->dpp_rupiah,
             ppnRupiah: (int) $line->ppn_rupiah,
+            // The unit was snapshotted with the quantity; the product is only
+            // consulted for lines written before the snapshot column existed.
+            satuan: strtoupper((string) ($line->satuan_dasar_snapshot ?: ($line->product?->satuan_dasar ?? 'PCS'))),
         );
     }
 

@@ -100,6 +100,7 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
+                'canSetCommission' => false,
             ]],
             /*
              * Inventori — the reorganisation's widened warehouse role. Stock
@@ -150,6 +151,7 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => false,
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
+                'canSetCommission' => false,
             ]],
             /*
              * Marketing — the approval seat. Every pending transaction waits
@@ -192,6 +194,7 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => true,
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
+                'canSetCommission' => false,
             ]],
             'finance' => [Role::Finance, [
                 'canSeePrices' => true,
@@ -242,6 +245,9 @@ class RoleMatrixTest extends TestCase
                 // half. Finance holding it would undo the payment/price rule
                 // in the time it takes to load one page.
                 'canManageStaff' => false,
+                // The desk that pays the commission out knows the percentage
+                // (2026-09). Finance is on no commission of any kind.
+                'canSetCommission' => true,
             ]],
             'owner' => [Role::Owner, [
                 'canSeePrices' => true,
@@ -275,6 +281,7 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => true,
                 'canViewAuditLog' => true,
                 'canManageStaff' => true,
+                'canSetCommission' => true,
             ]],
 
             /*
@@ -342,6 +349,7 @@ class RoleMatrixTest extends TestCase
                 'canSeeReports' => false,
                 'canViewAuditLog' => false,
                 'canManageStaff' => false,
+                'canSetCommission' => false,
             ]],
         ];
     }

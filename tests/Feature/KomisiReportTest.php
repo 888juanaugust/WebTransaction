@@ -154,15 +154,16 @@ class KomisiReportTest extends TestCase
         $this->assertSame(0, (int) $kosong['basis']);
     }
 
-    public function test_only_the_owner_sets_rates_and_only_finance_reads_the_report(): void
+    public function test_only_finance_and_the_owner_set_rates_and_read_the_report(): void
     {
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessageMatches('/Pemilik/');
+        $this->expectExceptionMessageMatches('/Keuangan dan Pemilik/');
 
         try {
+            // A marketing seat is paid on it, so it never sets it.
             app(KomisiSetter::class)->setRate(
                 $this->sales, 500, Carbon::parse('2026-09-01'),
-                User::factory()->finance()->create(),
+                User::factory()->marketing()->create(),
             );
         } finally {
             $this->actingAs(User::factory()->finance()->create(), 'web')
@@ -172,9 +173,12 @@ class KomisiReportTest extends TestCase
             $this->actingAs($this->sales, 'web')
                 ->get('/admin/laporan/komisi')->assertForbidden();
 
+            // Finance and the Owner hold the key to the rates; nobody else.
             $this->actingAs($this->owner, 'web')
                 ->get('/admin/komisi-target')->assertOk();
             $this->actingAs(User::factory()->finance()->create(), 'web')
+                ->get('/admin/komisi-target')->assertOk();
+            $this->actingAs(User::factory()->marketing()->create(), 'web')
                 ->get('/admin/komisi-target')->assertForbidden();
         }
     }

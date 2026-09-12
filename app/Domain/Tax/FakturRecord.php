@@ -39,11 +39,13 @@ final class FakturRecord
         public readonly int $dppRupiah,
         public readonly int $ppnRupiah,
         public readonly array $lines,
+        public readonly string $emailPembeli = '',
+        public readonly string $idTkuPembeli = '',
     ) {}
 
     public static function fromInvoice(Invoice $invoice): self
     {
-        $invoice->loadMissing('order.lines');
+        $invoice->loadMissing(['order.lines', 'company']);
 
         $issued = Carbon::parse($invoice->issued_on);
 
@@ -69,6 +71,16 @@ final class FakturRecord
             dppRupiah: (int) $invoice->dpp_rupiah,
             ppnRupiah: (int) $invoice->ppn_rupiah,
             lines: $lines,
+            /*
+             * Two things the Coretax XML wants that the printed faktur never
+             * carried, so they were never snapshotted: the buyer's email and
+             * their ID TKU. Read from the customer record at export time — a
+             * corrected email should reach the tax office, and the ID TKU is
+             * the head office of the *snapshotted* NPWP unless the customer
+             * has told us their branch.
+             */
+            emailPembeli: (string) ($invoice->company?->email ?? ''),
+            idTkuPembeli: Npwp::idTku((string) $invoice->npwp, $invoice->company?->id_tku),
         );
     }
 

@@ -24,8 +24,8 @@ use Illuminate\Support\Collection;
 use Throwable;
 
 /**
- * The Owner's levers: what each seller earns per rupiah collected, and what
- * each sales seat is expected to bring in this month.
+ * Finance's and the Owner's levers: what each seller earns per rupiah
+ * collected, and what each sales seat is expected to bring in this month.
  *
  * Rates are effective-dated and append-only — the screen only ever adds a
  * new "from this date" row, so past months keep their arithmetic. Targets
@@ -60,7 +60,7 @@ class KomisiTarget extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role() === Role::Owner;
+        return auth()->user()?->role()->canSetCommission() ?? false;
     }
 
     /**

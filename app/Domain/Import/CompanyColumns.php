@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Import;
 
 /**
- * The customer import format.
+ * The customer import format — the canonical one.
+ *
+ * Since 2026-09 the file people actually upload is the accounting package's
+ * workbook (see CompanyWorkbookLayout), which is translated into these
+ * columns before any rule runs. This list is still the vocabulary the
+ * importer thinks in, and a CSV in it still imports.
  *
  * Same discipline as the price list's canonical columns: position is what
  * matters, the header is read for reassurance rather than for meaning, and
@@ -30,6 +35,7 @@ final class CompanyColumns
         'KOTA',
         'ALAMAT_KIRIM',
         'NPWP',
+        'ID_TKU',
         'NAMA_WAJIB_PAJAK',
         'ALAMAT_PAJAK',
         'TIER',
@@ -58,6 +64,7 @@ final class CompanyColumns
             'KOTA' => 'Kota.',
             'ALAMAT_KIRIM' => 'Alamat pengiriman barang.',
             'NPWP' => 'Kosongkan bila belum ada. Tanpa NPWP, faktur pajaknya tidak bisa diekspor.',
+            'ID_TKU' => '22 digit NITKU bila pelanggan membeli lewat cabang terdaftar. Kosong = kantor pusat (NPWP + 000000).',
             'NAMA_WAJIB_PAJAK' => 'Nama sesuai NPWP, bila berbeda dari nama usaha.',
             'ALAMAT_PAJAK' => 'Alamat sesuai NPWP.',
             'TIER' => 'Nama tier harga persis seperti di layar Tier harga, mis. Bengkel. Dikosongkan di contoh ini karena tier tiap perusahaan berbeda; kosong berarti harga dasar.',
@@ -90,6 +97,7 @@ final class CompanyColumns
                 'Surabaya',
                 'Jl. Raya Darmo No. 12, Surabaya',
                 '01.234.567.8-901.000',
+                '',
                 'CV Jaya Motor',
                 'Jl. Raya Darmo No. 12, Surabaya',
                 '',
@@ -107,6 +115,7 @@ final class CompanyColumns
                 '',
                 'Sidoarjo',
                 'Jl. Pahlawan No. 5, Sidoarjo',
+                '',
                 '',
                 '',
                 '',

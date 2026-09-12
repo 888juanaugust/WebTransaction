@@ -109,7 +109,7 @@ final class DataInventory
                 'kategori' => 'identitas_pelanggan',
                 'personal' => [
                     'nama', 'nama_kontak', 'telepon', 'email',
-                    'npwp', 'nama_wajib_pajak', 'alamat_pajak', 'alamat_kirim', 'kota',
+                    'npwp', 'id_tku', 'nama_wajib_pajak', 'alamat_pajak', 'alamat_kirim', 'kota',
                     'catatan',
                 ],
                 'bukan' => [

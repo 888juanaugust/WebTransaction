@@ -13,27 +13,51 @@
     $preview = $this->getPreview();
     $exports = $this->getExports();
     $format = config('pajak.format_ekspor');
+    $coretax = config('pajak.coretax');
 @endphp
 
 <x-filament-panels::page>
     {{--
-        The format question, on the screen rather than only in the code. The
-        person filing is the one who can ask the accountant, and they will not
-        read FakturWriter.
+        The format and the reference codes, on the screen rather than only in
+        the code. The person filing is the one who can ask the accountant, and
+        they will not read CoretaxXmlWriter or config/pajak.php.
     --}}
-    <div class="rounded-xl border border-warning-300 bg-warning-50 p-4
-                dark:border-warning-500/30 dark:bg-warning-500/10">
-        <h2 class="text-sm font-semibold text-warning-800 dark:text-warning-300">
-            Pastikan dulu formatnya
-        </h2>
-        <p class="mt-1 text-sm text-warning-800/90 dark:text-warning-300/90">
-            File dibuat dalam format <strong class="font-mono">{{ $format }}</strong> —
-            CSV impor e-Faktur. Coretax kemungkinan meminta XML. Sebelum pelaporan
-            pertama, cocokkan file ini dengan template resmi bersama akuntan.
-            Kalau ternyata XML, yang berubah hanya penulis filenya; pemetaan datanya
-            tetap.
-        </p>
-    </div>
+    @if ($format === 'coretax_xml')
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                File XML impor Coretax
+            </h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                Dibuat dalam format <strong class="font-mono">{{ $format }}</strong> — satu
+                <span class="font-mono">TaxInvoice</span> per faktur, satu
+                <span class="font-mono">GoodService</span> per baris, mengikuti template dari
+                akuntan. Nomor faktur kita ada di <span class="font-mono">RefDesc</span>; nomor
+                seri diisi Coretax dan dicatat kembali di sini.
+            </p>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Kode rujukan yang dipakai — periksa bersama akuntan sebelum pelaporan pertama:
+                negara pembeli <span class="font-mono">{{ $coretax['negara_pembeli'] }}</span>,
+                kode barang <span class="font-mono">{{ $coretax['kode_barang'] }}</span>,
+                satuan PCS <span class="font-mono">{{ $coretax['satuan']['PCS'] ?? '—' }}</span>,
+                satuan SET <span class="font-mono">{{ $coretax['satuan']['SET'] ?? '—' }}</span>.
+                Diubah lewat <span class="font-mono">.env</span> (PAJAK_NEGARA_PEMBELI,
+                PAJAK_KODE_BARANG, PAJAK_SATUAN_PCS, PAJAK_SATUAN_SET).
+            </p>
+        </div>
+    @else
+        <div class="rounded-xl border border-warning-300 bg-warning-50 p-4
+                    dark:border-warning-500/30 dark:bg-warning-500/10">
+            <h2 class="text-sm font-semibold text-warning-800 dark:text-warning-300">
+                Pastikan dulu formatnya
+            </h2>
+            <p class="mt-1 text-sm text-warning-800/90 dark:text-warning-300/90">
+                File dibuat dalam format <strong class="font-mono">{{ $format }}</strong> —
+                CSV impor e-Faktur lama. Coretax menerima XML; ganti
+                <span class="font-mono">PAJAK_FORMAT_EKSPOR</span> ke
+                <span class="font-mono">coretax_xml</span> kecuali akuntan meminta CSV.
+            </p>
+        </div>
+    @endif
 
     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-gray-900">
         <label for="periode" class="text-sm font-medium text-gray-700 dark:text-gray-200">

@@ -258,7 +258,7 @@ class KomisiJenisTest extends TestCase
         }
     }
 
-    public function test_the_owner_receives_no_commission_and_only_the_owner_sets_it(): void
+    public function test_the_owner_receives_no_commission_and_only_finance_or_the_owner_sets_it(): void
     {
         $setter = app(KomisiSetter::class);
 
@@ -271,11 +271,20 @@ class KomisiJenisTest extends TestCase
 
         $manajer = User::factory()->marketing()->create();
 
-        try {
-            $setter->setRate($manajer, 10, Carbon::parse('2026-01-01'), $this->finance, JenisKomisi::Manajer);
-            $this->fail('finance set a rate');
-        } catch (DomainException $e) {
-            $this->assertStringContainsString('Hanya Pemilik', $e->getMessage());
+        // Finance holds the key too (2026-09): the desk that pays the
+        // commission out is the desk that knows the percentage.
+        $setter->setRate($manajer, 10, Carbon::parse('2026-01-01'), $this->finance, JenisKomisi::Manajer);
+        $setter->setTarget(User::factory()->sales()->create(), 2026, 9, 1_000_000, $this->finance);
+        $this->assertSame(10, $setter->currentRate($manajer, JenisKomisi::Manajer));
+
+        // The seats that are paid on it never set it.
+        foreach ([User::factory()->sales()->create(), User::factory()->marketing()->create()] as $seat) {
+            try {
+                $setter->setRate($manajer, 20, Carbon::parse('2026-02-01'), $seat, JenisKomisi::Manajer);
+                $this->fail($seat->role()->label().' set a rate');
+            } catch (DomainException $e) {
+                $this->assertStringContainsString('Hanya Keuangan dan Pemilik', $e->getMessage());
+            }
         }
     }
 

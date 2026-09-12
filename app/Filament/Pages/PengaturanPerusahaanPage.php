@@ -105,6 +105,11 @@ class PengaturanPerusahaanPage extends Page
                     ->schema([
                         TextInput::make('pajak_penjual_npwp')->label('NPWP wajib pajak')->maxLength(30),
                         TextInput::make('pajak_penjual_nama')->label('Nama wajib pajak')->maxLength(120),
+                        TextInput::make('pajak_penjual_id_tku')
+                            ->label('ID TKU penjual (NITKU)')
+                            ->maxLength(22)
+                            ->helperText('22 digit di file XML Coretax. Kosongkan bila kantor pusat — '
+                                .'sistem memakai NPWP 16 digit + 000000.'),
                     ]),
 
                 Section::make('Nilai komersial — syarat penjualan')

@@ -65,6 +65,7 @@ class PengaturanPerusahaan
         // The seller on every faktur pajak export.
         'pajak_penjual_npwp' => 'pajak.penjual.npwp',
         'pajak_penjual_nama' => 'pajak.penjual.nama',
+        'pajak_penjual_id_tku' => 'pajak.penjual.id_tku',
 
         // The two >>> PUTUSKAN commercial values in the terms of sale.
         'legal_denda_persen' => 'legal.syarat.denda_persen_per_bulan',

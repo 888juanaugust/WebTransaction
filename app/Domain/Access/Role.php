@@ -473,4 +473,20 @@ enum Role: string
     {
         return $this === self::Owner;
     }
+
+    /**
+     * Set what a colleague earns per rupiah collected, and the monthly
+     * target it is measured against.
+     *
+     * Finance and the Owner (2026-09; it was the Owner alone). The rate is a
+     * cost of sales that Finance books and pays out, so the desk that pays
+     * the commission is the desk that knows the percentage — and every
+     * change is an audited, effective-dated row, so nothing here is quiet.
+     * Sales and Marketing, who are paid on it, never touch it; Finance is
+     * not on a commission of any kind, which is what keeps the line clean.
+     */
+    public function canSetCommission(): bool
+    {
+        return in_array($this, [self::Finance, self::Owner], true);
+    }
 }

@@ -8,6 +8,7 @@ use App\Domain\Access\Role;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\OrderStatus;
 use App\Domain\Purchasing\GoodsReceiptPoster;
+use App\Domain\Tax\CoretaxXmlWriter;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturBlocker;
 use App\Domain\Tax\FakturExporter;
@@ -41,11 +42,11 @@ use Tests\TestCase;
  * middle — a faktur silently left out, or a serial landing on the wrong
  * invoice — so that is what most of these tests are about.
  *
- * **The file format is not settled.** CLAUDE.md specifies the e-Faktur CSV;
- * Coretax may want XML. These tests pin the *mapping* — which figure goes in
- * which field, and where it came from — which is the half that does not change
- * with the answer. The layout assertions are deliberately shallow for the same
- * reason.
+ * Two layouts: the Coretax XML (the default since 2026-09, written to the
+ * accountant's template and held up against it at the end of this file) and
+ * the older e-Faktur CSV, kept so a past filing stays reproducible. Most of
+ * these tests pin the *mapping* — which figure goes in which field, and
+ * where it came from — which is the half both layouts share.
  */
 class FakturExportTest extends TestCase
 {
@@ -64,6 +65,14 @@ class FakturExportTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
+
+        /*
+         * The layout sections below are written against the e-Faktur CSV,
+         * which is no longer the default (the Coretax XML is — see the XML
+         * section at the end). Pinned here so the CSV writer stays covered
+         * for as long as a past filing can be reproduced in it.
+         */
+        config(['pajak.format_ekspor' => 'efaktur_csv']);
 
         $this->gudang = Warehouse::factory()->create();
         $this->finance = User::factory()->role(Role::Finance)->create();
@@ -666,6 +675,185 @@ class FakturExportTest extends TestCase
     }
 
     // --- helpers ------------------------------------------------------------
+
+    // ---------------------------------------------------------- the Coretax XML
+
+    public function test_the_coretax_xml_is_the_default_layout(): void
+    {
+        // What a fresh install writes, with no PAJAK_FORMAT_EKSPOR in .env.
+        $config = require base_path('config/pajak.php');
+
+        $this->assertSame('coretax_xml', $config['format_ekspor']);
+        $this->assertSame('xml', (new CoretaxXmlWriter)->extension());
+    }
+
+    public function test_the_xml_follows_the_accountants_template_element_for_element(): void
+    {
+        /*
+         * The template the accountant handed over, held up against what we
+         * write: same root, same attributes, and the children of TaxInvoice
+         * and of GoodService in the same order. A renamed or reordered
+         * element is an upload rejected near a deadline, so this is a diff
+         * of the template and the output, not a reading of the writer.
+         */
+        $this->coretax();
+        $this->invoiceFor(10);
+
+        $template = simplexml_load_file(base_path('tests/Fixtures/coretax-tax-invoice-template.xml'));
+        $output = simplexml_load_string($this->exportedContents());
+
+        $this->assertNotFalse($output, 'The file is well-formed XML.');
+        $this->assertSame($template->getName(), $output->getName());
+        $this->assertSame(
+            (string) $template->attributes('xsi', true)->noNamespaceSchemaLocation,
+            (string) $output->attributes('xsi', true)->noNamespaceSchemaLocation,
+        );
+        $this->assertSame(['TIN', 'ListOfTaxInvoice'], $this->childNames($template), 'Template sanity.');
+        $this->assertSame($this->childNames($template), $this->childNames($output));
+
+        $this->assertSame(
+            $this->childNames($template->ListOfTaxInvoice->TaxInvoice),
+            $this->childNames($output->ListOfTaxInvoice->TaxInvoice),
+        );
+        $this->assertSame(
+            $this->childNames($template->ListOfTaxInvoice->TaxInvoice->ListOfGoodService->GoodService),
+            $this->childNames($output->ListOfTaxInvoice->TaxInvoice->ListOfGoodService->GoodService),
+        );
+
+        // And the lists the writer is built from are that template, as data.
+        $this->assertSame(
+            $this->childNames($template->ListOfTaxInvoice->TaxInvoice),
+            CoretaxXmlWriter::ELEMEN_FAKTUR,
+        );
+        $this->assertSame(
+            $this->childNames($template->ListOfTaxInvoice->TaxInvoice->ListOfGoodService->GoodService),
+            CoretaxXmlWriter::ELEMEN_BARIS,
+        );
+    }
+
+    public function test_the_xml_carries_the_figures_and_identifiers_coretax_reads(): void
+    {
+        $this->coretax();
+        $invoice = $this->invoiceFor(10, npwp: '01.234.567.8-901.000');
+
+        $export = app(FakturExporter::class)->export((int) now()->year, (int) now()->month, $this->finance);
+        $xml = simplexml_load_string(app(FakturExporter::class)->contents($export) ?? '');
+        $faktur = $xml->ListOfTaxInvoice->TaxInvoice;
+        $baris = $faktur->ListOfGoodService->GoodService;
+
+        $this->assertSame('coretax_xml', $export->format);
+        $this->assertStringEndsWith('.xml', (string) $export->file_path);
+
+        // The seller: sixteen digits, and the head-office ID TKU derived from them.
+        $this->assertSame('0987654321012345', (string) $xml->TIN);
+        $this->assertSame('0987654321012345000000', (string) $faktur->SellerIDTKU);
+
+        // The buyer: a 15-digit NPWP gains its leading zero; the ID TKU follows.
+        $this->assertSame('0012345678901000', (string) $faktur->BuyerTin);
+        $this->assertSame('0012345678901000000000', (string) $faktur->BuyerIDTKU);
+        $this->assertSame('TIN', (string) $faktur->BuyerDocument);
+        $this->assertSame('IDN', (string) $faktur->BuyerCountry);
+        $this->assertSame('PT Pembeli Sejahtera', (string) $faktur->BuyerName);
+        $this->assertSame('Jl. Industri No. 5, Bekasi', (string) $faktur->BuyerAdress);
+
+        // Our number, where Coretax echoes it back beside the serial it assigns.
+        $this->assertSame($invoice->nomor, (string) $faktur->RefDesc);
+        $this->assertSame('Normal', (string) $faktur->TaxInvoiceOpt);
+        $this->assertSame('04', (string) $faktur->TrxCode);
+        $this->assertSame($invoice->issued_on->format('Y-m-d'), (string) $faktur->TaxInvoiceDate);
+
+        // 10 × 100.000: TaxBase is the price, OtherTaxBase the 11/12 DPP, VAT 12% of that.
+        $this->assertSame('A', (string) $baris->Opt);
+        $this->assertSame('000000', (string) $baris->Code);
+        $this->assertSame('YUHOLI Shock Absorber Depan', (string) $baris->Name);
+        $this->assertSame('UM.0001', (string) $baris->Unit);
+        $this->assertSame('100000', (string) $baris->Price);
+        $this->assertSame('10', (string) $baris->Qty);
+        $this->assertSame('0', (string) $baris->TotalDiscount);
+        $this->assertSame('1000000', (string) $baris->TaxBase);
+        $this->assertSame('916667', (string) $baris->OtherTaxBase);
+        $this->assertSame('12', (string) $baris->VATRate);
+        $this->assertSame('110000', (string) $baris->VAT);
+        $this->assertSame('0', (string) $baris->STLGRate);
+        $this->assertSame('0', (string) $baris->STLG);
+    }
+
+    public function test_a_customers_registered_branch_and_email_reach_the_xml(): void
+    {
+        /*
+         * Neither was ever on the printed faktur, so neither is snapshotted:
+         * both are read from the customer record when the file is made. A
+         * registered branch has an ID TKU suffix only the customer knows.
+         */
+        $this->coretax();
+        $invoice = $this->invoiceFor(10);
+        $invoice->company->update(['id_tku' => '0012345678901000000123', 'email' => 'pajak@pembeli.co.id']);
+
+        $faktur = simplexml_load_string($this->exportedContents())->ListOfTaxInvoice->TaxInvoice;
+
+        $this->assertSame('0012345678901000000123', (string) $faktur->BuyerIDTKU);
+        $this->assertSame('pajak@pembeli.co.id', (string) $faktur->BuyerEmail);
+    }
+
+    public function test_the_unit_code_follows_the_lines_base_unit(): void
+    {
+        $this->coretax();
+        config(['pajak.coretax.satuan' => ['PCS' => 'UM.0018', 'SET' => 'UM.0021']]);
+        $this->invoiceFor(10);
+
+        $baris = simplexml_load_string($this->exportedContents())->ListOfTaxInvoice->TaxInvoice->ListOfGoodService->GoodService;
+
+        $this->assertSame('UM.0018', (string) $baris->Unit);
+    }
+
+    public function test_the_xml_escapes_what_would_break_it(): void
+    {
+        $this->coretax();
+        $invoice = $this->invoiceFor(10);
+        $invoice->forceFill([
+            'nama_wajib_pajak' => 'PT Baut & Mur <Jaya>',
+            'alamat_pajak' => "Jl. Raya\nBlok A/1",
+        ])->save();
+
+        $faktur = simplexml_load_string($this->exportedContents())->ListOfTaxInvoice->TaxInvoice;
+
+        $this->assertSame('PT Baut & Mur <Jaya>', (string) $faktur->BuyerName);
+        $this->assertSame('Jl. Raya Blok A/1', (string) $faktur->BuyerAdress);
+    }
+
+    public function test_the_sellers_npwp_must_be_set_before_a_file_is_made(): void
+    {
+        $this->coretax();
+        config(['pajak.penjual.npwp' => null]);
+        $this->invoiceFor(10);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageMatches('/NPWP penjual/');
+
+        $this->exportedContents();
+    }
+
+    /** Select the Coretax XML and give the seller an NPWP, as the settings screen would. */
+    private function coretax(): void
+    {
+        config([
+            'pajak.format_ekspor' => 'coretax_xml',
+            'pajak.penjual.npwp' => '98.765.432.1-012.345',
+            'pajak.penjual.id_tku' => null,
+        ]);
+    }
+
+    /** @return list<string> */
+    private function childNames(\SimpleXMLElement $element): array
+    {
+        $names = [];
+
+        foreach ($element->children() as $child) {
+            $names[] = $child->getName();
+        }
+
+        return $names;
+    }
 
     private function invoiceFor(
         int $qty,

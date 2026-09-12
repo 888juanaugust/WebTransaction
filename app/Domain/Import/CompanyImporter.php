@@ -10,6 +10,8 @@ use App\Models\PriceTier;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Throwable;
 
 /**
  * Customers, from a spreadsheet instead of one form at a time.
@@ -20,13 +22,20 @@ use Illuminate\Support\Facades\DB;
  * register. An importer that writes as it reads gives you half a customer
  * list and an error message.
  *
+ * Two files are accepted, and one set of rules judges both. The accounting
+ * package's own customer workbook (CompanyWorkbookLayout — an .xlsx, or the
+ * same columns saved as CSV) is what people actually have; it is translated
+ * into the canonical columns first. A CSV in the canonical columns themselves
+ * still imports. The layout is recognised from the heading row, never asked.
+ *
  * Three decisions worth keeping:
  *
  * **A known KODE updates rather than duplicates.** The register is keyed on
  * it, and the realistic file is last month's export with three rows added and
  * two phone numbers corrected. Refusing every existing code would make the
  * routine case impossible; creating a second row would silently split a
- * customer's history in two.
+ * customer's history in two. And a blank status on such a row leaves the
+ * status alone — an update file is not an approval decision.
  *
  * **A bad row is held back, never guessed at.** No defaulting an unknown
  * jenis_usaha to bengkel, no rounding a price tier to the nearest name. The
@@ -40,12 +49,17 @@ use Illuminate\Support\Facades\DB;
  *
  * **Credit limits need the seat that may set them.** `LIMIT_KREDIT` is a
  * money-affecting field: the customer form only shows it to Finance and the
- * Owner, and a CSV must not be the way around that. A file carrying the
- * column is refused outright for anybody else, rather than quietly ignoring
- * the values they typed — they would never know their limits were dropped.
+ * Owner, and a spreadsheet must not be the way around that. A file carrying
+ * the column is refused outright for anybody else, rather than quietly
+ * ignoring the values they typed — they would never know their limits were
+ * dropped.
  */
 class CompanyImporter
 {
+    public const LAYOUT_KANONIK = 'kanonik';
+
+    public const LAYOUT_WORKBOOK = 'workbook';
+
     public function __construct(private readonly AuditLogger $audit) {}
 
     /**
@@ -57,18 +71,25 @@ class CompanyImporter
     {
         $this->assertMayImport($actor);
 
-        $lines = $this->lines($contents);
+        $table = $this->table($contents);
 
-        if ($lines === []) {
+        if ($table === []) {
             throw new DomainException('Berkasnya kosong.');
         }
 
-        $header = $this->header(array_shift($lines));
+        $judul = array_map(fn ($c) => trim((string) $c), array_shift($table));
+        $layout = CompanyWorkbookLayout::kenali($judul) ? self::LAYOUT_WORKBOOK : self::LAYOUT_KANONIK;
+
+        // Every line as canonical cells first, so one rule set judges both layouts.
+        $baris = $this->canonicalRows($layout, $judul, $table);
+
         $mayCredit = $actor->role()->canOverrideCreditLimit();
 
-        if (! $mayCredit && $this->carriesCredit($header, $lines)) {
+        if (! $mayCredit && $this->carriesCredit($baris)) {
+            $label = $this->label($layout, 'LIMIT_KREDIT');
+
             throw new DomainException(
-                'Berkas ini berisi kolom LIMIT_KREDIT yang terisi. Hanya Keuangan atau '
+                "Berkas ini berisi kolom {$label} yang terisi. Hanya Keuangan atau "
                 .'Pemilik yang boleh menetapkan limit kredit — minta mereka yang mengimpor, '
                 .'atau kosongkan kolom itu.'
             );
@@ -79,16 +100,9 @@ class CompanyImporter
 
         $rows = [];
         $seen = [];
-        $nomor = 1; // the header was line 1
 
-        foreach ($lines as $line) {
-            $nomor++;
-
-            if ($this->blank($line)) {
-                continue;
-            }
-
-            $rows[] = $this->row($nomor, $this->cells($line, $header), $existing, $tiers, $seen, $mayCredit);
+        foreach ($baris as [$nomor, $cells, $catatanAwal]) {
+            $rows[] = $this->row($layout, $nomor, $cells, $catatanAwal, $existing, $tiers, $seen, $mayCredit);
         }
 
         return $rows;
@@ -152,42 +166,46 @@ class CompanyImporter
     }
 
     /**
-     * @param  array<string, int>  $header  column → position
+     * @param  array<string, string>  $cells  canonical column → value
+     * @param  list<string>  $catatanAwal  notes the translation already made
      * @param  array<string, int>  $existing
      * @param  array<string, int>  $tiers
      * @param  array<string, true>  $seen
      */
     private function row(
+        string $layout,
         int $nomor,
         array $cells,
+        array $catatanAwal,
         $existing,
         $tiers,
         array &$seen,
         bool $mayCredit,
     ): CompanyImportRow {
         $alasan = [];
-        $catatan = [];
+        $catatan = $catatanAwal;
+        $label = fn (string $kolom): string => $this->label($layout, $kolom);
 
         $kode = trim((string) ($cells['KODE'] ?? ''));
         $nama = trim((string) ($cells['NAMA'] ?? ''));
 
         if ($kode === '') {
-            $alasan[] = 'KODE kosong';
+            $alasan[] = $label('KODE').' kosong';
         } elseif (isset($seen[$kode])) {
-            $alasan[] = "KODE {$kode} muncul dua kali di berkas ini";
+            $alasan[] = "{$label('KODE')} {$kode} muncul dua kali di berkas ini";
         }
 
         if ($nama === '') {
-            $alasan[] = 'NAMA kosong';
+            $alasan[] = $label('NAMA').' kosong';
         }
 
         $jenis = strtolower(trim((string) ($cells['JENIS_USAHA'] ?? '')));
         $jenisSah = ['bengkel', 'toko_sparepart', 'distributor'];
 
         if ($jenis === '') {
-            $alasan[] = 'JENIS_USAHA kosong';
+            $alasan[] = $label('JENIS_USAHA').' kosong';
         } elseif (! in_array($jenis, $jenisSah, true)) {
-            $alasan[] = "JENIS_USAHA '{$jenis}' tidak dikenal (bengkel, toko_sparepart, distributor)";
+            $alasan[] = "{$label('JENIS_USAHA')} '{$jenis}' tidak dikenal (bengkel, toko_sparepart, distributor)";
         }
 
         $nilai = [
@@ -200,10 +218,15 @@ class CompanyImporter
             'kota' => $this->teks($cells, 'KOTA'),
             'alamat_kirim' => $this->teks($cells, 'ALAMAT_KIRIM'),
             'npwp' => $this->teks($cells, 'NPWP'),
+            'id_tku' => $this->teks($cells, 'ID_TKU') ?: null,
             'nama_wajib_pajak' => $this->teks($cells, 'NAMA_WAJIB_PAJAK'),
             'alamat_pajak' => $this->teks($cells, 'ALAMAT_PAJAK'),
             'catatan' => $this->teks($cells, 'CATATAN'),
         ];
+
+        if ($nilai['id_tku'] !== null && strlen(preg_replace('/\D+/', '', $nilai['id_tku']) ?? '') !== 22) {
+            $alasan[] = "{$label('ID_TKU')} '{$nilai['id_tku']}' bukan 22 digit";
+        }
 
         // Tier: named, not numbered — a person filling this in knows "Bengkel",
         // not that it is row 3 of price_tiers.
@@ -213,7 +236,7 @@ class CompanyImporter
             $id = $tiers[$tier] ?? null;
 
             if ($id === null) {
-                $alasan[] = "TIER '{$tier}' tidak ada";
+                $alasan[] = "{$label('TIER')} '{$tier}' tidak ada";
             } else {
                 $nilai['price_tier_id'] = $id;
             }
@@ -222,7 +245,7 @@ class CompanyImporter
         $limit = $this->angka($cells['LIMIT_KREDIT'] ?? '');
 
         if ($limit === false) {
-            $alasan[] = 'LIMIT_KREDIT bukan angka';
+            $alasan[] = $label('LIMIT_KREDIT').' bukan angka';
         } elseif ($limit !== null && $mayCredit) {
             $nilai['credit_limit_rupiah'] = $limit;
         }
@@ -230,27 +253,38 @@ class CompanyImporter
         $tempo = $this->angka($cells['TEMPO_HARI'] ?? '');
 
         if ($tempo === false) {
-            $alasan[] = 'TEMPO_HARI bukan angka';
+            $alasan[] = $label('TEMPO_HARI').' bukan angka';
         } elseif ($tempo !== null) {
             $nilai['payment_terms_days'] = $tempo;
         }
 
         $status = strtolower(trim((string) ($cells['STATUS'] ?? '')));
         $petaStatus = [
-            '' => Company::STATUS_PENDING,
             'menunggu' => Company::STATUS_PENDING,
             'aktif' => Company::STATUS_ACTIVE,
             'ditangguhkan' => Company::STATUS_SUSPENDED,
         ];
 
-        if (! array_key_exists($status, $petaStatus)) {
-            $alasan[] = "STATUS '{$status}' tidak dikenal (aktif, menunggu, ditangguhkan)";
+        if ($status === '') {
+            /*
+             * Blank means two different things. For a customer that is not
+             * on the register yet it means nobody has approved them, and
+             * they arrive awaiting approval — a customer that starts active
+             * because a column was left blank is a customer nobody approved.
+             * For a customer already on the register it means "no change":
+             * an update file with a blank status is not a decision to send
+             * an approved customer back to the queue.
+             */
+            if (isset($existing[$kode])) {
+                $catatan[] = $label('STATUS').' kosong — status lama dipertahankan';
+            } else {
+                $nilai['status'] = Company::STATUS_PENDING;
+                $catatan[] = $label('STATUS').' kosong — masuk sebagai menunggu persetujuan';
+            }
+        } elseif (! array_key_exists($status, $petaStatus)) {
+            $alasan[] = "{$label('STATUS')} '{$status}' tidak dikenal (aktif, menunggu, ditangguhkan)";
         } else {
             $nilai['status'] = $petaStatus[$status];
-
-            if ($status === '') {
-                $catatan[] = 'STATUS kosong — masuk sebagai menunggu persetujuan';
-            }
         }
 
         if (($nilai['npwp'] ?? '') === '') {
@@ -274,13 +308,62 @@ class CompanyImporter
         );
     }
 
-    /** @return array<string, int> column name → position */
-    private function header(string $line): array
+    /**
+     * Every data line as canonical cells, numbered as the person sees them
+     * in their spreadsheet, blank lines skipped.
+     *
+     * @param  list<string>  $judul
+     * @param  list<list<string>>  $table
+     * @return list<array{0: int, 1: array<string, string>, 2: list<string>}>
+     */
+    private function canonicalRows(string $layout, array $judul, array $table): array
     {
-        $cells = str_getcsv($line, $this->delimiter($line), '"', '\\');
+        $rows = [];
+        $nomor = 1; // the heading was line 1
+
+        if ($layout === self::LAYOUT_WORKBOOK) {
+            $posisi = CompanyWorkbookLayout::posisi($judul);
+
+            foreach ($table as $line) {
+                $nomor++;
+
+                if ($this->blank($line)) {
+                    continue;
+                }
+
+                [$cells, $catatan] = CompanyWorkbookLayout::keCanonical($posisi, $line);
+                $rows[] = [$nomor, $cells, $catatan];
+            }
+
+            return $rows;
+        }
+
+        $header = $this->header($judul);
+
+        foreach ($table as $line) {
+            $nomor++;
+
+            if ($this->blank($line)) {
+                continue;
+            }
+
+            $rows[] = [$nomor, $this->cells($line, $header), []];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The canonical heading row as column name → position.
+     *
+     * @param  list<string>  $judul
+     * @return array<string, int>
+     */
+    private function header(array $judul): array
+    {
         $map = [];
 
-        foreach ($cells as $position => $cell) {
+        foreach ($judul as $position => $cell) {
             $name = strtoupper(trim((string) $cell));
             $name = preg_replace('/^\xEF\xBB\xBF/', '', $name) ?? $name;
 
@@ -292,8 +375,9 @@ class CompanyImporter
         foreach (['KODE', 'NAMA', 'JENIS_USAHA'] as $wajib) {
             if (! array_key_exists($wajib, $map)) {
                 throw new DomainException(
-                    "Baris judul tidak punya kolom {$wajib}. Unduh contoh CSV dari layar ini "
-                    .'dan pakai baris judulnya apa adanya.'
+                    "Baris judul tidak punya kolom {$wajib}. Unduh contoh dari layar ini "
+                    .'dan pakai baris judulnya apa adanya — atau unggah workbook pelanggan '
+                    .'dari ACCURATE (Template Impor Pelanggan).'
                 );
             }
         }
@@ -302,30 +386,86 @@ class CompanyImporter
     }
 
     /**
+     * @param  list<string>  $line
      * @param  array<string, int>  $header
      * @return array<string, string>
      */
-    private function cells(string $line, array $header): array
+    private function cells(array $line, array $header): array
     {
-        $cells = str_getcsv($line, $this->delimiter($line), '"', '\\');
         $out = [];
 
         foreach ($header as $name => $position) {
-            $out[$name] = (string) ($cells[$position] ?? '');
+            $out[$name] = (string) ($line[$position] ?? '');
         }
 
         return $out;
     }
 
-    /** @return list<string> */
-    private function lines(string $contents): array
+    /**
+     * The file as rows of cells, whichever it is.
+     *
+     * An .xlsx starts with the zip signature and is read through
+     * PhpSpreadsheet, first sheet only — the accounting package's template
+     * says so itself, and its second sheet is the column legend. Anything
+     * else is text, split on the delimiter the line actually uses.
+     *
+     * @return list<list<string>>
+     */
+    private function table(string $contents): array
     {
-        $contents = preg_replace('/^\xEF\xBB\xBF/', '', $contents) ?? $contents;
+        if (str_starts_with($contents, "PK\x03\x04")) {
+            return $this->fromXlsx($contents);
+        }
 
-        return array_values(array_filter(
-            preg_split('/\r\n|\r|\n/', $contents) ?: [],
-            fn (string $line) => trim($line) !== '',
-        ));
+        $contents = preg_replace('/^\xEF\xBB\xBF/', '', $contents) ?? $contents;
+        $rows = [];
+
+        foreach (preg_split('/\r\n|\r|\n/', $contents) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $rows[] = array_map(fn ($c) => (string) $c, str_getcsv($line, $this->delimiter($line), '"', '\\'));
+        }
+
+        return $rows;
+    }
+
+    /** @return list<list<string>> */
+    private function fromXlsx(string $contents): array
+    {
+        $path = tempnam(sys_get_temp_dir(), 'impor-pelanggan-');
+
+        if ($path === false) {
+            throw new DomainException('Tidak bisa membaca berkas Excel.');
+        }
+
+        try {
+            file_put_contents($path, $contents);
+
+            $reader = IOFactory::createReader('Xlsx');
+            $reader->setReadDataOnly(true);
+            $sheet = $reader->load($path)->getSheet(0);
+
+            $rows = [];
+
+            // Formatted, so a date cell reads 19/01/2016 and a postcode 14470,
+            // the way the person sees them — not a serial and a float.
+            foreach ($sheet->toArray(null, true, true, false) as $row) {
+                $rows[] = array_map(fn ($c) => trim((string) ($c ?? '')), $row);
+            }
+
+            // Trailing empty rows are the sheet's, not the person's.
+            while ($rows !== [] && $this->blank(end($rows))) {
+                array_pop($rows);
+            }
+
+            return $rows;
+        } catch (Throwable $e) {
+            throw new DomainException('Berkas Excel tidak bisa dibaca: '.$e->getMessage(), previous: $e);
+        } finally {
+            @unlink($path);
+        }
     }
 
     /**
@@ -340,29 +480,38 @@ class CompanyImporter
         return substr_count($line, ';') > substr_count($line, ',') ? ';' : ',';
     }
 
-    private function blank(string $line): bool
+    /** @param list<string> $line */
+    private function blank(array $line): bool
     {
-        return trim(str_replace([',', ';', '"'], '', $line)) === '';
-    }
-
-    /** @param array<string, int> $header */
-    private function carriesCredit(array $header, array $lines): bool
-    {
-        if (! array_key_exists('LIMIT_KREDIT', $header)) {
-            return false;
+        foreach ($line as $cell) {
+            if (trim((string) $cell) !== '') {
+                return false;
+            }
         }
 
-        foreach ($lines as $line) {
-            if ($this->blank($line)) {
-                continue;
-            }
+        return true;
+    }
 
-            if (trim($this->cells($line, $header)['LIMIT_KREDIT'] ?? '') !== '') {
+    /** @param list<array{0: int, 1: array<string, string>, 2: list<string>}> $baris */
+    private function carriesCredit(array $baris): bool
+    {
+        foreach ($baris as [, $cells]) {
+            if (trim((string) ($cells['LIMIT_KREDIT'] ?? '')) !== '') {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /** The column's name as the person sees it in the file they uploaded. */
+    private function label(string $layout, string $kolom): string
+    {
+        if ($layout === self::LAYOUT_WORKBOOK) {
+            return CompanyWorkbookLayout::label()[$kolom] ?? $kolom;
+        }
+
+        return $kolom;
     }
 
     /** @param array<string, string> $cells */

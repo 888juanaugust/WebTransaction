@@ -14,6 +14,7 @@ use App\Domain\Ops\OpsHealth;
 use App\Domain\Pengaturan\PengaturanPerusahaan;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
+use App\Domain\Tax\CoretaxXmlWriter;
 use App\Domain\Tax\EFakturCsvWriter;
 use App\Domain\Tax\FakturWriter;
 use App\Domain\Tax\TaxCalculator;
@@ -77,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(FakturWriter::class, function () {
             return match ((string) config('pajak.format_ekspor')) {
+                'coretax_xml' => new CoretaxXmlWriter,
                 'efaktur_csv' => new EFakturCsvWriter,
                 default => throw new InvalidArgumentException(
                     'Format ekspor faktur tidak dikenal: '.config('pajak.format_ekspor')

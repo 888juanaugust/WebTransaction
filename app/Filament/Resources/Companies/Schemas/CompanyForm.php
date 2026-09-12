@@ -75,6 +75,11 @@ class CompanyForm
                     ->schema([
                         TextInput::make('npwp')->label('NPWP')->maxLength(25),
                         TextInput::make('nama_wajib_pajak')->label('Nama wajib pajak'),
+                        TextInput::make('id_tku')
+                            ->label('ID TKU (NITKU)')
+                            ->maxLength(22)
+                            ->helperText('22 digit: NPWP 16 digit + kode cabang. Kosongkan bila '
+                                .'kantor pusat — sistem memakai NPWP + 000000.'),
                         Textarea::make('alamat_pajak')->label('Alamat pajak')->columnSpanFull(),
                     ]),
 

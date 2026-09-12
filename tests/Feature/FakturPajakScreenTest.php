@@ -54,6 +54,10 @@ class FakturPajakScreenTest extends TestCase
 
         Storage::fake('local');
 
+        // The Coretax XML names the seller; a real install has this set in
+        // Pengaturan perusahaan before the first filing.
+        config(['pajak.penjual.npwp' => '98.765.432.1-012.345']);
+
         $this->gudang = Warehouse::factory()->create();
         $this->finance = User::factory()->role(Role::Finance)->create();
         $this->sales = User::factory()->sales()->create();
@@ -109,18 +113,35 @@ class FakturPajakScreenTest extends TestCase
             ->assertSet('periode', '2026-07');
     }
 
-    public function test_the_unsettled_format_is_stated_on_the_screen(): void
+    public function test_the_format_and_the_reference_codes_are_stated_on_the_screen(): void
     {
         /*
          * The person filing is the one who can ask the accountant, and they
-         * will not read FakturWriter. Burying this in a docblock would mean
-         * the first anybody hears of it is a rejected upload.
+         * will not read CoretaxXmlWriter or config/pajak.php. The reference
+         * codes — country, goods, units — are the part nobody here can
+         * verify, so they are printed where the accountant will see them.
          */
+        config(['pajak.coretax.satuan.SET' => 'UM.0099']);
+
+        Livewire::actingAs($this->finance)
+            ->test(FakturPajak::class)
+            ->assertOk()
+            ->assertSee('File XML impor Coretax')
+            ->assertSee('coretax_xml')
+            ->assertSee('IDN')
+            ->assertSee('UM.0099')
+            ->assertDontSee('Pastikan dulu formatnya');
+    }
+
+    public function test_the_old_csv_layout_is_flagged_when_it_is_still_selected(): void
+    {
+        config(['pajak.format_ekspor' => 'efaktur_csv']);
+
         Livewire::actingAs($this->finance)
             ->test(FakturPajak::class)
             ->assertOk()
             ->assertSee('Pastikan dulu formatnya')
-            ->assertSee('Coretax kemungkinan meminta XML');
+            ->assertSee('efaktur_csv');
     }
 
     public function test_blocked_invoices_are_named_with_the_reason_and_the_fix(): void

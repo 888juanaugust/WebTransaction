@@ -214,7 +214,7 @@ classes, because presentation and ownership must be allowed to disagree.
 | `/admin/products` | Catalogue | read: **everyone**, Gudang included · write: Inventori, Owner | Reference data; list price is read-only. **Nobody creates a SKU here** — the create route is gone, items arrive through Impor barang. A SKU anything has referenced cannot be deleted at all — deactivate |
 | `/admin/invoices` | Faktur | Finance, Sales, Owner | Read-only. **Nobody can edit an amount, not even Owner** |
 | `/admin/pengiriman` | Pengiriman | Inventori, Gudang, Owner | Approved orders land here for packing — pick list, surat jalan, ship. A Gudang account sees **only its own warehouse**, in the query itself |
-| `/admin/komisi-target` | Komisi & target | Owner | Set each seller's rate (effective-dated, append-only) and each sales seat's monthly target |
+| `/admin/komisi-target` | Komisi & target | Finance, Owner | Set each seller's rate (effective-dated, append-only) and each sales seat's monthly target; the supervisor, manajer and pembelian-impor kinds too. Finance joined the Owner here 2026-09 (`Role::canSetCommission`) — the desk that pays the commission out is the desk that knows the percentage |
 | `/admin/laporan/komisi` | Komisi & target | Finance, Owner | Who earned what on the month's **collected** sales, vs target. Derived, never stored |
 | `/admin/laporan/rekap-ppn` | Rekap PPN masa | Finance, Owner | Keluaran − Masukan for one masa pajak, netted the way it is filed |
 | `/admin/pesanan-pembelian` | Pesanan pembelian | Finance, Owner | PO + three-way match modal |
@@ -233,7 +233,7 @@ classes, because presentation and ownership must be allowed to disagree.
 | `/admin/bayar-pemasok` | Bayar pemasok | Finance, Owner | One transfer out, spread across as many of a supplier's tagihan as it covers. Body is the queue of payments not yet fully applied; badge counts them |
 | `/admin/biaya-perolehan` | Biaya perolehan | Finance, Owner | Freight and duty spread over the goods. Badge counts charges nobody has spread |
 | `/admin/price-list-imports` | Impor harga & barang | Sales, Owner | Upload → stage → diff → publish. **Also loads the catalogue** — publishing upserts `products` from the same rows. Carries a generated example CSV |
-| `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates |
+| `/admin/impor-pelanggan` | Impor pelanggan | Sales, Marketing, Finance, Owner | Upload → preview per row → import. Held rows say why; a known KODE updates rather than duplicates. **The file is the accounting package's customer workbook** (ACCURATE "Template Impor Pelanggan", .xlsx or the same columns as CSV — `CompanyWorkbookLayout`, 2026-09); the example download is that workbook with a legend sheet, and the canonical CSV still imports |
 | `/admin/impor-barang` | Impor barang | Inventori, Owner | **The only door a SKU enters by.** One CSV, every item in it; preview per row, held rows say why. Carries no HARGA and refuses a file that has one. Filed under Penjualan beside Impor pelanggan — **not** under Gudang, which is the packer's section |
 | `/admin/impor-pengguna` | Impor pengguna | **Owner only** | Staff accounts from a CSV, through `StaffRegistrar` — same rules as the Staf form, one audit row per person. Create-only: an existing email is held, never re-roled by a file |
 | `/admin/impor-saldo-awal-piutang` | Impor saldo awal piutang | Finance, Owner | What customers already owed on the day of conversion, one open invoice per row, booked Dr Piutang Usaha / Cr **Saldo Awal Konversi**. Real debts, not sales: they age and settle normally, earn no commission, and never reach the tax export |
@@ -451,7 +451,10 @@ invoice. That round trip is the feature.
 | `FakturExporter::export` | Writes the file, keeps it, records the filing |
 | `NsfpRecorder::record` | Matches returned serials to invoices by our own reference |
 | `FilingScope::entityWide` | **The filing is the NPWP's, not a region's** — see below |
-| `FakturWriter` | The one part in doubt — see below |
+| `FakturWriter` | The serialisation only; `pajak.format_ekspor` picks the implementation — see below |
+| `CoretaxXmlWriter` | The Coretax bulk-import XML, written to the accountant's template (2026-09, the default). `ELEMEN_FAKTUR` / `ELEMEN_BARIS` are the template's element order as data |
+| `EFakturCsvWriter` | The old desktop e-Faktur CSV, kept so a past filing stays reproducible |
+| `Npwp` | Every shape a tax number takes: digits, the 16-digit form (15 gains a leading zero), the ID TKU (16 + branch suffix, `000000` for a head office) |
 
 **A filing crosses every region, and this is the one place where region scoping
 is wrong by construction** (2026-09). Regions are sets of books and warehouses;
@@ -506,23 +509,37 @@ accounts per region and the Owner has a switcher; the tax filing is a document
 with the company's NPWP on it and a deadline, prepared by a role that cannot
 switch.
 
-**The file format is not settled, and nothing in this repository can settle
-it.** `CLAUDE.md` specifies a CSV in the e-Faktur import layout, which the
-desktop application accepted for years. Coretax, live since January 2025, is
-widely reported to want XML. Both cannot be right, and getting it wrong is not
-a bug that shows up in testing — it is a rejected upload near a deadline, or an
-accepted upload of the wrong figures.
+**The file is the Coretax bulk-import XML (2026-09).** The accountant handed
+over a `TaxInvoiceBulk` template and `CoretaxXmlWriter` is written to it,
+element for element and in its order: one `TaxInvoice` per faktur, one
+`GoodService` per line. The two element lists are declared as data
+(`ELEMEN_FAKTUR`, `ELEMEN_BARIS`) and a test holds the template fixture
+(`tests/Fixtures/coretax-tax-invoice-template.xml`) up against the output, so a
+newer template is a diff of two lists. `pajak.format_ekspor` selects it;
+`efaktur_csv` (the old desktop e-Faktur CSV, `EFakturCsvWriter`) stays
+selectable because `faktur_exports.format` records which layout each past
+filing used and a filing must stay reproducible in the layout it was made in.
+The mapping — which invoice, whose NPWP, what the DPP is per line — never
+moved: it lives in `FakturRecord`, and the XML arrived as one class and one
+config value.
 
-So the serialisation is an interface with one implementation, and the mapping
-is not. `EFakturCsvWriter` declares its three column lists as data, one per row
-type, so an accountant's real template is a line-by-line diff rather than a
-reading of code. If the answer is XML, that is a second class against
-`FakturWriter` and a change to `pajak.format_ekspor`; nothing above it moves,
-and `faktur_exports.format` records which layout each past filing used so old
-ones stay readable. **No XML schema has been guessed at** — a plausible-looking
-tax file that is subtly wrong is worse than none.
+What the XML carries that the CSV did not: the seller's and buyer's **ID TKU**
+(NITKU — the 16-digit NPWP plus a six-digit branch suffix, `000000` for a head
+office; `Npwp::idTku` derives it, `companies.id_tku` and
+`pajak.penjual.id_tku` override it for a registered branch), the buyer's
+**email** (read from the customer record at export time — it was never on the
+printed faktur, so never snapshotted), and per line both bases: `TaxBase` is
+the selling price net of discount and `OtherTaxBase` the stored DPP Nilai
+Lain, with `VAT` the stored PPN. Reference codes that are Coretax's rather than
+ours — buyer country, goods code, the unit code per base unit — live in
+`config/pajak.php` under `coretax` and are printed on the filing screen, because
+they are the part nobody here can verify: the sample template read `IND` for
+the country (India, in ISO 3166-1 alpha-3) and `UM.0001` for a unit, so the
+country defaults to `IDN` and the unit codes to the template's until the
+accountant confirms them.
 
-Three things a reviewer should look at hardest:
+Three things a reviewer should look at hardest (the CSV writer; the XML has the
+same three, under the names `RefDesc`, `BuyerTin` and `OtherTaxBase`):
 
 - **`NOMOR_FAKTUR` is written empty.** The serial is not ours to choose. Our
   invoice number goes in `REFERENSI`, which is what comes back beside the
@@ -1838,6 +1855,7 @@ never all of them — the unsafe reading of a blank.
 | Function | Decides |
 |---|---|
 | `Role::canManageStaff` | Owner only, and the widest line in the enum |
+| `Role::canSetCommission` | Finance and Owner (2026-09; was Owner alone): every commission rate and target. The seats paid on it — Sales, Marketing — never set it; Finance is on no commission of any kind |
 | `StaffRegistrar::create` | Hiring. The only path that writes `staff_created` |
 | `StaffRegistrar::changeRole` | Moving somebody across a control boundary, logged old → new |
 | `StaffRegistrar::setPassword` | An administrative reset, and the remember-me token that goes with it |
@@ -2438,9 +2456,11 @@ is one somebody has been told the truth about.
 | Function | Decides |
 |---|---|
 | `CsvTemplate::toCsv` | The example file, **generated from the column constant the parser reads** — prose drifts from a parser, a generated template cannot |
-| `CompanyColumns::COLUMNS` / `keterangan` | The customer format, and what each column is for, shown beside the download |
-| `CompanyImporter::preview` | What each line *would* do — new, update, or held with a reason. **Writes nothing** |
+| `CompanyColumns::COLUMNS` / `keterangan` | The canonical customer format — the vocabulary the rules are written in. A CSV in it still imports; `ID_TKU` joined 2026-09 |
+| `CompanyWorkbookLayout` | The accounting package's 94-column customer workbook, as data: `JUDUL` (row 1 verbatim), `kenali` (is this that layout?), `keCanonical` (one row → canonical cells + the notes the translation made), `label` (held rows name the column as the spreadsheet does), `keterangan` (which columns are read), `contoh`. Saldo awal, Default Penjual, cabang and account codes are deliberately not translated — each has its own door |
+| `CompanyImporter::preview` | What each line *would* do — new, update, or held with a reason. **Writes nothing.** Reads .xlsx (first sheet, through PhpSpreadsheet) or CSV, recognises the layout from the heading row, translates the workbook to canonical cells, then one rule set judges both. A blank status on a *known* customer leaves their status alone |
 | `CompanyImporter::import` | Re-reads the same file and writes the rows that were not held. A known KODE updates; a bad row is skipped, never guessed at |
+| `CsvTemplate::toXlsx` | The customer example as the package's workbook: the data sheet with two example customers, and a "Penjelasan Kolom" sheet saying which of the 94 headings this system reads |
 | `ProductColumns::COLUMNS` / `keterangan` | The item format: the canonical price-list columns **minus HARGA** and **plus GOLONGAN**, so the example file cannot teach anyone to paste prices in, and does teach them the three sourcing streams |
 | `Golongan` | **Impor / Titip impor / Lokal** — a third axis on the catalogue beside merk and kategori: how *we* source a part, which is not what it is or whose name is on the box. Read from a cell the way people type it (`TITIP IMPOR`, `titip_impor`, `Titip Impor` are one value); an unknown word holds the row and names the three choices. **Nullable on purpose** — the existing catalogue predates the distinction, and writing `lokal` on a thousand SKUs would be a claim, not a default. Unclassified reads as *Belum digolongkan* everywhere |
 | `SalesDimension::Golongan` | The sales report grouped by stream, with the unclassified in a bucket that says so — dropping them would make the report's total disagree with the ledger. A price-list publish **leaves golongan alone**: the supplier's file knows nothing about how we source, so it cannot unsay it |

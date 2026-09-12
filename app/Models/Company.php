@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'kode', 'nama', 'jenis_usaha', 'npwp', 'nama_wajib_pajak', 'alamat_pajak',
+    'kode', 'nama', 'jenis_usaha', 'npwp', 'id_tku', 'nama_wajib_pajak', 'alamat_pajak',
     'alamat_kirim', 'kota', 'telepon', 'email', 'nama_kontak', 'price_tier_id',
     'credit_limit_rupiah', 'payment_terms_days', 'status', 'catatan',
 ])]

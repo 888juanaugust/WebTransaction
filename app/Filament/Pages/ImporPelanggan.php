@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Domain\Import\CompanyImporter;
 use App\Domain\Import\CompanyImportRow;
+use App\Domain\Import\CompanyWorkbookLayout;
 use App\Domain\Import\CsvTemplate;
 use App\Domain\Import\TemplateKind;
 use App\Filament\Navigation\SidebarGroups;
@@ -30,7 +31,10 @@ use Throwable;
  * The example file is generated from the same column list the parser reads,
  * and is offered before the upload field rather than after it — the testers'
  * complaint was that nothing told them what the file should look like, and a
- * template you find only after failing once is not much of an answer.
+ * template you find only after failing once is not much of an answer. Since
+ * 2026-09 that file is the accounting package's own customer workbook
+ * (CompanyWorkbookLayout): what people export from ACCURATE uploads here as
+ * it is.
  */
 class ImporPelanggan extends Page
 {
@@ -78,10 +82,14 @@ class ImporPelanggan extends Page
         return auth()->user()?->role()->canSeeCreditData() ?? false;
     }
 
-    /** @return array<string, string> */
+    /**
+     * The workbook columns this system reads, for the screen's legend.
+     *
+     * @return array<string, string>
+     */
     public function keterangan(): array
     {
-        return app(CsvTemplate::class)->keterangan(TemplateKind::Pelanggan);
+        return CompanyWorkbookLayout::keterangan();
     }
 
     /** @return list<CompanyImportRow> */
@@ -124,15 +132,20 @@ class ImporPelanggan extends Page
         return ['baru' => $baru, 'perbarui' => $perbarui, 'tertahan' => $tertahan];
     }
 
+    /**
+     * The example workbook — the accounting package's own layout, so the
+     * file somebody exports from there and the file they download here are
+     * the same shape.
+     */
     public function unduhContoh(): StreamedResponse
     {
         $template = app(CsvTemplate::class);
-        $csv = $template->toCsv(TemplateKind::Pelanggan);
+        $xlsx = $template->toXlsx(TemplateKind::Pelanggan);
 
         return response()->streamDownload(
-            fn () => print $csv,
-            $template->namaBerkas(TemplateKind::Pelanggan),
-            ['Content-Type' => 'text/csv; charset=UTF-8'],
+            fn () => print $xlsx,
+            $template->namaBerkasXlsx(TemplateKind::Pelanggan),
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         );
     }
 
@@ -140,7 +153,7 @@ class ImporPelanggan extends Page
     {
         return [
             Action::make('contoh')
-                ->label('Unduh contoh CSV')
+                ->label('Unduh contoh Excel')
                 ->icon(Heroicon::OutlinedArrowDownTray)
                 ->color('gray')
                 ->action('unduhContoh'),
@@ -149,11 +162,12 @@ class ImporPelanggan extends Page
                 ->label('Unggah berkas')
                 ->icon(Heroicon::OutlinedArrowUpTray)
                 ->modalHeading('Unggah daftar pelanggan')
-                ->modalDescription('CSV dengan baris judul seperti contoh. Belum ada yang '
+                ->modalDescription('Workbook Template Impor Pelanggan (.xlsx) dari ACCURATE atau dari '
+                    .'contoh di layar ini; CSV dengan kolom yang sama juga bisa. Belum ada yang '
                     .'disimpan sampai Anda menekan Impor di layar berikutnya.')
                 ->schema([
                     FileUpload::make('berkas')
-                        ->label('Berkas CSV')
+                        ->label('Berkas Excel atau CSV')
                         ->required()
                         ->disk('local')
                         // Kept, like every other import's source file: a
@@ -161,7 +175,10 @@ class ImporPelanggan extends Page
                         // bytes it came from.
                         ->directory('impor-pelanggan')
                         ->preserveFilenames()
-                        ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel']),
+                        ->acceptedFileTypes([
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'text/csv', 'text/plain', 'application/vnd.ms-excel',
+                        ]),
                 ])
                 ->action(fn (array $data) => $this->baca($data['berkas'] ?? null)),
         ];

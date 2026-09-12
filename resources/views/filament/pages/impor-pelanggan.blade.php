@@ -14,9 +14,11 @@
             <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Isi berkasnya</h2>
 
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Unduh contoh CSV di atas, isi barisnya, lalu unggah. Baris judulnya jangan diubah —
-                itu yang dibaca sistem. Kode yang sudah ada akan <strong>memperbarui</strong>
-                pelanggan itu, bukan membuat yang kedua.
+                Bentuknya <strong>Template Impor Pelanggan</strong> dari ACCURATE: ekspor daftar
+                pelanggan dari sana dan unggah apa adanya, atau unduh contoh Excel di atas dan isi
+                barisnya. Baris judulnya jangan diubah — itu yang dibaca sistem. Hanya sheet
+                pertama yang dibaca; kolom yang tidak disebut di bawah diabaikan. Kode yang sudah
+                ada akan <strong>memperbarui</strong> pelanggan itu, bukan membuat yang kedua.
             </p>
 
             <div class="mt-3 overflow-x-auto">

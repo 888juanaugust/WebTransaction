@@ -90,6 +90,10 @@ class FilingAcrossRegionsTest extends TestCase
         Storage::fake('local');
         $this->travelTo('2026-08-20 09:00:00');
 
+        // The Coretax XML names the seller; a real install has this set in
+        // Pengaturan perusahaan before the first filing.
+        config(['pajak.penjual.npwp' => '98.765.432.1-012.345']);
+
         $this->sby = $this->currentRegion();
         $this->jkt = Region::factory()->create(['kode' => 'JKT']);
 
