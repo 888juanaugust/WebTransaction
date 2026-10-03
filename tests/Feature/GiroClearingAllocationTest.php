@@ -51,6 +51,16 @@ class GiroClearingAllocationTest extends TestCase
     {
         parent::setUp();
 
+        /*
+         * Every date below is written out — faktur 2 September, cheque due
+         * 30 September, cleared 1 October — except the day the cheque is
+         * received, which defaults to today. That held until today passed
+         * 30 September, when receiving a cheque already due became the
+         * refusal this file was never about. The clock is pinned to a day
+         * inside the story the dates tell.
+         */
+        $this->travelTo(Carbon::parse('2026-09-27 09:00:00'));
+
         $this->seed(ChartOfAccountsSeeder::class);
 
         $this->finance = User::factory()->finance()->create();
