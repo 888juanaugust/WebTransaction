@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Domain\Access\Role;
 use App\Domain\Komisi\JenisKomisi;
 use App\Domain\Komisi\KomisiSetter;
+use App\Domain\Pengaturan\Fitur;
 use App\Filament\Navigation\SidebarGroups;
 use App\Models\Region;
 use App\Models\SalesTarget;
@@ -60,7 +61,8 @@ class KomisiTarget extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role()->canSetCommission() ?? false;
+        return Fitur::Komisi->aktif()
+            && (auth()->user()?->role()->canSetCommission() ?? false);
     }
 
     /**

@@ -51,7 +51,7 @@ this file off before Phase 2 starts, and again at Phase 19.
 | S-13 | Penyesuaian harga / diskon jual | PARTIAL | `company_price_overrides`, tier items | 12 | — | No screen. Discount is derived, never typed | awal |
 | S-14 | Syarat Pembayaran | PARTIAL | `payment_terms_days` (an integer) | 12 | — | No early-payment discount terms (2/10 n/30) | awal |
 | S-15 | Pengiriman / ekspedisi (shipping method) | MISSING | — | 12 | — | — | awal |
-| S-16 | Batas kredit | DIFFERS | `app/Domain/Credit/CreditChecker.php` | 12 | BekuKredit | 120-day notice and 150-day freeze are WebTransaction rules | awal |
+| S-16 | Batas kredit | DIFFERS | `app/Domain/Credit/CreditChecker.php`, `DebtAging.php` | 12 | BekuKredit, PeringatanPiutang | 120-day notice and 150-day freeze are WebTransaction rules. Both switches and both day counts are live (Phase 1) | awal |
 
 ## Pembelian — purchasing
 
@@ -149,7 +149,7 @@ this file off before Phase 2 starts, and again at Phase 19.
 | # | ACCURATE | Status | WebTransaction today | Phase | Toggle | Notes | Source |
 |---|---|---|---|---|---|---|---|
 | X-01 | Info perusahaan | BUILT | `Pages/PengaturanPerusahaanPage.php` | — | — | — | awal |
-| X-02 | Preferensi | MISSING | — | 1, then each phase | — | Phase 1 builds the store and the screen. Each phase adds its own switches | awal |
+| X-02 | Preferensi | PARTIAL | `app/Domain/Pengaturan/Preferensi.php`, `Fitur.php`, `Pages/Preferensi.php` | 1, then each phase | — | Store, switches and screen built (Phase 1). Each phase adds the preferences its ACCURATE screens have | awal |
 | X-03 | Pengguna & hak akses (per menu: lihat/tambah/ubah/hapus/cetak) | DIFFERS | 6 fixed roles (`app/Domain/Access/Role.php`) | 3 | — | — | awal |
 | X-04 | Akses cabang / gudang per pengguna | DIFFERS | One region per user | 2, 3 | — | — | awal |
 | X-05 | Persetujuan (approval rules) | DIFFERS | Hard-coded per document | 8 | PersetujuanMarketingWajib | — | awal |
@@ -184,20 +184,21 @@ this file off before Phase 2 starts, and again at Phase 19.
 
 ## WebTransaction extras — kept, each behind a switch
 
-All default **on**, matching today's behaviour. The owner decides in the modify phase.
+All default **on**, matching today's behaviour. The owner decides in the modify phase. **Live** means the switch is on the Preferensi screen now; the rest arrive with their phase (`Fitur::berlakuMulaiFase()`).
 
 | Extra | Switch (Phase 1) |
 |---|---|
 | Buyer portal (`/portal`) | `PortalPembeli` |
 | Public site | `SitusPublik` |
 | Every order waits for its marketing's approval | `PersetujuanMarketingWajib` (becomes a seeded approval rule in Phase 8) |
-| 120-day notice / 150-day freeze | `BekuKredit` |
+| 120-day notice | `PeringatanPiutang` — **live** |
+| 150-day freeze | `BekuKredit` — **live** |
 | Split one order across warehouses | `PecahGudang` |
 | Stock reserved at confirmation | `ReservasiStok` |
 | Invoice issued before shipping | `TagihSebelumKirim` |
-| Commission on settled invoices | `Komisi` |
-| Store visits | `KunjunganToko` |
-| Coretax XML export | `EksporCoretax` |
+| Commission on settled invoices | `Komisi` — **live** |
+| Store visits | `KunjunganToko` — **live** |
+| Coretax XML export | `EksporCoretax` — **live** |
 | Price-list import pipeline (staging, diff, brake) | `PipelineImporHarga` |
 | Selling price only from the resolver | `HargaHanyaDariResolver` |
 | Two-key rules (filer ≠ verifier, counter ≠ approver, …) | `PemisahanTugas` (Phase 3) |

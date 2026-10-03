@@ -157,7 +157,7 @@ class CreditChecker
                     .'Transaksi baru terkunci sampai faktur itu lunas.',
                     $tertua->nomor,
                     number_format($tertua->amountOutstanding(), 0, ',', '.'),
-                    (int) config('penjualan.debt_freeze_days'),
+                    $this->aging->freezeDays(),
                 );
             }
         }

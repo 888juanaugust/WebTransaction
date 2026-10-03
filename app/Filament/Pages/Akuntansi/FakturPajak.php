@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Akuntansi;
 
+use App\Domain\Pengaturan\Fitur;
 use App\Domain\Tax\FakturExporter;
 use App\Domain\Tax\FakturExportPreview;
 use App\Domain\Tax\FilingScope;
@@ -58,7 +59,8 @@ class FakturPajak extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role()->canExportFaktur() ?? false;
+        return Fitur::EksporCoretax->aktif()
+            && (auth()->user()?->role()->canExportFaktur() ?? false);
     }
 
     /**

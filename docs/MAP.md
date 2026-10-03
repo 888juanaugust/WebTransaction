@@ -2016,6 +2016,22 @@ including the bank account on the faktur — without a terminal, and watches
 the launch checklist go green as they type. `docs/UAT.md` is the per-role
 acceptance script the pilot runs.
 
+### Preferensi — ACCURATE's switches, and WebTransaction's extras behind them
+
+Phase 1 of the ACCURATE-parity programme (`docs/accurate/PARITY.md`).
+
+| Piece | Decides |
+|---|---|
+| `PengaturanStore` | The `pengaturan` table read cache-first with the database behind it, and written with one audit row per save. Extracted unchanged from `PengaturanPerusahaan`, which now keeps only its kunci→config map |
+| `Fitur` | Every WebTransaction behaviour ACCURATE lacks, as a switch, **on by default** (= today). A switch whose phase has not landed (`berlakuMulaiFase()`) is not shown, cannot be saved off, and answers on whatever is stored |
+| `Preferensi` | Switches as `pref.<fitur>` = '1'/'0'; numbers as `pref.<kunci>`, falling back to their config key. **Read through the class, not laid over config at boot**: a queue worker boots once, and the nightly debt sweep must see a change at its next job. Scoped, so one read per request or job |
+| `Pages/Preferensi` | Owner-only (the special right from Phase 3). Sections named after ACCURATE's Preferensi tabs. Lists the switches still to come with their phase. Audit action `preferensi_diubah` |
+| Wired now | `PeringatanPiutang` and `BekuKredit` (both inside `DebtAging`, so the credit check, the cart, the portal banner and the sweep follow), plus the two day counts. `Komisi` (both commission screens), `KunjunganToko` (the visit log), `EksporCoretax` (the faktur pajak screen) |
+
+The freeze and the reminder are separate switches on purpose. With the freeze
+off and the reminder on, the sweep still tells the team, but drops its "N days
+until locked" sentence, because no lock is coming.
+
 ### Onboarding pelanggan — the pilot worklist
 
 | Piece | Decides |

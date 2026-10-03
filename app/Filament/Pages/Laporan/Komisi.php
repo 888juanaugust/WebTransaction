@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Laporan;
 
+use App\Domain\Pengaturan\Fitur;
 use App\Domain\Reporting\KomisiReport;
 use App\Domain\Reporting\Period;
 use App\Domain\Reporting\ReportTable;
@@ -42,7 +43,8 @@ class Komisi extends ReportPage
     {
         $role = auth()->user()?->role();
 
-        return $role?->canConfirmPayment() ?? false;
+        return Fitur::Komisi->aktif()
+            && ($role?->canConfirmPayment() ?? false);
     }
 
     public function controlsView(): ?string

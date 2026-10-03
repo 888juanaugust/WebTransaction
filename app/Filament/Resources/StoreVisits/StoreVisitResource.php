@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\StoreVisits;
 
 use App\Domain\Access\Role;
+use App\Domain\Pengaturan\Fitur;
 use App\Filament\Navigation\SidebarGroups;
 use App\Filament\Resources\StoreVisits\Pages\CreateStoreVisit;
 use App\Filament\Resources\StoreVisits\Pages\ListStoreVisits;
@@ -42,12 +43,14 @@ class StoreVisitResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return in_array(auth()->user()?->role(), [Role::Sales, Role::Marketing, Role::Finance, Role::Owner], true);
+        return Fitur::KunjunganToko->aktif()
+            && in_array(auth()->user()?->role(), [Role::Sales, Role::Marketing, Role::Finance, Role::Owner], true);
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->role() === Role::Sales;
+        return Fitur::KunjunganToko->aktif()
+            && auth()->user()?->role() === Role::Sales;
     }
 
     public static function canEdit($record): bool

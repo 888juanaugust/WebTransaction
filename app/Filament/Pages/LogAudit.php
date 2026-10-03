@@ -310,6 +310,7 @@ class LogAudit extends Page implements HasTable
             'visit_photos_purged' => 'Foto kunjungan kedaluwarsa dihapus',
             'customer_password_reset' => 'Sandi pembeli direset sendiri',
             'pengaturan_diubah' => 'Pengaturan perusahaan diubah',
+            'preferensi_diubah' => 'Preferensi diubah',
             'visits_archived' => 'Kunjungan diarsipkan',
             'order_split' => 'Order dipecah per gudang',
             'customer_portal_access_granted' => 'Akses portal diberikan',

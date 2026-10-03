@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Domain\Credit\DebtAging;
+use App\Domain\Pengaturan\Fitur;
 use App\Models\Invoice;
 use App\Models\User;
 use Filament\Notifications\Notification;
@@ -84,8 +85,20 @@ class SweepDebtAging implements ShouldQueue
          * left" about a customer who is already locked would cost the
          * warning its credibility.
          */
-        $sudahTerkunci = $invoice->issued_on->lte(app(DebtAging::class)->freezeCutoff());
-        $sisaHari = (int) config('penjualan.debt_freeze_days') - (int) config('penjualan.debt_notice_days');
+        $aging = app(DebtAging::class);
+        $sudahTerkunci = $invoice->issued_on->lte($aging->freezeCutoff());
+        $sisaHari = $aging->freezeDays() - $aging->noticeDays();
+
+        /*
+         * With the freeze switched off (Fitur::BekuKredit) the reminder still
+         * goes, but it says nothing about a lock: there is none to come.
+         */
+        $akibat = match (true) {
+            ! Fitur::BekuKredit->aktif() => 'Tagih sebelum makin tua.',
+            $sudahTerkunci => 'Pelanggan ini sudah terkunci dari transaksi baru sampai faktur lunas.',
+            default => "{$sisaHari} hari lagi pelanggan ini terkunci dari transaksi baru.",
+        };
+        $sudahTerkunci = $sudahTerkunci && Fitur::BekuKredit->aktif();
 
         foreach ($tim as $anggota) {
             $notice = Notification::make()
@@ -93,15 +106,13 @@ class SweepDebtAging implements ShouldQueue
                 // turns 120 days, and still true for the late-seen invoice
                 // that is already older.
                 ->title("Piutang {$company->nama} melewati "
-                    .config('penjualan.debt_notice_days').' hari')
+                    .$aging->noticeDays().' hari')
                 ->body(sprintf(
                     'Faktur %s, sisa %s, terbit %s. %s',
                     $invoice->nomor,
                     number_format($invoice->amountOutstanding(), 0, ',', '.'),
                     $invoice->issued_on->format('d/m/Y'),
-                    $sudahTerkunci
-                        ? 'Pelanggan ini sudah terkunci dari transaksi baru sampai faktur lunas.'
-                        : "{$sisaHari} hari lagi pelanggan ini terkunci dari transaksi baru.",
+                    $akibat,
                 ));
 
             ($sudahTerkunci ? $notice->danger() : $notice->warning())

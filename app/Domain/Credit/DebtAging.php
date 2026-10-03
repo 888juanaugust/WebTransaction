@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Credit;
 
+use App\Domain\Pengaturan\Fitur;
+use App\Domain\Pengaturan\Preferensi;
 use App\Models\Company;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -23,6 +26,12 @@ use Illuminate\Support\Collection;
  *   transaction until the aged invoice is settled. Not a status column:
  *   fall-due is calendar arithmetic over open invoices, recomputed whenever
  *   asked, so it can never say frozen about a debt paid an hour ago.
+ *
+ * Both are WebTransaction's own rules, not ACCURATE's, so each sits behind a
+ * switch (Fitur::PeringatanPiutang, Fitur::BekuKredit — on by default) and
+ * both day counts are Preferensi the business sets on a screen. Off, this
+ * class answers "nothing aged": every caller — the credit check, the cart,
+ * the portal banner, the nightly sweep — goes quiet with it.
  */
 class DebtAging
 {
@@ -34,6 +43,10 @@ class DebtAging
      */
     public function fallDueInvoices(Company $company): Collection
     {
+        if (! Fitur::BekuKredit->aktif()) {
+            return new EloquentCollection;
+        }
+
         // Across regions: a split order books the debt wherever it shipped
         // from, and an aged invoice freezes the customer everywhere.
         return $this->openAgedQuery($this->freezeCutoff())
@@ -45,6 +58,10 @@ class DebtAging
 
     public function isFrozen(Company $company): bool
     {
+        if (! Fitur::BekuKredit->aktif()) {
+            return false;
+        }
+
         return $this->openAgedQuery($this->freezeCutoff())
             ->withoutGlobalScope('region')
             ->where('company_id', $company->id)
@@ -60,6 +77,10 @@ class DebtAging
      */
     public function needingNotice(): Collection
     {
+        if (! Fitur::PeringatanPiutang->aktif()) {
+            return new EloquentCollection;
+        }
+
         return $this->openAgedQuery($this->noticeCutoff())
             ->whereNull('debt_notified_at')
             ->with(['company.salesRep', 'company.marketingRep'])
@@ -67,18 +88,30 @@ class DebtAging
             ->get();
     }
 
-    /** The last issue date old enough to be frozen: strictly older than 150 days. */
+    /** The last issue date old enough to be frozen: strictly older than the freeze age (150 days by default). */
     public function freezeCutoff(): Carbon
     {
         return today()
-            ->subDays((int) config('penjualan.debt_freeze_days'))
+            ->subDays($this->freezeDays())
             ->subDay();
     }
 
     /** The last issue date old enough for the reminder. */
     public function noticeCutoff(): Carbon
     {
-        return today()->subDays((int) config('penjualan.debt_notice_days'));
+        return today()->subDays($this->noticeDays());
+    }
+
+    /** Days from the faktur date to the freeze — what the business set, else 150. */
+    public function freezeDays(): int
+    {
+        return app(Preferensi::class)->angka('piutang_hari_beku');
+    }
+
+    /** Days from the faktur date to the reminder — what the business set, else 120. */
+    public function noticeDays(): int
+    {
+        return app(Preferensi::class)->angka('piutang_hari_peringatan');
     }
 
     /** @return Builder<Invoice> */

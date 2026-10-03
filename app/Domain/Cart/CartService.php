@@ -170,7 +170,7 @@ class CartService
                 'Transaksi baru terkunci: faktur %s belum dibayar lebih dari %d hari. '
                 .'Silakan selesaikan pembayaran itu dulu — hubungi tim kami bila sudah membayar.',
                 $jatuhTempo->first()->nomor,
-                (int) config('penjualan.debt_freeze_days'),
+                $this->aging->freezeDays(),
             ));
         }
 

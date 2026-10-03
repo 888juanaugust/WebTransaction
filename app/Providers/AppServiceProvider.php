@@ -12,6 +12,7 @@ use App\Domain\Launch\LaunchReadiness;
 use App\Domain\Ops\OpsAlerter;
 use App\Domain\Ops\OpsHealth;
 use App\Domain\Pengaturan\PengaturanPerusahaan;
+use App\Domain\Pengaturan\Preferensi;
 use App\Domain\Pricing\PriceResolver;
 use App\Domain\Regions\RegionContext;
 use App\Domain\Tax\CoretaxXmlWriter;
@@ -106,6 +107,13 @@ class AppServiceProvider extends ServiceProvider
          * hold Monday's answer all week.
          */
         $this->app->scoped(LaunchReadiness::class);
+
+        /*
+         * The business's Preferensi and feature switches, read once per
+         * request or job: a page asks Fitur::X->aktif() many times, and a
+         * worker must see a change at its next job, not its next restart.
+         */
+        $this->app->scoped(Preferensi::class);
 
         /*
          * Which region this request is working in.
