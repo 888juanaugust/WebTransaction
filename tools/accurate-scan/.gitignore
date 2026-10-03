@@ -1,0 +1,3 @@
+node_modules/
+# Session cookies, recon dumps and screenshots never belong in the repository.
+.state/

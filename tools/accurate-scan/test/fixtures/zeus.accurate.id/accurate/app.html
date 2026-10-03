@@ -1,0 +1,108 @@
+<!doctype html>
+<html><head><title>ACCURATE Online (fixture)</title>
+<style>
+  body { margin: 0; font-family: sans-serif; }
+  nav { position: fixed; left: 0; top: 0; width: 200px; }
+  nav a { display: block; padding: 8px; }
+  #flyout { position: fixed; left: 200px; top: 0; width: 220px; background: #eee; display: none; }
+  #flyout a { display: block; padding: 6px; }
+  main { margin-left: 460px; padding: 16px; }
+  [hidden] { display: none !important; }
+  [role=dialog] { position: fixed; left: 480px; top: 40px; background: #fff; border: 1px solid #999; padding: 12px; }
+</style></head>
+<body>
+<nav>
+  <a href="#" data-module="penjualan">Penjualan</a>
+  <a href="#" data-module="persediaan">Persediaan</a>
+  <a href="#" data-module="pengaturan">Pengaturan</a>
+</nav>
+<div id="flyout"></div>
+<main id="main"><h2>Beranda</h2><p>Selamat datang.</p></main>
+
+<script>
+const MENU = {
+  penjualan: ['Faktur Penjualan', 'Pesanan Penjualan'],
+  persediaan: ['Pemindahan Barang'],
+  pengaturan: ['Preferensi'],
+};
+
+// Reads the app makes on its own: one allowed list call, one analytics beacon.
+fetch('/accurate/api/sales-invoice/list.do', { method: 'POST' });
+navigator.sendBeacon('https://www.google-analytics.com/g/collect', 'x');
+
+document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  const fly = document.getElementById('flyout');
+  fly.innerHTML = MENU[a.dataset.module].map(t => `<a href="#">${t}</a>`).join('');
+  fly.style.display = 'block';
+  fly.querySelectorAll('a').forEach(i => i.addEventListener('click', ev => { ev.preventDefault(); fly.style.display = 'none'; open(i.textContent); }));
+}));
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.getElementById('flyout').style.display = 'none';
+  document.querySelectorAll('[role=dialog]').forEach(d => d.remove());
+});
+
+function open(name) {
+  const main = document.getElementById('main');
+  if (name === 'Faktur Penjualan') {
+    fetch('/accurate/api/sales-invoice/list.do', { method: 'POST' });
+    main.innerHTML = `
+      <h2>Faktur Penjualan</h2>
+      <button id="new">+ Tambah</button> <button id="del">Hapus</button> <button>Cetak</button>
+      <table><thead><tr><th>No. Faktur</th><th>Tanggal</th><th>Pelanggan</th><th>Total</th></tr></thead>
+      <tbody><tr><td>SI.2026.10.00012</td><td>03/10/2026</td><td>PT Maju Jaya</td><td>Rp 1.250.000</td></tr></tbody></table>`;
+    document.getElementById('del').onclick = () => fetch('/accurate/api/sales-invoice/delete.do', { method: 'POST' });
+    document.getElementById('new').onclick = newInvoice;
+  } else if (name === 'Pesanan Penjualan') {
+    main.innerHTML = `<h2>Pesanan Penjualan</h2>
+      <table><thead><tr><th>No. Pesanan</th><th>Status</th></tr></thead><tbody><tr><td>SO.2026.10.00001</td><td>Menunggu diproses</td></tr></tbody></table>`;
+  } else if (name === 'Pemindahan Barang') {
+    fetch('/accurate/api/item-transfer/list.do', { method: 'POST' });
+    main.innerHTML = `<h2>Pemindahan Barang</h2>
+      <table><thead><tr><th>No. Pemindahan</th><th>Dari Gudang</th><th>Ke Gudang</th></tr></thead></table>`;
+  } else if (name === 'Preferensi') {
+    main.innerHTML = `<h2>Preferensi</h2>
+      <div role="tablist"><button role="tab" data-tab="p1">Penjualan</button><button role="tab" data-tab="p2">Persediaan</button></div>
+      <div id="p1"><label for="due">Jatuh tempo default (hari)</label><input id="due" type="number" value="30">
+        <label><input type="checkbox" checked> Wajib persetujuan pesanan</label></div>
+      <div id="p2" hidden><label><input type="checkbox" checked> Izinkan stok minus</label>
+        <label for="cost">Metode HPP</label><select id="cost"><option>Rata-rata</option><option>FIFO</option></select></div>`;
+    main.querySelectorAll('[role=tab]').forEach(t => t.onclick = () => {
+      main.querySelector('#p1').hidden = t.dataset.tab !== 'p1';
+      main.querySelector('#p2').hidden = t.dataset.tab !== 'p2';
+    });
+  }
+}
+
+function newInvoice() {
+  // An app that autosaves a draft and holds a socket open: both must be refused.
+  fetch('/accurate/api/sales-invoice/save-draft.do', { method: 'POST' });
+  try { new WebSocket('wss://zeus.accurate.id/accurate/ws'); } catch (e) {}
+
+  const d = document.createElement('div');
+  d.setAttribute('role', 'dialog');
+  d.innerHTML = `
+    <h3>Faktur Penjualan Baru</h3>
+    <div role="tablist"><button role="tab" data-tab="t1">Rincian Barang</button><button role="tab" data-tab="t2">Info Lainnya</button></div>
+    <div id="t1">
+      <div class="form-group"><label for="cust">Pelanggan *</label><select id="cust" required><option>PT A</option><option>CV B</option></select></div>
+      <div class="form-group"><label for="terms">Syarat Pembayaran</label><select id="terms"><option>C.O.D</option><option>Net 30</option></select></div>
+      <div class="form-group"><label for="no">No. Faktur</label><input id="no" type="text" value="SI.2026.10.00013"></div>
+      <div class="form-group"><label for="tgl">Tanggal</label><input id="tgl" type="date"></div>
+      <label><input type="checkbox" id="tax"> Termasuk Pajak</label>
+      <table><thead><tr><th>Kode Barang</th><th>Nama Barang</th><th>Kuantitas</th><th>Harga Satuan</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div id="t2" hidden><div class="form-group"><label for="ket">Keterangan</label><textarea id="ket"></textarea></div></div>
+    <button id="save">Simpan</button> <button id="cancel">Batal</button>`;
+  document.body.appendChild(d);
+  d.querySelector('#save').onclick = () => fetch('/accurate/api/sales-invoice/save.do', { method: 'POST' });
+  d.querySelector('#cancel').onclick = () => d.remove();
+  d.querySelectorAll('[role=tab]').forEach(t => t.onclick = () => {
+    d.querySelector('#t1').hidden = t.dataset.tab !== 't1';
+    d.querySelector('#t2').hidden = t.dataset.tab !== 't2';
+  });
+}
+</script>
+</body></html>

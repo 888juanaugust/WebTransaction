@@ -1,0 +1,18 @@
+{
+  "name": "accurate-scan",
+  "private": true,
+  "description": "Read-only structural scan of ACCURATE Online: menus, forms, reports, preferences. Not part of the application.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "recon": "node scan.mjs --mode=recon",
+    "scan": "node scan.mjs --mode=full",
+    "render": "node render.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.1"
+  }
+}

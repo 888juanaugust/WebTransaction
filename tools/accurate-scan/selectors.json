@@ -1,0 +1,18 @@
+{
+  "_comment": "Defaults written before ACCURATE's markup was seen. Run `npm run recon`, read .state/recon.json, and tune these. allowPost takes exact paths only — never a save endpoint.",
+  "loginUrl": "https://account.accurate.id/",
+  "allowPost": [],
+  "login": {
+    "email": ["input[type=email]", "input[name*=email i]", "input[name*=user i]", "#email", "#username"],
+    "password": ["input[type=password]"],
+    "submit": ["button[type=submit]", "input[type=submit]", "button:has-text('Masuk')", "button:has-text('Login')"]
+  },
+  "database": {
+    "open": ["a:has-text('Buka')", "button:has-text('Buka')", "[class*=database] a", "[class*=db-list] a"]
+  },
+  "menu": {
+    "modules": [],
+    "sidebarMaxX": 280
+  },
+  "challenge": "(captcha|kode verifikasi|kode otp|verification code|two-factor|2fa|one-time)"
+}
