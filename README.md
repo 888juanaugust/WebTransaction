@@ -22,6 +22,8 @@ The deep documentation lives in `docs/`:
 | [docs/PILOT.md](docs/PILOT.md) | Running 3–4 friendly customers for two weeks |
 | [docs/DEMO.md](docs/DEMO.md) | Seeding and walking through the demo data |
 | [docs/BACKUP.md](docs/BACKUP.md) | Encrypted nightly backups, and the restore drill |
+| [docs/accurate/PARITY.md](docs/accurate/PARITY.md) | The ACCURATE-parity programme: every ACCURATE feature, what exists here, and the phase that closes the gap |
+| [tools/accurate-scan](tools/accurate-scan/README.md) | Read-only scan of the owner's ACCURATE Online, the source of that spec |
 
 ## Stack
 

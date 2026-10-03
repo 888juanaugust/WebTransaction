@@ -7,6 +7,21 @@ Three surfaces sit over one shared domain core. The rule that shapes everything
 below: **screens display, the domain decides.** No controller, form or table
 computes a price, moves stock, or writes an order status.
 
+> **ACCURATE parity (2026-10).** The owner decided WebTransaction first
+> replicates ACCURATE Online, then gets modified (CLAUDE.md, *ACCURATE parity*;
+> the spec is [`docs/accurate/PARITY.md`](accurate/PARITY.md)). This map still
+> describes the code **as it is**. The sections below change when the phase
+> that changes their code lands, and that phase rewrites them:
+>
+> | Section | Becomes | Phase |
+> |---|---|---|
+> | Wilayah — one company, several sets of books | Cabang as a tag in one set of books | 2 |
+> | Peran dan tim · Access | Hak akses: permission groups, cabang/gudang access | 3 |
+> | Append-only, enforced by the database · Stock · Payments | Postings derived from documents, written only by the posting engine | 4–6 |
+> | Costing — moving average, frozen at the movement | Dated movements, HPP recalculated after back-dated edits | 5 |
+> | Books — double entry over everything above | Editable chart of accounts, default-account preferences, departemen/proyek | 7 |
+> | Orders — every transition in one place | Pesanan → Pengiriman → Faktur, partial fulfilment | 12 |
+
 ---
 
 ## 1. Pages

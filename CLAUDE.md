@@ -11,6 +11,35 @@ Three surfaces over one shared domain core:
 - **Buyer portal** — authenticated, per-customer prices, ordering
 - **Admin panel** — staff, role-scoped
 
+## ACCURATE parity (2026-10) — read this before the invariants
+
+The business runs on **ACCURATE Online**. On 2026-10-03 the owner decided that
+WebTransaction first **replicates ACCURATE's functionality**, and is modified
+afterwards. That decision outranks older text in this file and in docblocks:
+
+| Decision | Consequence |
+|---|---|
+| Match ACCURATE, change it later | `docs/accurate/PARITY.md` is the spec. Where it and an older rule disagree, PARITY.md wins unless the row names a toggle |
+| Posted transactions can be edited and deleted, as in ACCURATE | Subject to hak akses, the closed-period lock and blockers (reconciled, settled, referenced by a later document). See invariant 1 for how |
+| Access is ACCURATE's: configurable per user/group, per menu (lihat/tambah/ubah/hapus/cetak) plus special rights | `Role` becomes job function only (sales/marketing seat, commission, Gudang binding). Phase 3 |
+| Cabang is a **tag in one set of books**, as in ACCURATE | Not a separate set of books per region. One ledger, one stock, one average cost, one supplier list; documents and journal lines carry the cabang. Phase 2 |
+| What WebTransaction does that ACCURATE does not stays, behind a switch | Buyer portal, public site, credit freeze, forced marketing approval, order split, reservation, commission, visits, Coretax XML, price-list pipeline, two-key rules. Each switch defaults to today's behaviour |
+| Out of scope | Multi-currency, payroll |
+
+The work runs in phases (0 scan + rules · 1 settings · 2 cabang tag · 3 hak akses ·
+4 posting engine · 5 HPP recalculation · 6 documents onto the engine · 7 GL ·
+8 numbering & approval · 9 inventory master · 10 tax codes · 11 purchasing ·
+12 sales · 13 cash/bank & assets · 14 printing · 15 reports · 16 manufacturing ·
+17 serial/batch · 18 ACCURATE importers · 19 UAT). A phase is done when its
+PARITY rows are BUILT, or DIFFERS behind a toggle. What ACCURATE does is learned
+from `tools/accurate-scan` (read-only scan of the owner's database), not guessed.
+
+**Until a phase lands, the code keeps its current mechanism.** Docblocks, tests
+and `docs/MAP.md` sections written before 2026-10 that say *append-only*,
+*never edited*, *books per region* or *fixed role matrix* describe the code
+as it still is. The phase that changes the mechanism also rewrites those
+docblocks and tests; nobody bypasses the mechanism early.
+
 ## Stack
 
 - Laravel + Livewire + Filament
@@ -37,27 +66,47 @@ in English; user-facing strings in the panels in Indonesian.
 
 ## Invariants — do not violate these
 
-These are load-bearing. If a change appears to require breaking one, stop and ask.
+These are load-bearing. Revised 2026-10 for ACCURATE parity (see above). If a
+change appears to require breaking one, stop and ask — in particular anything
+touching invariant 6, a journal that would not balance, a hak akses check, the
+closed-period lock, or `audit_logs` being anything but append-only.
 
-### 1. Stock and money are append-only ledgers
+### 1. Postings are derived from documents, and only the posting layer writes them
 
-Never `UPDATE products SET stock = stock - n`.
-Insert into `stock_movements` (sku, warehouse_id, qty_signed, reason, reference_type,
-reference_id, actor_id, created_at). Current stock is a cached column updated inside the
-same transaction, and must always be reconstructible by summing the ledger.
+A document (faktur, penerimaan, pengiriman, penyesuaian, jurnal umum…) is the
+record a person edits. Its postings — `stock_movements`, `journal_entries` /
+`journal_lines`, `payment_entries` / `payment_allocations`,
+`supplier_payment_entries` / `supplier_payment_allocations` — are derived from
+it. Documents may be edited and deleted (ACCURATE semantics), subject to hak
+akses, the closed-period lock on **both** the old and the new date, and
+blockers (reconciled, settled, referenced by a later document).
 
-Same for `payment_entries`. Never mutate a payment row; insert a reversing entry.
+Only the posting layer writes those tables: today the existing posters,
+`Ledger`, `StockLedger`, `PaymentLedger`, `SupplierLedger` (append-only, guarded
+by the `ledger_is_append_only()` trigger); from Phase 4,
+`App\Domain\Posting\PostingService`, which regenerates a document's postings by
+stable `posting_key` and is the only code the relaxed trigger lets through.
+
+Never `UPDATE products SET stock = stock - n`, and never touch a ledger from a
+controller, form, report, seeder or raw SQL. Cached columns (stock levels,
+average cost, settled amounts, received quantities) must always be
+reconstructible from the ledgers. `audit_logs` (and, from Phase 4,
+`document_revisions`) stay strictly append-only: an edit or delete is recorded
+there with the before and after.
 
 ### 2. Pricing is one pure function
 
 `resolvePrice(company, sku, qty, date)` returns price + the reason it resolved that way.
-Cart, order confirmation, invoice, and quote all call it. Never duplicate price logic —
-not in the admin panel, not in a report, not in an export.
+Cart, order confirmation, invoice, and quote all call it for the **default** price.
+Never duplicate price logic — not in the admin panel, not in a report, not in an export.
+A manually typed price (ACCURATE allows one) needs the special right to change selling
+prices (Phase 3/12), is audited, and is switched off while `HargaHanyaDariResolver` is on.
 
-### 3. Order lines snapshot their price
+### 3. Document lines snapshot their price
 
 At `confirmed`, copy unit price, discount, DPP, PPN, and `price_list_version_id` onto the
 line row. Never join to the live price list when rendering a historical order or invoice.
+Editing a line re-snapshots it explicitly; it never reaches back to the live list.
 
 ### 4. `paid` is set only by settlement in the payment ledger
 
@@ -71,8 +120,9 @@ faktur comes from `config/perusahaan.php` (`rekening`).
 
 ### 5. Unit of measure is modeled, not assumed
 
-Every SKU has a base unit (PCS or SET) and `qty_per_ctn`. Order lines store **both** the
-ordered unit/quantity and the resolved base quantity. Stock ledger is always in base units.
+Every SKU has a base unit (PCS or SET) and `qty_per_ctn` — from Phase 9, any number of
+units with conversion ratios, as in ACCURATE. Order lines store **both** the ordered
+unit/quantity and the resolved base quantity. Stock ledger is always in base units.
 
 ### 6. Money is BIGINT rupiah
 
@@ -83,6 +133,11 @@ fractional rupiah is unavoidable, rounded to whole rupiah at the line level.
 
 Take `SELECT ... FOR UPDATE` on stock rows inside the confirming transaction.
 A scheduled job releases reservations on stale unpaid orders.
+
+ACCURATE does not reserve, so this becomes the switch `ReservasiStok` (default on). From
+Phase 12 stock leaves at the Pengiriman Pesanan, which may be partial. From Phase 5 every
+movement carries its document date, and a back-dated or edited document re-costs what
+came after it (HPP recalculation, never before the first open period).
 
 ---
 
@@ -98,7 +153,14 @@ Every transition is an explicit logged event with actor and timestamp — never 
 flag flipped in place. Transitions live in a dedicated state machine class, not scattered
 across controllers.
 
-**Multi-warehouse split (2026-08):** stock lives per warehouse per region. When
+**ACCURATE chain (Phase 12):** the order becomes ACCURATE's Pesanan Penjualan, followed by
+its own **Pengiriman Pesanan** (partial deliveries allowed) and **Faktur Penjualan** (own
+lines; from one or more deliveries, or direct). Fulfilment status (menunggu / sebagian /
+terproses / ditutup) is derived from quantities. Today's invoice-before-shipping becomes
+the switch `TagihSebelumKirim`. The portal keeps feeding orders into the chain.
+
+**Multi-warehouse split (2026-08, switch `PecahGudang` from Phase 1):** stock lives per
+warehouse per region — from Phase 2, per warehouse in one set of books. When
 approval finds an order's goods scattered, it splits into one transaction per
 shipping warehouse — home region drained first, remainder from the fullest
 foreign warehouse — each piece booked in **its warehouse's region** with that
@@ -118,6 +180,15 @@ scoped.
 Reorganised 2026-08 for the credit-sales operation: customers buy on account,
 every order needs marketing's approval, and debt is watched per customer by
 the team in charge of them.
+
+**Becoming ACCURATE's hak akses (Phase 3).** Permission groups hold rights per menu
+(lihat / tambah / ubah / hapus / cetak) plus special rights (see cost, change selling
+price, see credit data, open a closed period…); a user belongs to a group, may carry
+per-user grants or revocations, and is limited to the cabang and gudang assigned to
+them. Six system groups are seeded to reproduce the matrix below **cell for cell**, so
+nobody's access changes on the day it lands; after that the Owner edits groups on a
+screen. `Role` stays only as job function. Until Phase 3 lands, the table below is what
+the code enforces.
 
 | Role | Can | Cannot |
 |---|---|---|
@@ -139,9 +210,12 @@ amount. Whoever is paid on the sale must not approve its credit (Sales cannot
 approve orders). Whoever sets the price neither approves credit nor confirms
 money. Whoever files a claim (pelunasan, retur, biaya) never verifies it —
 two keys, two people, the Owner included. Log every override with actor, old
-value, new value, timestamp.
+value, new value, timestamp. ACCURATE has no such rules, so from Phase 3 each is
+a switch under `PemisahanTugas` — **default on**, and turning one off is itself
+audited. Logging every override is not a switch.
 
-**Debt terms (2026-08):** faktur due date defaults to 30 days. Aging counts
+**Debt terms (2026-08, switch `BekuKredit` from Phase 1):** faktur due date defaults to
+30 days. Aging counts
 from the transaction (issue) date: notice to customer + team at 120 days,
 hard freeze — no new transactions — strictly after 150 days, lifted the
 moment the aged invoice is settled. Derived arithmetic, never stored state.
@@ -257,9 +331,13 @@ Generic CRUD exists behind these for corrections only.
 
 Payment-gateway integration · shipping-rate API integration · Coretax API integration · mobile app · real-time
 notifications · multi-currency · product reviews · recommendation engine · promo/voucher
-engine · public price display.
+engine · public price display. The ACCURATE-parity programme does not reopen these:
+multi-currency and payroll were explicitly left out of it.
 
 ## Build order
+
+The original build, phases 0–5, is code-complete. The work now is the ACCURATE-parity
+programme at the top of this file. Its phases are numbered separately.
 
 0. KBLI check on NIB, price tier structure on paper
 1. **Admin panel only** (~4–6 wk) — staff enter real orders, no buyer login at all
@@ -285,5 +363,12 @@ Phase 1 must run the real business before any buyer logs in.
 - Every money-affecting action writes to the audit log.
 - Queue jobs must be idempotent — assume they run twice.
 - Tests required for: price resolution, credit check, stock reservation, payment
-  settlement, tax calculation. These five are where bugs cost money.
+  settlement, tax calculation. These five are where bugs cost money. They stay green
+  through every phase of the parity programme.
+- A new switch defaults to today's behaviour, so the existing suite stays green; tests of
+  the ACCURATE behaviour turn the switch.
+- The test suite needs PHP ≥ 8.4.1 (Symfony 8). The cloud session hook
+  (`.claude/hooks/session-start.sh`) installs it when the network allows; otherwise CI
+  (`.github/workflows/tests.yml`, every push) is the runner, and a session checks
+  `php -l` and `./vendor/bin/pint --test` locally.
 - Backups: nightly `pg_dump`, encrypted, off-box. Test restore before launch.
