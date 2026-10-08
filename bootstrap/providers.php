@@ -1,11 +1,11 @@
 <?php
 
+use App\Client\ClientServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
-use App\Providers\Filament\PortalPanelProvider;
 
 return [
     AppServiceProvider::class,
     AdminPanelProvider::class,
-    PortalPanelProvider::class,
+    ClientServiceProvider::class, // last, so the client can override anything above
 ];

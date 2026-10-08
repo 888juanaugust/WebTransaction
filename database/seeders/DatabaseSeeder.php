@@ -1,95 +1,47 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Database\Seeders;
 
-use App\Domain\Access\Role;
-use App\Domain\Regions\RegionContext;
-use App\Models\PriceTier;
-use App\Models\Region;
-use App\Models\User;
-use App\Models\Warehouse;
+use App\Modules\ModuleRegistry;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 /**
- * Baseline reference data: one staff account per role, the warehouse, and the
- * price tiers.
- *
- * No products and no prices — those come from a real price list import,
- * because a seeded price is a price nobody approved.
+ * What every installation gets: the System seeders the code relies on, the
+ * Defaults a company usually wants and can edit, and the defaults of each
+ * module that is switched on. The demo company is seeded only on request
+ * (erp:install --demo, or --class=Database\Seeders\Demo\DemoCompanySeeder).
  */
 class DatabaseSeeder extends Seeder
 {
+    /** @var list<class-string<Seeder>> the tables the code itself relies on */
+    public const SYSTEM = [
+        System\AdminUserSeeder::class,
+        System\BranchSeeder::class,
+        System\CurrencySeeder::class,
+        System\ChartOfAccountsSeeder::class,
+        System\DocumentSeriesSeeder::class,
+        System\CoreMastersSeeder::class,
+    ];
+
+    /** @var list<class-string<Seeder>> sensible starting data a company edits on its screens */
+    public const DEFAULTS = [
+        Defaults\BankSeeder::class,
+        Defaults\TaxCodeSeeder::class,
+        Defaults\PaymentTermSeeder::class,
+        Defaults\FobSeeder::class,
+        Defaults\UnitSeeder::class,
+        Defaults\PrintLayoutSeeder::class,
+        Defaults\AccessGroupSeeder::class,
+        Defaults\ApprovalRuleSeeder::class,
+    ];
+
     public function run(): void
     {
-        /*
-         * The console is unbound, and seeded rows need books to file
-         * themselves under. Pin to the default region the migration created
-         * — the same thing TestCase does for the suite.
-         */
-        app(RegionContext::class)->pinTo(
-            Region::query()->orderBy('id')->firstOrFail(),
-        );
+        $this->call(self::SYSTEM);
+        $this->call(self::DEFAULTS);
 
-        /*
-         * Ordinary staff are pinned to the default region the migration
-         * created; the Owner's blank is the grant of every region. Left
-         * unpinned, a seeded salesperson could not be seated on any team —
-         * TeamAssigner rightly refuses an assignee the region scope hides
-         * from the customer.
-         */
-        $wilayahUtama = Region::query()->orderBy('id')->value('id');
-
-        /*
-         * People, not role labels. The accounts used to be named after
-         * their roles — "Pemilik", "Gudang" — which read fine in a table and
-         * badly on the account card, where the role is printed under the
-         * name and the demo Owner became "Pemilik / Pemilik". The emails
-         * are what docs/DEMO.md refers to and they are unchanged.
-         */
-        $nama = [
-            Role::Owner->value => 'Budi Santoso',
-            Role::Sales->value => 'Andi Wijaya',
-            Role::Marketing->value => 'Rina Kusuma',
-            Role::Warehouse->value => 'Dewi Lestari',
-            Role::Storage->value => 'Agus Prasetyo',
-            Role::Finance->value => 'Siti Rahayu',
-        ];
-
-        foreach (Role::cases() as $role) {
-            User::query()->firstOrCreate(
-                ['email' => "{$role->value}@example.test"],
-                [
-                    'name' => $nama[$role->value] ?? $role->label(),
-                    'password' => Hash::make('password'),
-                    'role' => $role,
-                    'is_active' => true,
-                    'email_verified_at' => now(),
-                    // Marketing is global like the Owner — no region of
-                    // their own, they answer for customers everywhere.
-                    'region_id' => in_array($role, [Role::Owner, Role::Marketing], true) ? null : $wilayahUtama,
-                ],
-            );
-        }
-
-        $this->call(ChartOfAccountsSeeder::class);
-
-        Warehouse::query()->firstOrCreate(
-            ['kode' => 'GD-PUSAT'],
-            ['nama' => 'Gudang Pusat', 'aktif' => true],
-        );
-
-        foreach ([
-            ['BENGKEL', 'Bengkel', 0],
-            ['TOKO', 'Toko sparepart', 250],
-            ['DIST', 'Distributor', 750],
-        ] as [$kode, $nama, $bps]) {
-            PriceTier::query()->firstOrCreate(
-                ['kode' => $kode],
-                ['nama' => $nama, 'discount_bps' => $bps, 'aktif' => true],
-            );
+        foreach (app(ModuleRegistry::class)->enabled() as $module) {
+            $this->call($module::defaultSeeders());
         }
     }
 }

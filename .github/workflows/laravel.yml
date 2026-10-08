@@ -1,0 +1,92 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: PHP 8.4
+    # The suite runs against real PostgreSQL, never sqlite: the schema depends
+    # on row locks, partial unique indexes and jsonb.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: central
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: central_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U central"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # FootprintTest reads the whole history
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, gd, intl, bcmath
+          coverage: none
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-8.4-
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            pg_isready -h 127.0.0.1 -p 5432 -U central && exit 0
+            sleep 2
+          done
+          echo "PostgreSQL never became ready" && exit 1
+      - name: Run migrations
+        env:
+          DB_DATABASE: central_test
+        run: php artisan migrate --force
+      - run: php artisan test
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pdo, pdo_pgsql, gd, intl
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: vendor/bin/pint --test
+      - run: composer audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm audit --audit-level=moderate
+      - run: bash -n .claude/hooks/session-start.sh

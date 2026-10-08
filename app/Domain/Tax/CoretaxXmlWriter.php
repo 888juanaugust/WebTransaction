@@ -4,114 +4,88 @@ declare(strict_types=1);
 
 namespace App\Domain\Tax;
 
-use DomainException;
+use App\Domain\Pengaturan\Preferensi;
+use App\Domain\Pengaturan\PreferensiKey;
+use App\Models\Sales\SalesInvoice;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use XMLWriter;
 
 /**
- * The Coretax bulk-import XML: one `TaxInvoiceBulk`, one `TaxInvoice` per
- * faktur, one `GoodService` per line.
- *
- * Written to the template the accountant handed over (2026-09), element for
- * element and in its order — the two element lists below are declared as
- * data so that checking this writer against a newer template is a diff of
- * two lists, not a reading of code, and so a test can hold the template up
- * against the output.
- *
- * Three things a reviewer should look at hardest:
- *
- * - **`RefDesc` carries our invoice number.** The serial (NSFP) is not ours
- *   to choose — Coretax assigns one and hands it back beside this reference,
- *   and that is what NsfpRecorder writes onto the invoice. There is no
- *   element for the serial on the way out, which is as it should be.
- * - **`TaxBase` and `OtherTaxBase` are different numbers under code 04.**
- *   TaxBase is the selling price net of discount; OtherTaxBase is the DPP
- *   Nilai Lain, 11/12 of it, and the VAT is 12% of *that* — which is the
- *   stored per-line snapshot, not a recomputation. Under code 01 the two
- *   bases coincide, and the writer still emits the stored DPP so a rate
- *   change never rewrites a filed month.
- * - **The identifiers are sixteen and twenty-two digits.** Coretax reads the
- *   16-digit NPWP (a 15-digit one gains a leading zero) and the ID TKU is
- *   that plus a six-digit branch suffix, `000000` for a head office. See
- *   `Npwp` — every number goes through it.
- *
- * Reference codes that are Coretax's rather than ours — the buyer country,
- * the goods code, the unit codes — come from `config/pajak.php` so the
- * accountant can correct them without a code change. They are printed on the
- * filing screen for that reason.
+ * The tax office's bulk-import file (TaxInvoiceBulk): one TaxInvoice per
+ * sales invoice, one GoodService per line, with the tax base and the "other
+ * tax base" (11/12 of it) the 12 % rate is charged on. No API: a person
+ * uploads the file and pastes the serial numbers back.
  */
-class CoretaxXmlWriter implements FakturWriter
+final class CoretaxXmlWriter
 {
-    /**
-     * The children of `TaxInvoice`, in the template's order.
-     *
-     * @var list<string>
-     */
-    public const ELEMEN_FAKTUR = [
-        'TaxInvoiceDate', 'TaxInvoiceOpt', 'TrxCode', 'AddInfo', 'CustomDoc', 'RefDesc',
-        'FacilityStamp', 'SellerIDTKU', 'BuyerTin', 'BuyerDocument', 'BuyerCountry',
-        'BuyerDocumentNumber', 'BuyerName', 'BuyerAdress', 'BuyerEmail', 'BuyerIDTKU',
-        'ListOfGoodService',
-    ];
-
-    /**
-     * The children of `GoodService`, in the template's order.
-     *
-     * @var list<string>
-     */
-    public const ELEMEN_BARIS = [
-        'Opt', 'Code', 'Name', 'Unit', 'Price', 'Qty', 'TotalDiscount', 'TaxBase',
-        'OtherTaxBase', 'VATRate', 'VAT', 'STLGRate', 'STLG',
-    ];
-
-    /** An original faktur. `Pengganti` would be a replacement for a corrected one. */
-    private const OPT_NORMAL = 'Normal';
-
-    /** Goods, as opposed to `B` for services. Spare parts are goods. */
-    private const OPT_BARANG = 'A';
-
-    /** The buyer is identified by a tax number, not a NIK or a passport. */
-    private const DOKUMEN_PEMBELI = 'TIN';
-
-    public function format(): string
+    /** @param  Collection<int, SalesInvoice>  $invoices */
+    public function write(Collection $invoices): string
     {
-        return 'coretax_xml';
-    }
-
-    public function extension(): string
-    {
-        return 'xml';
-    }
-
-    /**
-     * @param  list<FakturRecord>  $fakturs
-     */
-    public function write(array $fakturs): string
-    {
-        $penjualTin = Npwp::enamBelasDigit((string) config('pajak.penjual.npwp'));
-
-        if ($penjualTin === '') {
-            throw new DomainException(
-                'NPWP penjual belum diisi — lengkapi di Pengaturan perusahaan sebelum membuat file.'
-            );
-        }
-
-        $penjualIdTku = Npwp::idTku($penjualTin, (string) config('pajak.penjual.id_tku'));
+        $cfg = config('pajak.coretax');
+        $prefs = app(Preferensi::class);
+        $sellerTin = preg_replace('/\D/', '', (string) $prefs->get(PreferensiKey::CompanyNpwp)) ?? '';
+        $sellerIdTku = (string) ($prefs->get(PreferensiKey::Nitku) ?: $sellerTin.$cfg['idtku_suffix']);
 
         $xml = new XMLWriter;
         $xml->openMemory();
         $xml->setIndent(true);
         $xml->setIndentString('  ');
         $xml->startDocument('1.0', 'utf-8');
-
         $xml->startElement('TaxInvoiceBulk');
         $xml->writeAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
-        $xml->writeAttribute('xsi:noNamespaceSchemaLocation', 'TaxInvoice.xsd');
-        $xml->writeElement('TIN', $penjualTin);
-
+        $xml->writeAttribute('xmlns:xsd', 'http://www.w3.org/2001/XMLSchema');
+        $xml->writeElement('TIN', $sellerTin);
         $xml->startElement('ListOfTaxInvoice');
 
-        foreach ($fakturs as $faktur) {
-            $this->faktur($xml, $faktur, $penjualIdTku);
+        foreach ($invoices as $invoice) {
+            $buyer = TaxParty::fromParty($invoice->customer);
+            $usesOtherBase = $invoice->lines->contains(fn ($line) => $line->taxCode && (int) $line->taxCode->dpp_denominator !== (int) $line->taxCode->dpp_numerator);
+
+            $xml->startElement('TaxInvoice');
+            $xml->writeElement('TaxInvoiceDate', CarbonImmutable::parse($invoice->trans_date)->toDateString());
+            $xml->writeElement('TaxInvoiceOpt', $cfg['tax_invoice_opt']);
+            $xml->writeElement('TrxCode', $usesOtherBase ? $cfg['trx_code_dpp_lain'] : $cfg['trx_code_normal']);
+            $xml->writeElement('AddInfo', '');
+            $xml->writeElement('CustomDoc', '');
+            $xml->writeElement('CustomDocMonthYear', '');
+            $xml->writeElement('RefDesc', $invoice->number);
+            $xml->writeElement('FacilityStamp', '');
+            $xml->writeElement('SellerIDTKU', $sellerIdTku);
+            $xml->writeElement('BuyerTin', $buyer->idNumber);
+            $xml->writeElement('BuyerDocument', $cfg['buyer_document'][$buyer->idType] ?? $cfg['buyer_document']['other']);
+            $xml->writeElement('BuyerCountry', $cfg['buyer_country']);
+            $xml->writeElement('BuyerDocumentNumber', $buyer->idType === 'npwp' ? '' : $buyer->idNumber);
+            $xml->writeElement('BuyerName', $buyer->name);
+            $xml->writeElement('BuyerAdress', $buyer->address);
+            $xml->writeElement('BuyerEmail', (string) $buyer->email);
+            $xml->writeElement('BuyerIDTKU', $buyer->idTku);
+            $xml->startElement('ListOfGoodService');
+            foreach ($invoice->lines as $line) {
+                $item = $line->item;
+                $isService = $item && method_exists($item, 'isService') && $item->isService();
+                $gross = (int) $line->amount + (int) $line->discount_amount;
+                $xml->startElement('GoodService');
+                $xml->writeElement('Opt', $isService ? 'B' : 'A');
+                $xml->writeElement('Code', (string) ($item?->item_tax_code ?: ($isService ? $cfg['service_code'] : $cfg['goods_code'])));
+                $xml->writeElement('Name', (string) ($item?->name ?? ''));
+                $xml->writeElement('Unit', (string) ($line->unit?->unit_tax_code ?: $cfg['unit_code']));
+                $xml->writeElement('Price', $this->decimal($line->unit_price));
+                $xml->writeElement('Qty', $this->decimal($line->quantity));
+                $xml->writeElement('TotalDiscount', (string) (int) $line->discount_amount);
+                $xml->writeElement('TaxBase', (string) (int) $line->amount);
+                $xml->writeElement('OtherTaxBase', (string) (int) $line->dpp_amount);
+                $xml->writeElement('VATRate', (string) $cfg['vat_rate']);
+                $xml->writeElement('VAT', (string) (int) $line->tax_amount);
+                $xml->writeElement('STLGRate', '0');
+                $xml->writeElement('STLG', '0');
+                $xml->endElement();
+                unset($gross);
+            }
+            $xml->endElement(); // ListOfGoodService
+            $xml->endElement(); // TaxInvoice
         }
 
         $xml->endElement(); // ListOfTaxInvoice
@@ -121,91 +95,9 @@ class CoretaxXmlWriter implements FakturWriter
         return $xml->outputMemory();
     }
 
-    private function faktur(XMLWriter $xml, FakturRecord $faktur, string $penjualIdTku): void
+    private function decimal(string|int|float|null $value): string
     {
-        $nilai = [
-            'TaxInvoiceDate' => $faktur->tanggalFaktur->format('Y-m-d'),
-            'TaxInvoiceOpt' => self::OPT_NORMAL,
-            'TrxCode' => $faktur->kodeTransaksi,
-            'AddInfo' => '',
-            'CustomDoc' => '',
-            // Our invoice number: what comes back beside the assigned serial.
-            'RefDesc' => $faktur->referensi,
-            'FacilityStamp' => '',
-            'SellerIDTKU' => $penjualIdTku,
-            'BuyerTin' => Npwp::enamBelasDigit($faktur->npwp),
-            'BuyerDocument' => self::DOKUMEN_PEMBELI,
-            'BuyerCountry' => (string) config('pajak.coretax.negara_pembeli'),
-            'BuyerDocumentNumber' => '',
-            'BuyerName' => $this->flatten($faktur->namaWajibPajak),
-            // Sic — the schema spells it with one d, and a corrected spelling
-            // is an unknown element to the importer.
-            'BuyerAdress' => $this->flatten($faktur->alamatPajak),
-            'BuyerEmail' => trim($faktur->emailPembeli),
-            'BuyerIDTKU' => $faktur->idTkuPembeli,
-        ];
-
-        $xml->startElement('TaxInvoice');
-
-        foreach (self::ELEMEN_FAKTUR as $elemen) {
-            if ($elemen === 'ListOfGoodService') {
-                $xml->startElement('ListOfGoodService');
-
-                foreach ($faktur->lines as $line) {
-                    $this->baris($xml, $line);
-                }
-
-                $xml->endElement();
-
-                continue;
-            }
-
-            $xml->writeElement($elemen, $nilai[$elemen]);
-        }
-
-        $xml->endElement(); // TaxInvoice
-    }
-
-    private function baris(XMLWriter $xml, FakturLine $line): void
-    {
-        $satuan = config('pajak.coretax.satuan');
-        $nilai = [
-            'Opt' => self::OPT_BARANG,
-            'Code' => (string) config('pajak.coretax.kode_barang'),
-            'Name' => $this->flatten($line->nama),
-            'Unit' => (string) ($satuan[$line->satuan] ?? $satuan['PCS'] ?? ''),
-            'Price' => (string) $line->hargaSatuanRupiah,
-            'Qty' => (string) $line->jumlahBarang,
-            'TotalDiscount' => (string) $line->diskonRupiah,
-            // Selling price net of discount — what the customer was billed.
-            'TaxBase' => (string) ($line->hargaTotalRupiah - $line->diskonRupiah),
-            // DPP Nilai Lain, as snapshotted: 11/12 of the line under code 04.
-            'OtherTaxBase' => (string) $line->dppRupiah,
-            'VATRate' => (string) intdiv((int) config('pajak.ppn_rate_bps'), 100),
-            'VAT' => (string) $line->ppnRupiah,
-            // PPnBM: luxury goods tax. Never spare parts, but the elements are
-            // part of the schema.
-            'STLGRate' => '0',
-            'STLG' => '0',
-        ];
-
-        $xml->startElement('GoodService');
-
-        foreach (self::ELEMEN_BARIS as $elemen) {
-            $xml->writeElement($elemen, $nilai[$elemen]);
-        }
-
-        $xml->endElement();
-    }
-
-    /**
-     * Collapse whitespace so a textarea address reads as one line.
-     *
-     * XMLWriter escapes the characters that would break the document; this
-     * is only about newlines, which are legal in XML and wrong on a faktur.
-     */
-    private function flatten(string $value): string
-    {
-        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+        // On the decimal string, never a float: a unit price keeps every digit it was stored with.
+        return (string) BigDecimal::of(trim((string) ($value ?? '')) === '' ? '0' : (string) $value)->toScale(4, RoundingMode::HalfUp)->strippedOfTrailingZeros();
     }
 }

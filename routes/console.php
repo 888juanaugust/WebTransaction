@@ -1,8 +1,5 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Each module declares its own scheduled commands in its schedule() method
+// (app/Modules); AppServiceProvider registers them and runs each only while
+// its module is on. A client module does the same.

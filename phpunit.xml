@@ -19,17 +19,20 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_LOCALE" value="en"/>
+        <env name="APP_FALLBACK_LOCALE" value="en"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <!-- Postgres, not sqlite: the schema relies on pg-specific behaviour
-             (FOR UPDATE row locks, partial unique indexes, generated columns). -->
+        <!-- Real PostgreSQL, never sqlite: the schema will depend on row locks,
+             partial unique indexes and jsonb. The database must exist; the
+             cloud session hook and CI both create it. -->
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="5432"/>
-        <env name="DB_DATABASE" value="webtransaction_test"/>
-        <env name="DB_USERNAME" value="webtransaction"/>
+        <env name="DB_DATABASE" value="central_test"/>
+        <env name="DB_USERNAME" value="central"/>
         <env name="DB_PASSWORD" value="secret"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>

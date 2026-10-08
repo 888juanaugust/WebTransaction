@@ -1,703 +1,1366 @@
+/*
+ * The admin theme. The tokens are docs/design/DESIGN.md; components use
+ * tokens, never raw hex. Filament's own styles load inside layer(components),
+ * so the plain rules below win without !important.
+ */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 
-/*
- * Panel theme — the FixFlow Odoo-19 design system, 2026-09.
- *
- * Indigo #4F46E5 on an #F8FAFC ground, white surfaces, #111827 ink, Cairo
- * throughout, generous corners, and a control-panel band under a 56px topbar.
- * Shared by both panels: the admin panel and the buyer portal load this same
- * file, so staff and buyers see one system.
- *
- * Most of the palette comes from ->colors() in the panel providers — buttons,
- * links, badges, focus rings and the active nav item all derive from the
- * indigo ramp in BrandColors. The typeface comes from ->font(): Cairo,
- * self-hosted from public/fonts, because the privacy notice promises no CDN
- * webfonts. This file does what a palette and a font cannot: settle the
- * surfaces, corners, chrome geometry and states.
- *
- * **The shopfront has not followed.** It keeps Geist and the logo blue
- * #073185, which is also the colour on every printed faktur. See
- * BrandColors::panel() — that divergence is deliberate and reversible.
- *
- * --- What the previous theme knew, and this one keeps ---
- *
- * Filament toggles dark mode by putting `.dark` on <html>. It does NOT follow
- * prefers-color-scheme once a user has chosen, so every rule below keys off
- * that class and nothing else. An earlier version used a media query and
- * looked right only while the OS and the toggle agreed; a user on a light
- * laptop switching the panel to dark got white cards on a near-black page.
- *
- * Light rules are scoped `:where(html:not(.dark))`, dark rules `html.dark`.
- * `:where()` keeps specificity at zero so Filament's own component styles can
- * still win where they should.
- *
- * Filament v4 names the nav classes `.fi-sidebar-item-btn` and `.fi-active` —
- * not `-button` and `.fi-sidebar-item-active`. With the wrong names those
- * rules match nothing and the active item is never tinted, which is invisible
- * as bugs go: the panel simply looks less finished than intended.
- */
+:root {
+    /* Color, light (the default) */
+    --ae-canvas: #e3e7f2;
+    --ae-surface: #ffffff;
+    --ae-surface-sunken: #f6f6f3;
+    --ae-ink: #1d2433;
+    /* 4.7:1 on the canvas, 5.9:1 on white: muted text sits on both. */
+    --ae-muted: #5d6475;
+    --ae-placeholder: #6b7280;
+    --ae-line: #e9e4da;
+    --ae-card-edge: #f2efe9;
+    --ae-input-edge: #d1d0ce;
+    --ae-accent: #2f5bea;
+    /* The fill of a primary button; in dark mode a deeper blue than the accent text so white text reads on it. */
+    --ae-accent-fill: var(--ae-accent);
+    --ae-accent-strong: color-mix(in oklab, var(--ae-accent-fill) 84%, black);
+    --ae-on-accent: #ffffff;
+    --ae-accent-soft: #e6ebfc;
+    --ae-focus-ring: #dae1fb;
+    --ae-backdrop: rgb(15 18 25 / 0.35);
 
-@theme {
-    /* --- The design system's four colours ------------------------------- */
-    --wt-indigo: #4f46e5;             /* primary */
-    --wt-indigo-dark: #4338ca;        /* hover, and headings that carry weight */
-    --wt-indigo-tint: #eef2ff;        /* row hover, the faintest fill */
-    --wt-ground: #f8fafc;             /* the page */
-    --wt-surface: #ffffff;            /* cards, topbar, sidebar */
-    --wt-ink: #111827;
-    --wt-ink-muted: #6b7280;
+    /* Status badges: background / text */
+    --ae-success-bg: #e4f6ea;
+    --ae-success-fg: #166534;
+    --ae-warning-bg: #fff2d4;
+    --ae-warning-fg: #8a5a00;
+    --ae-danger-bg: #fde7e7;
+    --ae-danger-fg: #a11d1d;
+    --ae-neutral-bg: #eef0f4;
+    --ae-neutral-fg: #4b5563;
+    --ae-info-bg: #e6ebfc;
+    --ae-info-fg: #2f5bea;
+    --ae-danger-fill: #a11d1d;
+    --ae-trend-up: #15803d;
+    --ae-trend-down: #b42318;
 
-    /* Red stays #DC2626: on this panel red means something is wrong, and it
-       is the one colour the redesign must not make prettier. */
-    --wt-red: #dc2626;
-    --wt-red-tint: #fef2f2;
+    /* Shape and depth */
+    --ae-radius: 14px;
+    --ae-radius-md: 10px;
+    --ae-radius-sm: 8px;
+    --ae-radius-full: 999px;
+    --ae-shadow-card: 0 1px 1px rgb(20 30 60 / 0.04), 0 12px 28px -8px rgb(20 30 60 / 0.14);
+    --ae-shadow-pop: 0 4px 8px rgb(20 30 60 / 0.06), 0 24px 48px -12px rgb(20 30 60 / 0.22);
+    --ae-shadow-btn: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 2px 6px rgb(47 91 234 / 0.35);
 
-    --wt-line: rgb(17 24 39 / 0.08);
-    --wt-line-strong: rgb(17 24 39 / 0.14);
-    --wt-shadow-card: 0 1px 2px rgb(17 24 39 / 0.04), 0 8px 24px rgb(79 70 229 / 0.06);
-    --wt-shadow-pop: 0 8px 30px rgb(79 70 229 / 0.14), 0 1px 2px rgb(17 24 39 / 0.06);
+    /* Spacing (comfortable density, 4px grid) */
+    --ae-pad-page: 22px;
+    --ae-gap-card: 12px;
+    --ae-pad-card: 16px;
+    --ae-sidebar-inset: 12px;
 
-    /* Dark — same hues re-weighted. Indigo at 600 on near-black is legible,
-       but it is the *text* uses that need lifting, so a lighter step exists
-       for those rather than the ground being darkened further. */
-    --wt-indigo-on-dark: #a5b4fc;
-    --wt-red-on-dark: #f87171;
-    --wt-line-dark: rgb(255 255 255 / 0.09);
-    --wt-surface-dark: #171a21;
-    --wt-ground-dark: #0f1115;
+    /* Workspace shell */
+    --ae-rail-width: 56px;
+    /* The rail stays dark in both themes. */
+    --ae-rail-bg: #1d2433;
+    --ae-rail-icon: #c3cbdc;
+    --ae-rail-icon-active: #ffffff;
+    --ae-rail-hover: rgb(255 255 255 / 0.12);
+    --ae-topbar-height: 56px;
+    --ae-tabstrip-height: 38px;
+    --ae-tabstrip-line: #cbd2e0;
+    --ae-side-tabs-width: 48px;
+
+    /* Tiles of the module menu, by what the screen is for */
+    --ae-tile-setup-bg: #eaf0fd;
+    --ae-tile-setup-edge: #bfd0f6;
+    --ae-tile-setup-fg: #2f5bea;
+    --ae-tile-work-bg: #e7f6ec;
+    --ae-tile-work-edge: #b7e0c3;
+    --ae-tile-work-fg: #166534;
+    --ae-tile-tool-bg: #f2edfd;
+    --ae-tile-tool-edge: #d7c9f6;
+    --ae-tile-tool-fg: #6941c6;
 
     /*
-     * Corners. The design system says rounded-3xl on containers and
-     * rounded-xl on buttons — Tailwind's 24px and 12px. That is a visible
-     * step up from the 16/10 this panel used, and 24px is large enough that
-     * it only works because the cards are big: it is applied to sections,
-     * tables and modals, and deliberately not to table rows or badges, where
-     * a 24px corner on a 32px-tall element is a lozenge.
+     * Motion: the transitions.dev token scale (.claude/skills/transitions-polish).
+     * Pick a token by what the motion does, not by the nearest number.
      */
-    --wt-radius-card: 24px;
-    --wt-radius-control: 12px;
+    --duration-stagger: 40ms;   /* per-item stagger offset */
+    --duration-micro: 80ms;     /* tooltip intent delay */
+    --duration-quick: 150ms;    /* modal/dropdown close, tooltip appear, hover */
+    --duration-fast: 250ms;     /* dropdown/modal open, tab slide */
+    --duration-medium: 350ms;   /* panel close */
+    --duration-slow: 400ms;     /* panel open */
+    --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-out: ease-out;
+    --scale-large: 0.96;        /* modal open / close, press */
+    --scale-medium: 0.97;       /* dropdown open */
+    --scale-small: 0.98;        /* tooltip open */
+    --scale-tiny: 0.99;         /* dropdown close */
 
-    /* The topbar height the design system specifies, used by the band below
-       it so the two line up whatever Filament's own padding does. */
-    --wt-topbar-h: 56px;
+    /* The module menu opens as a transitions.dev menu dropdown. */
+    --dropdown-open-dur: var(--duration-fast);
+    --dropdown-close-dur: var(--duration-quick);
+    --dropdown-pre-scale: var(--scale-medium);
+    --dropdown-closing-scale: var(--scale-tiny);
+    --dropdown-ease: var(--ease-smooth-out);
+
+    /* The rail's labels: one transitions.dev tooltip that travels between buttons. */
+    --tt-in-dur: var(--duration-quick);
+    --tt-out-dur: 50ms;
+    --tt-scale: var(--scale-small);
+    --tt-delay: var(--duration-micro);
+    --tt-in-ease: var(--ease-out);
+    --tt-out-ease: var(--ease-out);
+    --tt-move-dur: 160ms;
+    --tt-move-ease: var(--ease-smooth-out);
+    --tt-bg: var(--ae-ink);
+    --tt-fg: var(--ae-surface);
 }
-
-/* ====================================================================
-   Type
-   ==================================================================== */
 
 /*
- * Cairo runs a little wider and a little lighter than Geist at the same
- * nominal size, so headings take slightly more weight and slightly less
- * tracking than they did.
+ * Dark mode: each user picks Light, Dark or System in the user menu (light is the
+ * default); Filament puts .dark on <html>, and workspace tabs follow (bridge.js).
+ * Every pair here meets WCAG AA (DESIGN.md). Printed documents stay white.
  */
+.dark {
+    color-scheme: dark;
+    --ae-canvas: #0f1219;
+    --ae-surface: #171b25;
+    --ae-surface-sunken: #1d2230;
+    --ae-ink: #e7eaf2;
+    --ae-muted: #9aa3b5;
+    --ae-placeholder: #8a93a6;
+    --ae-line: #262c3a;
+    --ae-card-edge: #232937;
+    --ae-input-edge: #343b4d;
+    --ae-accent: #97afee;
+    --ae-accent-fill: #435fa7;
+    --ae-accent-soft: #21293e;
+    --ae-focus-ring: #2f3c5d;
+    --ae-backdrop: rgb(0 0 0 / 0.55);
+
+    --ae-success-bg: #18291c;
+    --ae-success-fg: #94cea3;
+    --ae-warning-bg: #302414;
+    --ae-warning-fg: #e5c287;
+    --ae-danger-bg: #331d1c;
+    --ae-danger-fg: #e9a29f;
+    --ae-danger-fill: #8d3936;
+    --ae-neutral-bg: #232937;
+    --ae-neutral-fg: #c0c7d4;
+    --ae-info-bg: #1f2638;
+    --ae-info-fg: #a6b9ec;
+    --ae-trend-up: #82c393;
+    --ae-trend-down: #df8a84;
+
+    --ae-shadow-card: 0 1px 1px rgb(0 0 0 / 0.3), 0 12px 28px -8px rgb(0 0 0 / 0.5);
+    --ae-shadow-pop: 0 4px 8px rgb(0 0 0 / 0.35), 0 24px 48px -12px rgb(0 0 0 / 0.6);
+    --ae-shadow-btn: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 2px 6px rgb(0 0 0 / 0.4);
+
+    --ae-rail-bg: #0b0e14;
+    --ae-tabstrip-line: #2a3142;
+
+    /* Tiles keep their kind as a tint and an icon colour, not a full colour block. */
+    --ae-tile-setup-bg: #1a1e29;
+    --ae-tile-setup-edge: #2c3242;
+    --ae-tile-setup-fg: #a3b6e8;
+    --ae-tile-work-bg: #172119;
+    --ae-tile-work-edge: #28372c;
+    --ae-tile-work-fg: #94c6a0;
+    --ae-tile-tool-bg: #1f1c28;
+    --ae-tile-tool-edge: #343041;
+    --ae-tile-tool-fg: #baafe0;
+
+    /*
+     * Filament paints its own dark surfaces (table repeaters, tab panels, toasts,
+     * pickers…) from its gray palette: point the darkest grays at the tokens so
+     * every surface is one family.
+     */
+    --gray-950: #0f1219;
+    --gray-900: #171b25;
+    --gray-800: #1d2230;
+
+    /*
+     * Filament's own coloured text, links, row actions and buttons use these
+     * shades in dark mode: same hues and lightness steps, about 60% of the
+     * chroma, so nothing glows on the dark canvas (Impeccable, quieter).
+     */
+    --primary-300: oklch(0.82 0.07 268);
+    --primary-400: oklch(0.76 0.095 268);
+    --primary-500: oklch(0.58 0.115 266);
+    --primary-600: oklch(0.5 0.12 266);
+    --primary-700: oklch(0.44 0.11 266);
+    --info-300: oklch(0.82 0.07 268);
+    --info-400: oklch(0.76 0.095 268);
+    --info-500: oklch(0.58 0.115 266);
+    --info-600: oklch(0.5 0.12 266);
+    --info-700: oklch(0.44 0.11 266);
+    --success-300: oklch(0.82 0.07 152);
+    --success-400: oklch(0.76 0.095 152);
+    --success-500: oklch(0.56 0.095 152);
+    --success-600: oklch(0.48 0.09 152);
+    --success-700: oklch(0.42 0.085 152);
+    --warning-300: oklch(0.85 0.07 80);
+    --warning-400: oklch(0.8 0.095 80);
+    --warning-500: oklch(0.66 0.1 75);
+    --warning-600: oklch(0.56 0.095 70);
+    --warning-700: oklch(0.48 0.085 68);
+    --danger-300: oklch(0.8 0.07 24);
+    --danger-400: oklch(0.72 0.105 24);
+    --danger-500: oklch(0.56 0.115 25);
+    --danger-600: oklch(0.48 0.115 25);
+    --danger-700: oklch(0.42 0.105 25);
+}
+
+/* ---------- Canvas and type ---------- */
+
+.fi-body {
+    background: var(--ae-canvas);
+    color: var(--ae-ink);
+    font-size: 13.5px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.fi-body ::selection {
+    background: var(--ae-accent-soft);
+    color: var(--ae-ink);
+}
+
 .fi-header-heading,
 .fi-section-header-heading,
-.fi-ta-header-heading,
-.fi-modal-heading {
-    letter-spacing: -0.01em;
+.fi-modal-heading,
+.ae-flyout-title {
+    text-wrap: balance;
 }
 
-.fi-header-heading {
-    font-weight: 700;
+.fi-header-subheading,
+.fi-section-header-description,
+.fi-fo-field-wrp-helper-text,
+.fi-ta-empty-state-description {
+    text-wrap: pretty;
 }
 
-/* Money lines up in columns or it cannot be scanned. */
-.fi-ta-cell,
-.fi-wi-stats-overview-stat-value,
-.fi-in-text,
-.fi-input {
+.fi-body :is(table, .fi-ta-cell, .fi-wi-stats-overview-stat-value, .fi-in-text, .fi-fo-field-wrp input[inputmode='decimal'], input[inputmode='numeric']) {
     font-variant-numeric: tabular-nums;
 }
 
-/* ====================================================================
-   Chrome — topbar, the control panel band, sidebar
-   ==================================================================== */
+/* ---------- Topbar on the canvas, page header ---------- */
 
-/*
- * 56px, and solid white rather than the translucent blur this panel used.
- * The blur was pleasant over a scrolling page and it is the wrong instinct
- * here: with a control-panel band directly beneath it, two translucent layers
- * stack and the heading underneath shows through the topbar.
- *
- * On `.fi-topbar` itself. The previous theme addressed `.fi-topbar > nav`,
- * and **there is no nav** — measured, `.fi-topbar` contains
- * `.fi-topbar-start` and `.fi-topbar-end` directly, so every rule in that
- * selector had been matching nothing since it was written. Its tallest child
- * is 36px, so 56px is a comfortable fit rather than a squeeze.
- */
 .fi-topbar {
-    height: var(--wt-topbar-h);
-    min-height: var(--wt-topbar-h);
-    padding-block: 0;
+    background: transparent;
     box-shadow: none;
-    border-bottom-width: 1px;
-    backdrop-filter: none;
+    --tw-ring-shadow: 0 0 #0000;
+    padding-inline: var(--ae-pad-page);
 }
 
-/*
- * The control panel: the page heading, its breadcrumbs and its actions on a
- * white band under the topbar, closed by a hairline — where Odoo puts the
- * view title and its mass actions.
- *
- * `.fi-header` is already exactly that pair, so this is a restyle and not new
- * markup. It lives inside `.fi-page-header-main-ctn`, a flex column with
- * 2rem of vertical padding and a 2rem gap; the negative block margin cancels
- * the padding so the band sits against the topbar, and the gap below it does
- * the separating. The inline margins match `.fi-main`'s own padding so the
- * band reaches the edges of the content column — measured at 1rem / 1.5rem /
- * 2rem across the md and lg breakpoints, which is why there are three of
- * them and not one.
- */
-.fi-header {
-    background-color: var(--wt-surface);
-    border-bottom: 1px solid var(--wt-line);
-    margin-block-start: -2rem;
-    padding-block: 1rem;
-    padding-inline: 1rem;
-    margin-inline: -1rem;
+.fi-main {
+    padding-inline: var(--ae-pad-page);
 }
 
-@media (min-width: 768px) {
-    .fi-header {
-        padding-inline: 1.5rem;
-        margin-inline: -1.5rem;
-    }
+.fi-page {
+    gap: var(--ae-gap-card);
 }
 
-@media (min-width: 1024px) {
-    .fi-header {
-        padding-inline: 2rem;
-        margin-inline: -2rem;
-    }
-}
-
-:where(html:not(.dark)) {
-    .fi-body,
-    .fi-main-ctn {
-        background-color: var(--wt-ground);
-    }
-
-    .fi-topbar {
-        background-color: var(--wt-surface);
-        border-color: var(--wt-line);
-    }
-
-    /* White, per the design system — it used to share the page ground. */
-    .fi-sidebar {
-        background-color: var(--wt-surface);
-        border-inline-end: 1px solid var(--wt-line);
-    }
-
-    .fi-section:not(.fi-section-not-contained):not(.fi-aside),
-    .fi-ta-ctn,
-    .fi-wi-stats-overview-stat,
-    .fi-simple-main {
-        background-color: var(--wt-surface);
-        border: 1px solid var(--wt-line);
-        box-shadow: var(--wt-shadow-card);
-        --tw-ring-shadow: 0 0 #0000;
-        --tw-ring-offset-shadow: 0 0 #0000;
-    }
-
-    .fi-section-has-header:not(.fi-collapsed) > .fi-section-content-ctn,
-    .fi-ta-header-toolbar,
-    .fi-section-footer {
-        border-color: var(--wt-line);
-    }
-
-    .fi-dropdown-panel,
-    .fi-modal-window {
-        border: 1px solid var(--wt-line);
-        box-shadow: var(--wt-shadow-pop);
-        --tw-ring-shadow: 0 0 #0000;
-        --tw-ring-offset-shadow: 0 0 #0000;
-    }
-
-    /* Inputs: a hairline at rest, no drop shadow; Filament's focus ring still wins. */
-    .fi-input-wrp {
-        border-radius: var(--wt-radius-control);
-        box-shadow: 0 0 0 1px var(--wt-line-strong);
-    }
-}
-
-html.dark {
-    .fi-body,
-    .fi-main-ctn {
-        background-color: var(--wt-ground-dark);
-    }
-
-    .fi-topbar {
-        background-color: var(--wt-surface-dark);
-        border-color: var(--wt-line-dark);
-    }
-
-    .fi-sidebar {
-        background-color: var(--wt-surface-dark);
-        border-inline-end: 1px solid var(--wt-line-dark);
-    }
-
-    .fi-header {
-        background-color: var(--wt-surface-dark);
-        border-bottom-color: var(--wt-line-dark);
-    }
-
-    /*
-     * Cards lift slightly off the page rather than sharing its colour. In dark
-     * mode a border alone is not enough separation — without this the widgets
-     * dissolve into the background and the page reads as one long list.
-     */
-    .fi-section:not(.fi-section-not-contained):not(.fi-aside),
-    .fi-ta-ctn,
-    .fi-wi-stats-overview-stat,
-    .fi-simple-main {
-        background-color: var(--wt-surface-dark);
-        border: 1px solid var(--wt-line-dark);
-        box-shadow: none;
-        --tw-ring-shadow: 0 0 #0000;
-        --tw-ring-offset-shadow: 0 0 #0000;
-    }
-
-    .fi-section-has-header:not(.fi-collapsed) > .fi-section-content-ctn,
-    .fi-ta-header-toolbar,
-    .fi-section-footer {
-        border-color: var(--wt-line-dark);
-    }
-
-    .fi-dropdown-panel,
-    .fi-modal-window {
-        border: 1px solid var(--wt-line-dark);
-        --tw-ring-shadow: 0 0 #0000;
-        --tw-ring-offset-shadow: 0 0 #0000;
-    }
-
-    .fi-input-wrp {
-        border-radius: var(--wt-radius-control);
-        box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16);
-    }
-}
-
-/* ====================================================================
-   Sidebar — sections, accordion groups, the account card
-   ==================================================================== */
-
-/*
- * Tighter than Filament's defaults (1.75rem between groups, 2rem of page
- * padding): the menu is now seven rows and a dashboard, and generous
- * spacing between seven rows reads as sparse rather than calm.
- */
-.fi-sidebar-nav {
-    gap: 0.75rem;
-    padding: 1rem 1rem 1.25rem;
-}
-
-.fi-sidebar-nav-groups {
-    gap: 0.25rem;
-}
-
-/* "Utama" (a hook) and "Lainnya" (drawn below): small caps above a section. */
-.wt-sidebar-bagian,
-.fi-sidebar-group[data-group-label='Pengaturan']::before {
-    display: block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.6875rem;
+.fi-header-heading {
+    font-size: 22px;
+    line-height: 28px;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: -0.01em;
+    color: var(--ae-ink);
+}
+
+/* DESIGN.md: one line of context under the title, not a second headline. */
+.fi-header-subheading {
+    margin-top: 2px;
+    max-width: 70ch;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ae-muted);
+}
+
+.fi-breadcrumbs-item-label {
+    color: var(--ae-muted);
+}
+
+/* ---------- Cards: every section, table, widget, tab strip ---------- */
+
+.fi-section:not(.fi-section-not-contained):not(.fi-aside),
+.fi-section:not(.fi-section-not-contained).fi-aside > .fi-section-content-ctn,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat,
+.fi-wi-widget .fi-wi-chart,
+.fi-tabs:not(.fi-contained),
+.fi-fo-repeater-item {
+    background: var(--ae-surface);
+    border-radius: var(--ae-radius);
+    box-shadow: var(--ae-shadow-card);
+    --tw-ring-color: var(--ae-card-edge);
+}
+
+.fi-section:not(.fi-section-not-contained):not(.fi-aside) > .fi-section-header {
+    padding: 14px var(--ae-pad-card);
+}
+
+.fi-section:not(.fi-section-not-contained):not(.fi-divided) > .fi-section-content-ctn > .fi-section-content {
+    padding: var(--ae-pad-card);
+}
+
+.fi-section-header-heading {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+    color: var(--ae-ink);
+}
+
+.fi-section.fi-section-has-header:not(.fi-collapsed) > .fi-section-content-ctn {
+    border-color: var(--ae-line);
+}
+
+/* ---------- Tables: clean, hover, sunken header ---------- */
+
+/* The header cell carries the label itself (Filament 5); a sortable one wraps it in a button. */
+.fi-ta-header-cell {
+    padding-block: 10px;
+    background: var(--ae-surface-sunken);
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--wt-ink-muted);
+    color: var(--ae-muted);
+}
+
+.fi-ta-header-cell .fi-ta-header-cell-sort-btn {
+    text-transform: inherit;
+    letter-spacing: inherit;
+}
+
+.fi-ta-header-cell.fi-ta-header-cell-sorted {
+    color: var(--ae-ink);
+}
+
+.fi-ta-table {
+    font-variant-numeric: tabular-nums;
+}
+
+/* DESIGN.md: 11px by 14px per cell. Filament pads the content, not the cell, so the content gets it. */
+.fi-ta-cell :is(.fi-ta-text, .fi-ta-icon, .fi-ta-color, .fi-ta-image, .fi-ta-checkbox, .fi-ta-select):not(.fi-inline) {
+    padding: 11px 14px;
+}
+
+@media (max-width: 639.98px) {
+    .fi-ta-table-stacked-on-mobile .fi-ta-cell :is(.fi-ta-text, .fi-ta-icon, .fi-ta-color, .fi-ta-image, .fi-ta-checkbox, .fi-ta-select):not(.fi-inline) {
+        padding: 0;
+    }
+}
+
+.fi-ta-row:not(.fi-ta-row-not-clickable):hover,
+.fi-ta-row.fi-clickable:hover,
+.fi-ta-row.fi-selected {
+    background: var(--ae-accent-soft);
+}
+
+.fi-ta-row > .fi-ta-cell:first-of-type .fi-ta-text-item-label {
+    font-weight: 500;
+}
+
+.fi-ta-header,
+.fi-ta-header-toolbar,
+.fi-ta-content {
+    border-color: var(--ae-line);
+}
+
+.fi-ta-pagination {
+    border-color: var(--ae-line);
 }
 
 /*
- * The settings group opens the "Lainnya" section. A pseudo-element, and
- * the only one in this file, because there is no render hook between two
- * groups; it is decorative sectioning — the group's own label still names
- * it — so nothing is lost on a reader that skips generated content.
+ * Dark mode: a row's actions name themselves in ink and keep their meaning in the
+ * icon's colour, so four coloured labels per row don't compete with the data.
  */
-.fi-sidebar-group[data-group-label='Pengaturan'] {
-    margin-top: 1rem;
+.dark .fi-ta-actions .fi-link.fi-color > .fi-link-label {
+    color: var(--ae-ink);
 }
 
-.fi-sidebar-group[data-group-label='Pengaturan']::before {
-    content: 'Lainnya';
-    margin-bottom: 0.25rem;
+/* ---------- Badges: pills with a status dot ---------- */
+
+.fi-badge {
+    border-radius: var(--ae-radius-full);
+    padding: 3px 9px;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-badge.fi-color::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+.fi-badge.fi-color-success { background: var(--ae-success-bg); color: var(--ae-success-fg); }
+.fi-badge.fi-color-warning { background: var(--ae-warning-bg); color: var(--ae-warning-fg); }
+.fi-badge.fi-color-danger  { background: var(--ae-danger-bg);  color: var(--ae-danger-fg); }
+.fi-badge.fi-color-gray    { background: var(--ae-neutral-bg); color: var(--ae-neutral-fg); }
+.fi-badge.fi-color-info    { background: var(--ae-info-bg);    color: var(--ae-info-fg); }
+.fi-badge.fi-color-primary { background: var(--ae-accent-soft); color: var(--ae-accent); }
+
+/* A count is not a status: the dot stays off counts on tabs and filter triggers. */
+.fi-tabs-item .fi-badge.fi-color::before,
+.fi-icon-btn-badge-ctn .fi-badge.fi-color::before {
+    content: none;
+}
+
+/* ---------- Buttons ---------- */
+
+.fi-btn {
+    border-radius: var(--ae-radius-md);
+    padding: 8px 14px;
+    font-weight: 600;
+    transition-property: color, background-color, border-color, box-shadow, scale;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-smooth-out);
+}
+
+.fi-btn.fi-size-sm { padding: 6px 10px; }
+.fi-btn.fi-size-xs { padding: 4px 8px; }
+
+/*
+ * DESIGN.md: accent fill, white text. Filament derives a lighter shade with dark
+ * text from the accent, which reads as a disabled button; the tokens win.
+ */
+.fi-btn:not(.fi-outlined).fi-color-primary:not(label) {
+    background: var(--ae-accent-fill);
+    color: var(--ae-on-accent);
+    box-shadow: var(--ae-shadow-btn);
+}
+
+.fi-btn:not(.fi-outlined).fi-color-primary:not(label):hover {
+    background: var(--ae-accent-strong);
+}
+
+.fi-btn:not(.fi-outlined).fi-color-primary:not(label) > .fi-icon {
+    color: inherit;
+}
+
+/* DESIGN.md: danger is a #a11d1d fill, in confirm modals. */
+.fi-btn:not(.fi-outlined).fi-color-danger:not(label) {
+    background: var(--ae-danger-fill);
+    color: var(--ae-on-accent);
+}
+
+.fi-btn:not(.fi-outlined).fi-color-danger:not(label) > .fi-icon {
+    color: inherit;
+}
+
+/* Press feedback: a small scale, never below 0.96. */
+.fi-btn:not(:disabled):not(.fi-disabled):active,
+.fi-icon-btn:not(:disabled):not(.fi-disabled):active {
+    scale: var(--scale-large);
+}
+
+.fi-icon-btn {
+    transition-property: color, background-color, scale;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-smooth-out);
+}
+
+.fi-btn:focus-visible,
+.fi-icon-btn:focus-visible,
+.fi-tabs-item:focus-visible {
+    outline: 2px solid var(--ae-accent);
+    outline-offset: 2px;
+}
+
+.fi-btn.fi-outlined,
+.fi-btn:not(.fi-outlined):not(.fi-color) {
+    --tw-ring-color: var(--ae-line);
+    color: var(--ae-ink);
+}
+
+/* ---------- Inputs: outlined, with a soft focus ring ---------- */
+
+.fi-input-wrp {
+    border-radius: var(--ae-radius-md);
+    /* DESIGN.md: white fill, 1px --ae-input-edge border, radius 10. The ring Filament draws is a box-shadow, so the border is one too. */
+    box-shadow: inset 0 0 0 1px var(--ae-input-edge);
+    --tw-ring-color: var(--ae-input-edge);
+}
+
+.fi-input-wrp:not(.fi-disabled):focus-within {
+    --tw-ring-color: var(--ae-accent);
+    box-shadow: inset 0 0 0 1px var(--ae-accent), 0 0 0 3px var(--ae-focus-ring);
+}
+
+.fi-input-wrp.fi-disabled {
+    background: var(--ae-surface-sunken);
+}
+
+/* Placeholders stay readable: 4.8:1 on white. */
+.fi-input::placeholder,
+.fi-fo-textarea textarea::placeholder,
+.fi-select-input-placeholder {
+    color: var(--ae-placeholder);
+    opacity: 1;
+}
+
+.fi-fo-field-wrp-label .fi-fo-field-wrp-label-text,
+.fi-fo-field-label-text,
+.fi-fo-field-wrp-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--ae-muted);
+}
+
+.fi-fo-field-wrp-helper-text,
+.fi-fo-field-wrp-hint {
+    font-size: 12px;
+    color: var(--ae-muted);
+}
+
+.fi-fo-field-wrp-error-message {
+    color: var(--ae-danger-fg);
+}
+
+.fi-input[inputmode='decimal'],
+.fi-input[inputmode='numeric'],
+.fi-input.ae-money {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Tabs as pills ---------- */
+
+.fi-tabs:not(.fi-contained) {
+    padding: 6px;
+    gap: 4px;
+}
+
+.fi-tabs-item {
+    border-radius: var(--ae-radius-sm);
+    padding: 6px 12px;
+    transition-property: background-color, color;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-out);
+}
+
+.fi-tabs-item:not(.fi-active) .fi-tabs-item-label {
+    color: var(--ae-muted);
+}
+
+.fi-tabs-item.fi-active {
+    background: var(--ae-accent-soft);
+}
+
+.fi-tabs-item.fi-active .fi-tabs-item-label,
+.fi-tabs-item.fi-active > .fi-icon {
+    color: var(--ae-accent);
+}
+
+.fi-tabs-item .fi-badge {
+    font-weight: 500;
+}
+
+/* ---------- Modals, slide-overs, dropdowns ---------- */
+
+/* The 1px edge replaces Filament's ring, which is a box-shadow too; it keeps the surface's outline in dark mode. */
+.fi-modal-window {
+    border-radius: var(--ae-radius);
+    background: var(--ae-surface);
+    box-shadow: var(--ae-shadow-pop), 0 0 0 1px var(--ae-card-edge);
+}
+
+.fi-modal > .fi-modal-close-overlay {
+    background: var(--ae-backdrop);
+    backdrop-filter: blur(2px);
 }
 
 /*
- * Folded to icons, the heading goes with the labels. "Utama" is a hooked
- * element and hides itself with x-show; this one is generated content on
- * a group that stays visible as an icon, so it needs telling — measured,
- * the folded sidebar still read "LAINNYA" above a lone cog.
+ * transitions.dev modal: scale up from 0.96 on the smooth-out curve, quicker on
+ * the way out. Slide-overs are panels: 400ms in, 350ms out.
  */
-.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group[data-group-label='Pengaturan']::before {
+.fi-modal-window.fi-transition-enter {
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-smooth-out);
+}
+
+.fi-modal-window.fi-transition-leave {
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-smooth-out);
+}
+
+.fi-modal:not(.fi-modal-slide-over) > .fi-modal-window-ctn > .fi-modal-window:is(.fi-transition-enter-start, .fi-transition-leave-end) {
+    scale: var(--scale-large);
+}
+
+.fi-modal-slide-over > .fi-modal-window-ctn > .fi-modal-window.fi-transition-enter {
+    transition-duration: var(--duration-slow);
+}
+
+.fi-modal-slide-over > .fi-modal-window-ctn > .fi-modal-window.fi-transition-leave {
+    transition-duration: var(--duration-medium);
+}
+
+.fi-dropdown-panel {
+    border-radius: var(--ae-radius-md);
+    background: var(--ae-surface);
+    box-shadow: var(--ae-shadow-pop), 0 0 0 1px var(--ae-card-edge);
+}
+
+/* The sign-in card and the other simple pages sit on the same surface as every card. */
+.fi-simple-main {
+    background: var(--ae-surface);
+}
+
+/* ---------- KPI cards (dashboard) ---------- */
+
+.fi-wi-stats-overview-stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ae-muted);
+}
+
+.fi-wi-stats-overview-stat-value {
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ae-ink);
+}
+
+/* ---------- Forms: create/edit pages read best at 1100px ---------- */
+
+.fi-resource-create-record-page .fi-page-content,
+.fi-resource-edit-record-page .fi-page-content {
+    max-width: 1100px;
+}
+
+/* ---------- Print: white A4, no canvas, no shadows ---------- */
+
+@media print {
+    .fi-body { background: #fff; }
+    .fi-sidebar, .fi-topbar-ctn, .fi-header-actions-ctn, .fi-badge { display: none; }
+    .fi-section, .fi-ta-ctn { box-shadow: none; }
+}
+
+/* ---------- Line grids: a document's lines need the whole width ---------- */
+
+.fi-resource-create-record-page .fi-page-content:has(.fi-fo-table-repeater),
+.fi-resource-edit-record-page .fi-page-content:has(.fi-fo-table-repeater) {
+    max-width: none;
+}
+
+.fi-fo-table-repeater {
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/*
+ * The grid keeps a working width and scrolls inside its card. Only where it is
+ * a table: below that Filament stacks each line's fields, which must fit the screen.
+ */
+@media (min-width: 1024px) {
+    .fi-fo-table-repeater > table {
+        min-width: 1280px;
+    }
+
+    .fi-fo-table-repeater td:first-child {
+        min-width: 18rem;
+    }
+}
+
+/* The line grid's header reads like a list's: small capitals, muted, on the sunken row. */
+.fi-fo-table-repeater > table > thead th {
+    background: var(--ae-surface-sunken);
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ae-muted);
+}
+
+/* Cells have no room for helper text; the column header and placeholders carry the meaning. */
+.fi-fo-table-repeater .fi-fo-field-wrp-helper-text {
     display: none;
 }
 
-.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group[data-group-label='Pengaturan'] {
-    margin-top: 0.5rem;
+.fi-fo-table-repeater .fi-select-input,
+.fi-fo-table-repeater .fi-input {
+    min-width: 6.5rem;
+}
+
+/* A select cell never wraps its placeholder or chosen option: it ends in an ellipsis. */
+.fi-fo-table-repeater :is(.fi-select-input-placeholder, .fi-select-input-value-label) {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 1024px) {
+    .fi-fo-table-repeater td:has(.fi-select-input) {
+        min-width: 11rem;
+    }
+
+    .fi-fo-table-repeater td:first-child .fi-select-input {
+        min-width: 16rem;
+    }
+
+    /* Money: a price field with its currency prefix, and a line's read-only amount. */
+    .fi-fo-table-repeater td:has(.fi-input-wrp-prefix) {
+        min-width: 10rem;
+    }
+
+    .fi-fo-table-repeater td:has(.fi-in-entry) {
+        min-width: 8rem;
+    }
+}
+
+/* A line's amount never breaks across lines. */
+.fi-fo-table-repeater .fi-in-text {
+    white-space: nowrap;
+}
+
+/* ---------- Document totals under a line grid ---------- */
+
+.ae-totals {
+    margin-left: auto;
+    width: 100%;
+    max-width: 22rem;
+    display: grid;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ae-totals-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ae-muted);
+    font-size: 13px;
+}
+
+.ae-totals-grand {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ae-line);
+    color: var(--ae-ink);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* Report tables: totals bold on a sunken row, headings as section labels. */
+.fi-ta-row.ae-report-total > td {
+    font-weight: 600;
+    background: var(--ae-surface-sunken);
+}
+
+.fi-ta-row.ae-report-heading > td {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ae-muted);
+    padding-top: 14px;
+}
+
+/* ---------- Workspace shell: icon rail, tile menu, tabs, framed screens ---------- */
+
+[x-cloak] {
+    display: none !important;
+}
+
+.ae-rail {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 40;
+    display: none;
+}
+
+.ae-rail-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: var(--ae-rail-width);
+    height: 100%;
+    padding-block: 12px;
+    background: var(--ae-rail-bg);
+    overflow-y: auto;
+}
+
+.ae-rail-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--ae-radius-md);
+    color: var(--ae-rail-icon);
+    transition-property: background-color, color, scale;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-out);
+}
+
+.ae-rail-btn:hover,
+.ae-rail-btn:focus-visible,
+.ae-rail-btn.is-open {
+    background: var(--ae-rail-hover);
+    color: var(--ae-rail-icon-active);
+    outline: none;
+}
+
+/* Keyboard focus is a ring, not just a lighter square: the rail is dark. */
+.ae-rail-btn:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--ae-rail-icon-active);
+}
+
+.ae-rail-btn:active {
+    scale: var(--scale-large);
+}
+
+.ae-rail-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.ae-rail-sep {
+    width: 24px;
+    height: 1px;
+    margin-block: 4px;
+    background: var(--ae-rail-hover);
 }
 
 /*
- * A group's header row reads as an item: icon, label, chevron, the same
- * height and corner as a link. Filament styles it as a muted heading, which
- * is right for a group that is always open and wrong for an accordion.
+ * The rail's labels: one transitions.dev tooltip (17-tooltip), shared by every
+ * rail button. It sits outside the scrolling bar so nothing clips it; rail.js
+ * writes its y and width. Delayed in, instant out, travels between buttons.
  */
-.fi-sidebar-group-btn {
-    border-radius: var(--wt-radius-control);
-    padding: 0.5rem;
-    transition: background-color 75ms;
-}
-
-.fi-sidebar-group.fi-collapsible > .fi-sidebar-group-btn:hover {
-    background-color: var(--wt-ground);
-}
-
-.fi-sidebar-group-label {
-    font-size: 0.875rem;
+.ae-tt {
+    position: fixed;
+    top: 0;
+    inset-inline-start: calc(var(--ae-rail-width) + 8px);
+    z-index: 41;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0;
+    overflow: hidden;
+    translate: 0 var(--tt-y, 0px);
+    scale: var(--tt-scale);
+    transform-origin: 0 50%;
+    padding: 6px 10px;
+    border-radius: var(--ae-radius-sm);
+    background: var(--tt-bg);
+    color: var(--tt-fg);
+    font-size: 12px;
+    line-height: 16px;
     font-weight: 500;
-    color: var(--wt-ink);
+    white-space: nowrap;
+    box-shadow: var(--ae-shadow-pop);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity var(--tt-out-dur) var(--tt-out-ease),
+        scale var(--tt-out-dur) var(--tt-out-ease),
+        translate var(--tt-move-dur) var(--tt-move-ease),
+        width var(--tt-move-dur) var(--tt-move-ease);
 }
 
-.fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-sidebar-group-label {
-    color: var(--wt-indigo-dark);
-    font-weight: 600;
+.ae-tt[data-show='true'] {
+    opacity: 1;
+    scale: 1;
+    transition:
+        opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+        scale var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+        translate var(--tt-move-dur) var(--tt-move-ease),
+        width var(--tt-move-dur) var(--tt-move-ease);
 }
 
-.fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-icon {
-    color: var(--wt-indigo);
-}
-
-/*
- * The chevron points right when folded and down when open, like the
- * reference; Filament's own points up and down.
- *
- * The `rotate` property, not `transform: rotate()`. Filament folds the
- * chevron with Tailwind's `-rotate-180`, which in Tailwind 4 is the
- * standalone `rotate` property — so a `transform` here does not replace
- * that turn, it stacks on it: up, then −180 to down, then +90 to the left.
- * Measured: every folded group showed "‹". Setting the same property
- * Filament sets is what makes this an override rather than an addition.
- */
-.fi-sidebar-group-collapse-btn {
-    rotate: 180deg;
-}
-
-.fi-sidebar-group.fi-collapsed .fi-sidebar-group-collapse-btn {
-    rotate: 90deg;
-}
-
-/* The items of an open group sit on a rule, indented under the label. */
-.fi-sidebar-group-items {
-    margin-inline-start: 1.125rem;
-    padding-inline-start: 0.75rem;
-    border-inline-start: 1px solid var(--wt-line);
-}
-
-/*
- * The group holding the current page is opened by a script in the
- * SIDEBAR_NAV_END hook, not here. A `display: flex !important` on the
- * active group's items was the first attempt; it compiled, it read right,
- * and it did nothing — x-collapse also writes `height: 0; overflow: hidden`
- * inline, and measured, the current page's own entry stayed invisible. The
- * stylesheet cannot argue with the store Alpine will read next, so the
- * script corrects the store instead.
- */
-
-/* --- the account card ---------------------------------------------- */
-
-.fi-sidebar-footer {
-    margin: 0.75rem 1rem 1rem;
-    padding: 0.375rem;
-    gap: 0;
-    border: 1px solid var(--wt-line);
-    border-radius: var(--wt-radius-control);
-    background-color: var(--wt-surface);
-}
-
-.fi-sidebar .fi-user-menu-trigger {
-    justify-content: flex-start;
-    border-radius: calc(var(--wt-radius-control) - 4px);
-}
-
-.fi-sidebar .fi-user-menu-trigger:hover {
-    background-color: var(--wt-ground);
-}
-
-.fi-sidebar .fi-user-menu-trigger-text {
-    font-weight: 600;
-    color: var(--wt-ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
+.ae-tt-text {
     white-space: nowrap;
 }
 
+.ae-flyout {
+    position: fixed;
+    top: var(--ae-sidebar-inset);
+    inset-inline-start: calc(var(--ae-rail-width) + 8px);
+    width: min(720px, calc(100vw - var(--ae-rail-width) - 24px));
+    max-height: calc(100dvh - 2 * var(--ae-sidebar-inset));
+    overflow-y: auto;
+    padding: 18px 20px 20px;
+    background: var(--ae-surface);
+    border: 1px solid var(--ae-card-edge);
+    border-radius: var(--ae-radius);
+    box-shadow: var(--ae-shadow-pop);
+    transform-origin: top left;
+}
+
 /*
- * Rendered before the trigger by the hook, shown after it by the grid.
- * Indented past the avatar (2rem) and its gap (0.75rem) so it sits under
- * the name, which is what makes it read as the name's second line.
+ * The module menu grows from the rail: transitions.dev menu dropdown (05),
+ * driven by Alpine's x-transition classes instead of .is-open/.is-closing.
  */
-.wt-akun-keterangan {
-    order: 2;
-    margin-top: -0.375rem;
-    padding: 0 0.5rem 0.375rem 3.25rem;
-    font-size: 0.75rem;
-    color: var(--wt-ink-muted);
+.ae-pop-enter {
+    transition:
+        transform var(--dropdown-open-dur) var(--dropdown-ease),
+        opacity var(--dropdown-open-dur) var(--dropdown-ease);
+}
+
+.ae-pop-leave {
+    transition:
+        transform var(--dropdown-close-dur) var(--dropdown-ease),
+        opacity var(--dropdown-close-dur) var(--dropdown-ease);
+}
+
+.ae-pop-from {
+    transform: scale(var(--dropdown-pre-scale));
+    opacity: 0;
+}
+
+.ae-pop-to {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.ae-pop-out {
+    transform: scale(var(--dropdown-closing-scale));
+    opacity: 0;
+}
+
+.ae-flyout-title {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--ae-accent);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ae-ink);
+}
+
+.ae-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.ae-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 112px;
+    padding: 14px 10px;
+    border: 1px solid;
+    border-radius: var(--ae-radius-md);
+    text-align: center;
+    transition-property: box-shadow, translate, scale;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-smooth-out);
+}
+
+.ae-tile:hover {
+    box-shadow: var(--ae-shadow-card);
+    translate: 0 -1px;
+}
+
+.ae-tile:focus-visible {
+    box-shadow: var(--ae-shadow-card);
+    outline: 2px solid var(--ae-accent);
+    outline-offset: 2px;
+}
+
+.ae-tile:active {
+    scale: var(--scale-large);
+}
+
+.ae-tile-icon {
+    width: 34px;
+    height: 34px;
+}
+
+.ae-tile-label {
+    font-size: 12.5px;
+    line-height: 16px;
+    color: var(--ae-ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-wrap: balance;
+}
+
+.ae-tile-setup { background: var(--ae-tile-setup-bg); border-color: var(--ae-tile-setup-edge); color: var(--ae-tile-setup-fg); }
+.ae-tile-work  { background: var(--ae-tile-work-bg);  border-color: var(--ae-tile-work-edge);  color: var(--ae-tile-work-fg); }
+.ae-tile-tool  { background: var(--ae-tile-tool-bg);  border-color: var(--ae-tile-tool-edge);  color: var(--ae-tile-tool-fg); }
+
+/* A touch control on narrow screens: 44px. */
+.ae-menu-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-inline: -4px 4px;
+    border-radius: var(--ae-radius-md);
+    color: var(--ae-ink);
+}
+
+.ae-menu-btn:focus-visible {
+    outline: 2px solid var(--ae-accent);
+    outline-offset: 0;
+}
+
+.ae-menu-btn-icon {
+    width: 22px;
+    height: 22px;
+}
+
+@media (min-width: 1024px) {
+    .ae-rail {
+        display: block;
+    }
+
+    .ae-menu-btn {
+        display: none;
+    }
+
+    .fi-body:has(.ae-rail) .fi-topbar {
+        padding-inline-start: calc(var(--ae-rail-width) + var(--ae-pad-page));
+    }
+}
+
+/* Narrow screens: the rail opens as a full-screen sheet from the topbar button. */
+@media (max-width: 1023.98px) {
+    .ae-rail.is-mobile-open {
+        display: flex;
+        inset: 0;
+        background: var(--ae-canvas);
+    }
+
+    .ae-rail.is-mobile-open .ae-flyout {
+        inset-inline-start: calc(var(--ae-rail-width) + 8px);
+        width: calc(100vw - var(--ae-rail-width) - 16px);
+    }
+}
+
+/* The workspace: a strip of tabs over one live frame per open screen. */
+.fi-body:has(.ae-workspace) .fi-topbar {
+    height: var(--ae-topbar-height);
+}
+
+.ae-workspace {
+    position: fixed;
+    top: var(--ae-topbar-height);
+    inset-inline-end: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+    .ae-workspace {
+        inset-inline-start: var(--ae-rail-width);
+    }
+}
+
+/*
+ * Underline tabs: no boxes. The strip's line is drawn inside it (an inset shadow,
+ * so the scrolling strip never overflows), and the active tab's 2px accent sits on it.
+ */
+.ae-tabstrip {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    height: var(--ae-tabstrip-height);
+    padding-inline: 12px;
+    overflow-x: auto;
+    box-shadow: inset 0 -1px 0 var(--ae-tabstrip-line);
+}
+
+.ae-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 220px;
+    padding-inline: 10px 4px;
+    color: var(--ae-muted);
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition-property: color, box-shadow;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-out);
+}
+
+.ae-tab:hover {
+    color: var(--ae-ink);
+    box-shadow: inset 0 -2px 0 var(--ae-tabstrip-line);
+}
+
+.ae-tab:focus-visible {
+    outline: 2px solid var(--ae-accent);
+    outline-offset: -2px;
+}
+
+.ae-tab.is-active {
+    box-shadow: inset 0 -2px 0 var(--ae-accent);
+    color: var(--ae-ink);
+    font-weight: 500;
+}
+
+.ae-tab.is-pinned {
+    padding-inline-end: 10px;
+}
+
+.ae-tab-title {
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.ae-tab-close {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--ae-radius-full);
+    color: var(--ae-muted);
+    transition-property: background-color, color;
+    transition-duration: var(--duration-quick);
+    transition-timing-function: var(--ease-out);
+}
+
+/* A 32px hit area around the 20px button; the tab's own padding keeps it clear of the title. */
+.ae-tab-close::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+}
+
+.ae-tab-close-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.ae-tab-close:hover,
+.ae-tab-close:focus-visible {
+    background: var(--ae-neutral-bg);
+    color: var(--ae-ink);
+    outline: none;
+}
+
+.ae-frames {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.ae-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--ae-canvas);
+}
+
+/* A screen inside a tab: the shell already shows the rail, topbar and tabs. */
+html.ae-framed .fi-topbar-ctn,
+html.ae-framed .fi-topbar,
+html.ae-framed .ae-rail {
+    display: none;
+}
+
+html.ae-framed .fi-main {
+    padding-top: 6px;
+}
+
+/* ---------- Topbar: approvals bell, who is signed in ---------- */
+
+.fi-topbar-end {
+    gap: 8px;
+}
+
+.ae-approvals {
+    display: flex;
+    min-width: 40px;
+}
+
+.ae-approvals-panel {
+    display: grid;
+    gap: 2px;
+    padding: 6px;
+    max-height: min(420px, 70dvh);
+    overflow-y: auto;
+}
+
+.ae-approvals-title {
+    padding: 6px 8px 8px;
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ae-muted);
+}
+
+.ae-approvals-item {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+    border-radius: var(--ae-radius-sm);
+    transition: background-color var(--duration-quick) var(--ease-out);
+}
+
+.ae-approvals-item:hover,
+.ae-approvals-item:focus-visible {
+    background: var(--ae-accent-soft);
+    outline: none;
+}
+
+.ae-approvals-item-title {
+    font-weight: 500;
+    color: var(--ae-ink);
+}
+
+.ae-approvals-item-detail,
+.ae-approvals-empty,
+.ae-approvals-more {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--ae-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.ae-approvals-empty,
+.ae-approvals-more {
+    padding: 4px 8px 8px;
+}
+
+.ae-user-id {
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    max-width: 200px;
+    line-height: 16px;
+    text-align: end;
+}
+
+.ae-user-name {
+    overflow: hidden;
+    max-width: 100%;
+    font-weight: 600;
+    color: var(--ae-ink);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.ae-user-role {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: 12px;
+    color: var(--ae-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+    .ae-user-id {
+        display: flex;
+    }
+}
+
+/* ---------- Form tabs as icons down the left side ---------- */
+
+.fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-tabs {
+    flex: 0 0 var(--ae-side-tabs-width);
+    width: var(--ae-side-tabs-width);
+    padding: 6px;
+    align-items: center;
+}
+
+.fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-tabs > .fi-tabs-item:has(> .fi-icon) {
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+}
+
+.fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-tabs > .fi-tabs-item:has(> .fi-icon) > .fi-tabs-item-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
     white-space: nowrap;
 }
 
-html.dark {
-    .fi-sidebar-group-label {
-        color: var(--wt-ink-on-dark, #e5e7eb);
+.fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-tabs > .fi-tabs-item > .fi-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.fi-sc-tabs.fi-vertical > .fi-sc-tabs-tab.fi-active {
+    margin-inline-start: 12px;
+    min-width: 0;
+}
+
+
+/* Phones: the icon tabs run across the top of the form instead of eating its width. */
+@media (max-width: 639.98px) {
+    .fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) {
+        flex-direction: column;
     }
 
-    .fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-sidebar-group-label,
-    .fi-sidebar-group.fi-active > .fi-sidebar-group-btn .fi-icon {
-        color: var(--wt-indigo-on-dark);
+    .fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-tabs {
+        flex: none;
+        flex-direction: row;
+        gap: 4px;
+        width: auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--ae-line);
     }
 
-    .fi-sidebar-group.fi-collapsible > .fi-sidebar-group-btn:hover,
-    .fi-sidebar .fi-user-menu-trigger:hover {
-        background-color: rgb(255 255 255 / 0.05);
-    }
-
-    .fi-sidebar-group-items {
-        border-inline-start-color: var(--wt-line-dark);
-    }
-
-    .fi-sidebar-footer {
-        border-color: var(--wt-line-dark);
-        background-color: var(--wt-surface-dark);
-    }
-
-    .fi-sidebar .fi-user-menu-trigger-text {
-        color: #ffffff;
+    .fi-sc-tabs.fi-vertical:not(.ae-tabs-labelled) > .fi-sc-tabs-tab.fi-active {
+        margin-inline-start: 0;
     }
 }
 
-/* ====================================================================
-   Corners — one scale for the whole panel
-   ==================================================================== */
+/* ---------- Reduced motion: state changes stay, travel and scale go ---------- */
 
-.fi-section:not(.fi-section-not-contained):not(.fi-aside),
-.fi-ta-ctn,
-.fi-wi-stats-overview-stat,
-.fi-modal-window,
-.fi-simple-main {
-    border-radius: var(--wt-radius-card);
-}
-
-.fi-btn,
-.fi-icon-btn,
-.fi-dropdown-panel,
-.fi-sidebar-item-btn,
-.fi-topbar-item-btn,
-.fi-tabs.fi-contained {
-    border-radius: var(--wt-radius-control);
-}
-
-/*
- * Badges keep a small corner on purpose. At 24px they become lozenges and at
- * 12px they read as buttons, and a badge that reads as a button gets clicked.
- */
-.fi-badge {
-    border-radius: 6px;
-}
-
-/*
- * The band spans the content column, so its own corners have to go —
- * otherwise a 24px radius cuts the corner out of a full-bleed white strip.
- */
-.fi-header {
-    border-radius: 0;
-}
-
-/* ====================================================================
-   Indigo — the brand mark, the active state, wherever the eye should land
-   ==================================================================== */
-
-.fi-logo {
-    font-weight: 700;
-    letter-spacing: -0.01em;
-}
-
-:where(html:not(.dark)) {
-    .fi-logo {
-        color: var(--wt-indigo);
+@media (prefers-reduced-motion: reduce) {
+    .ae-tt,
+    .ae-pop-enter,
+    .ae-pop-leave {
+        transition: none !important;
     }
 
-    /*
-     * The active nav item is a filled indigo tint, per the design system.
-     * The previous theme used a white pill lifted off a grey ground, which
-     * cannot work now that the sidebar itself is white — a white pill on
-     * white is only its shadow.
-     */
-    .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
-        background-color: var(--wt-indigo-tint);
-        box-shadow: none;
+    .fi-btn:active,
+    .fi-icon-btn:active,
+    .ae-rail-btn:active,
+    .ae-tile:active,
+    .ae-tile:hover {
+        scale: none;
+        translate: none;
     }
 
-    .fi-sidebar-item.fi-active .fi-sidebar-item-label {
-        color: var(--wt-indigo-dark);
-        font-weight: 600;
-    }
-
-    .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
-    .fi-sidebar-item.fi-active .fi-sidebar-item-btn > .fi-icon {
-        color: var(--wt-indigo);
-    }
-
-    .fi-sidebar-item:not(.fi-active) .fi-sidebar-item-btn:hover {
-        background-color: var(--wt-ground);
-    }
-
-    /* Each worklist reads as its own block on an otherwise quiet page. */
-    .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-indigo-dark);
-    }
-
-    .fi-ta-header {
-        border-bottom: 1px solid var(--wt-line);
-    }
-
-    .fi-ta-header-cell {
-        color: var(--wt-ink-muted);
-        font-size: 0.8125rem;
-        font-weight: 600;
-    }
-
-    .fi-ta-row:hover {
-        background-color: var(--wt-indigo-tint);
-    }
-
-    .fi-btn.fi-color-primary:not(.fi-outlined) {
-        box-shadow: 0 1px 2px rgb(79 70 229 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.15);
-    }
-}
-
-html.dark {
-    .fi-logo {
-        color: var(--wt-indigo-on-dark);
-    }
-
-    .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
-        background-color: rgb(79 70 229 / 0.22);
-        box-shadow: none;
-    }
-
-    .fi-sidebar-item.fi-active .fi-sidebar-item-label,
-    .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
-    .fi-sidebar-item.fi-active .fi-sidebar-item-btn > .fi-icon {
-        color: var(--wt-indigo-on-dark);
-    }
-
-    .fi-sidebar-item:not(.fi-active) .fi-sidebar-item-btn:hover {
-        background-color: rgb(255 255 255 / 0.05);
-    }
-
-    .fi-wi-widget .fi-ta-header-heading {
-        color: var(--wt-indigo-on-dark);
-    }
-
-    /*
-     * The rule under each queue heading. The light tint (#eef2ff) is very
-     * nearly white, so reusing it here would draw a glaring bar across every
-     * widget.
-     */
-    .fi-ta-header {
-        border-bottom: 1px solid var(--wt-line-dark);
-    }
-
-    .fi-ta-header-cell {
-        font-size: 0.8125rem;
-        font-weight: 600;
-    }
-
-    .fi-ta-row:hover {
-        background-color: rgb(79 70 229 / 0.24);
-    }
-}
-
-.fi-wi-widget .fi-ta-header-heading {
-    font-weight: 600;
-}
-
-/* Pressed feedback on every button. */
-.fi-btn:active,
-.fi-icon-btn:active {
-    transform: scale(0.98);
-}
-
-/* ====================================================================
-   Red — scarce, and only ever "something is wrong"
-   ==================================================================== */
-
-:where(html:not(.dark)) .fi-badge.fi-color-danger {
-    background-color: var(--wt-red-tint);
-    color: var(--wt-red);
-}
-
-html.dark .fi-badge.fi-color-danger {
-    background-color: rgb(220 38 38 / 0.18);
-    color: var(--wt-red-on-dark);
-}
-
-/*
- * Overdue invoices and short stock are the two things a manager must not
- * scroll past. A left edge marks the row without shouting.
- *
- * Scoped to danger *data* — a text column or a badge — and deliberately not to
- * `.fi-color-danger` in general: destructive action buttons ("Tolak") are
- * danger-coloured too and sit on every row of the approval queue, so the
- * looser selector marked every row red and the signal meant nothing.
- */
-.fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
-.fi-ta-row:has(.fi-badge.fi-color-danger) {
-    box-shadow: inset 3px 0 0 0 var(--wt-red);
-}
-
-html.dark .fi-ta-row:has(.fi-ta-text-item.fi-color-danger),
-html.dark .fi-ta-row:has(.fi-badge.fi-color-danger) {
-    box-shadow: inset 3px 0 0 0 var(--wt-red-on-dark);
-}
-
-/* ====================================================================
-   Login — the simple layout, centred on the same ground
-   ==================================================================== */
-
-:where(html:not(.dark)) .fi-simple-layout {
-    background-color: var(--wt-ground);
-    background-image: radial-gradient(ellipse 60% 50% at 50% 100%, rgb(79 70 229 / 0.10), transparent 70%);
-}
-
-html.dark .fi-simple-layout {
-    background-color: var(--wt-ground-dark);
-}
-
-/* ====================================================================
-   Print — surat jalan and anything else the warehouse puts on paper
-   ==================================================================== */
-
-@media print {
-    .fi-sidebar,
-    .fi-topbar,
-    .fi-header-actions,
-    .fi-btn {
-        display: none !important;
-    }
-
-    /* The band is chrome on screen and a stray white strip on paper. */
-    .fi-header {
-        border: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .fi-body,
-    .fi-main-ctn {
-        background: #ffffff !important;
+    .fi-modal:not(.fi-modal-slide-over) > .fi-modal-window-ctn > .fi-modal-window:is(.fi-transition-enter-start, .fi-transition-leave-end) {
+        scale: none;
     }
 }

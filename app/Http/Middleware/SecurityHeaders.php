@@ -9,34 +9,29 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The response headers every surface carries.
- *
- * Small and deliberate rather than exhaustive:
- *
- * - `nosniff`, because the portal serves buyer-facing downloads (faktur,
- *   surat jalan, CSV) and a browser second-guessing content types is how a
- *   download becomes a script.
- * - `X-Frame-Options: DENY` — no page here is meant to live in someone
- *   else's iframe, and a framed login is a phishing kit. Printing opens in
- *   a tab, not a frame, so nothing legitimate breaks.
- * - `Referrer-Policy: same-origin` — document numbers sit in URLs
- *   (/dokumen/faktur/123), and a buyer following an outbound link should
- *   not hand our path to the destination.
- *
- * No Content-Security-Policy yet, and that is a decision rather than an
- * oversight: Livewire and Filament lean on inline scripts, so a real CSP
- * here is nonce plumbing through the whole asset pipeline — worth doing,
- * not worth doing as a side effect of a launch checklist.
+ * Headers every response carries. The content policy keeps everything on this site: no script, style, font or
+ * frame from elsewhere, no other site framing these pages (the workspace frames its own tabs), no <base> or
+ * <object> injection, forms posting only here. Scripts keep 'unsafe-inline' and 'unsafe-eval' because the panel's
+ * own inline scripts and Alpine's expressions need them; escaping output is what stops injected markup.
  */
 class SecurityHeaders
 {
+    public const POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; "
+        ."img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' blob:; "
+        ."frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('Referrer-Policy', 'same-origin');
+        $headers = $response->headers;
+        $headers->set('Content-Security-Policy', self::POLICY, false);
+        $headers->set('X-Frame-Options', 'SAMEORIGIN', false);
+        $headers->set('X-Content-Type-Options', 'nosniff', false);
+        $headers->set('Referrer-Policy', 'strict-origin-when-cross-origin', false);
+        $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()', false);
+        if ($request->isSecure()) {
+            $headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains', false);
+        }
 
         return $response;
     }

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Central'),
 
     /*
     |--------------------------------------------------------------------------
@@ -59,12 +59,17 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | The business runs on WIB, and this is what date-only logic keys off:
-    | which price list is effective "today", whether an invoice is overdue,
-    | and what date lands on a faktur. Running these in UTC would move the
-    | boundary seven hours and quietly misdate a day's worth of work.
+    | Here you may specify the default timezone for your application, which
+    | will be used by the PHP date and date-time functions. The timezone
+    | is set to "UTC" by default as it is suitable for most use cases.
     |
     */
+
+    /*
+    | The proxies in front of the app (a load balancer, Caddy, nginx): addresses or ranges, comma-separated, or "*".
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
 
     'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
@@ -115,7 +120,7 @@ return [
     | manage Laravel's "maintenance mode" status. The "cache" driver will
     | allow maintenance mode to be controlled across multiple machines.
     |
-    | Supported drivers: "file", "cache"
+    | Supported drivers: "file", "cache", "array"
     |
     */
 

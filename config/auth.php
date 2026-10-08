@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\CustomerUser;
 use App\Models\User;
 
 return [
@@ -39,21 +38,9 @@ return [
     */
 
     'guards' => [
-        // Staff. The admin panel authenticates here.
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
-        ],
-
-        /*
-         * Buyers. A separate guard against a separate table, so a buyer
-         * session carries no staff identity at all — the isolation between
-         * the portal and the admin panel is structural rather than a
-         * permission check somebody can forget to write.
-         */
-        'customer' => [
-            'driver' => 'session',
-            'provider' => 'customer_users',
         ],
     ],
 
@@ -80,10 +67,10 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        'customer_users' => [
-            'driver' => 'eloquent',
-            'model' => CustomerUser::class,
-        ],
+        // 'users' => [
+        //     'driver' => 'database',
+        //     'table' => 'users',
+        // ],
     ],
 
     /*
@@ -109,18 +96,6 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
-        ],
-
-        /*
-         * Buyers reset against their own table, same as they authenticate
-         * against their own table — a buyer and a staff member sharing an
-         * email address must never share a reset token.
-         */
-        'customer_users' => [
-            'provider' => 'customer_users',
-            'table' => 'customer_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],
