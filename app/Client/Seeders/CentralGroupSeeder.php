@@ -35,6 +35,9 @@ class CentralGroupSeeder extends Seeder
 
     private const READ = [Hak::View, Hak::Print];
 
+    /** Filing a claim: view, create and print; the Update right is the verifier's key and stays with Finance or Inventory. */
+    private const FILE = [Hak::View, Hak::Create, Hak::Print];
+
     public function run(): void
     {
         foreach ($this->matrix() as $name => [$rights, $special]) {
@@ -51,6 +54,7 @@ class CentralGroupSeeder extends Seeder
     public function matrix(): array
     {
         $salesWork = [MenuKey::SalesQuotations, MenuKey::SalesOrders, MenuKey::CheckIns, MenuKey::Customers];
+        $salesFiles = [CentralScreen::SettlementClaims];
         $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, MenuKey::Calendar, MenuKey::Contacts];
 
         return [
@@ -59,11 +63,11 @@ class CentralGroupSeeder extends Seeder
                 HakKhusus::cases(),
             ],
             CentralGroups::SALES => [
-                $this->grant($salesWork, self::WORK) + $this->grant($salesRead, self::READ),
+                $this->grant($salesWork, self::WORK) + $this->grant($salesFiles, self::FILE) + $this->grant($salesRead, self::READ),
                 [HakKhusus::SeeCreditData],
             ],
             CentralGroups::MARKETING => [
-                $this->grant([MenuKey::SalesOrders], self::ALL) + $this->grant([...$salesWork, CentralScreen::OrderApprovals], self::WORK) + $this->grant($salesRead, self::READ),
+                $this->grant([MenuKey::SalesOrders], self::ALL) + $this->grant([...$salesWork, CentralScreen::OrderApprovals], self::WORK) + $this->grant($salesFiles, self::FILE) + $this->grant($salesRead, self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
             ],
             CentralGroups::INVENTORY => [
@@ -77,7 +81,7 @@ class CentralGroupSeeder extends Seeder
                 [],
             ],
             CentralGroups::FINANCE => [
-                $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports), MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions], self::ALL)
+                $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports), MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims], self::ALL)
                     + $this->grant([MenuKey::Customers], self::WORK)
                     + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams], self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],

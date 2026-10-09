@@ -56,6 +56,12 @@ final class TeamAssigner
         });
     }
 
+    /** Whether the user sits on this customer's team: its sales seat or its marketing seat. */
+    public static function holdsSeat(?User $user, Customer $customer): bool
+    {
+        return $user !== null && $user->is_active && in_array($user->id, array_map('intval', array_filter([$customer->sales_user_id, $customer->marketing_user_id])), true);
+    }
+
     /** Whether the user may approve this customer's orders: the owner, or the customer's marketing seat. */
     public static function holdsApprovalSeat(?User $user, Customer $customer): bool
     {

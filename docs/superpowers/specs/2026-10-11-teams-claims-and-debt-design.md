@@ -30,13 +30,14 @@ Decisions taken with the owner:
 One seeder, `App\Client\Seeders\CentralGroupSeeder`, shapes the six groups from the role
 table in CLAUDE.md. A group that already holds rights is left as the Owner shaped it on the
 Access Groups screen. Rights sets: ALL (view, create, update, delete, print), WORK (view,
-create, update, print), READ (view, print).
+create, update, print), FILE (view, create, print: filing a claim; the Update right is the
+verifier's key), READ (view, print).
 
 | Group | ALL | WORK | READ | Special |
 |---|---|---|---|---|
 | Administrator | every base and Central screen | | | every special right |
-| Sales | | Sales Quotations, Sales Orders, Check-ins, Customers, Settlement Claims, Expense Claims, Return Claims, Collections | Delivery Orders, Sales Invoices, Sales Receipts, Sales Returns, Items, Stock by Warehouse, Order Fulfilment, Price Categories, Sales Targets, Salesman Commissions, Price List, Customer Prices, Calendar, Contacts | See credit data |
-| Marketing | | Sales' WORK without Expense Claims and Return Claims, plus Order Approvals; Sales Orders with delete (erasing drafts) | Sales' READ | See credit data, Approve transactions |
+| Sales | | Sales Quotations, Sales Orders, Check-ins, Customers, Collections; FILE on Settlement Claims, Expense Claims, Return Claims | Delivery Orders, Sales Invoices, Sales Receipts, Sales Returns, Items, Stock by Warehouse, Order Fulfilment, Price Categories, Sales Targets, Salesman Commissions, Price List, Customer Prices, Calendar, Contacts | See credit data |
+| Marketing | | Sales' WORK plus Order Approvals; Sales Orders with delete (erasing drafts); FILE on Settlement Claims | Sales' READ | See credit data, Approve transactions |
 | Inventory | the Inventory group's screens, Price List, Customer Prices, Warehouse Accounts, Fulfilment | Delivery Orders, Goods Receipts, Sales Returns, Return Claims | Sales Orders, Purchase Orders | See cost |
 | Warehouse | | Fulfilment, Delivery Orders | Stock by Warehouse | none |
 | Finance | the Cash & Bank, General Ledger, Tax and Reports groups' screens, Sales Receipts, Sales Invoices, Sales Down Payments, Invoice Exchanges, Purchase Invoices, Purchase Payments, Purchase Down Payments, Payment Orders, Expense Accruals, Sales Targets, Salesman Commissions, Settlement Claims, Expense Claims, Collections | Customers | Vendors, Sales Orders, Purchase Orders, Delivery Orders, Goods Receipts, Sales Returns, Calendar, Contacts, Customer Teams | See credit data, Override credit limit, Export data |
@@ -70,7 +71,8 @@ per invoice (partial unique index).
   not blank.
 - **Verify** (Finance): two keys; the balance is checked again and a claim above the
   balance is refused (the seat re-files); a `SalesReceipt` is created in the verifier's
-  name — number from the default Sales Receipt series with the branch code, the cash or
+  name — number from the default Cash & Bank Voucher series, which now carries the branch code like
+  the sales and stock documents, the cash or
   bank account and the date chosen in the modal (default: the company's default bank
   account, today), payment method cash for a cash account else bank transfer, one line
   settling the invoice for the amount — through `DocumentRepository::created`, which

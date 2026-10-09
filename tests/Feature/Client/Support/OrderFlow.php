@@ -13,6 +13,7 @@ use App\Models\Inventory\Item;
 use App\Models\Inventory\Warehouse;
 use App\Models\Sales\Customer;
 use App\Models\Sales\Delivery;
+use App\Models\Sales\SalesInvoice;
 use App\Models\Sales\SalesOrder;
 use App\Models\Settings\AccessGroup;
 use App\Models\User;
@@ -31,6 +32,10 @@ trait OrderFlow
     protected User $marketing;
 
     protected User $sales;
+
+    protected User $finance;
+
+    protected User $inventory;
 
     protected Customer $customer;
 
@@ -65,6 +70,8 @@ trait OrderFlow
 
         $this->marketing = $this->member(CentralGroups::MARKETING, [$this->jakarta, $this->surabaya]);
         $this->sales = $this->member(CentralGroups::SALES, [$this->jakarta]);
+        $this->finance = $this->member(CentralGroups::FINANCE, [$this->jakarta, $this->surabaya]);
+        $this->inventory = $this->member(CentralGroups::INVENTORY, [$this->jakarta, $this->surabaya]);
         $this->customer = $this->sampleCustomer(['branch_id' => $this->jakarta->id, 'default_warehouse_id' => $this->gudangJakarta->id, 'sales_user_id' => $this->sales->id, 'marketing_user_id' => $this->marketing->id]);
         $this->item = $this->sampleItem();
         $this->vat = TaxCode::default();
@@ -117,5 +124,18 @@ trait OrderFlow
         $this->docs->created($delivery);
 
         return $delivery->fresh();
+    }
+
+    /** An invoice of the customer, straight from stock (no order behind it), approved on save. */
+    protected function invoice(int $qty, int $price = 150_000, ?Item $item = null, ?string $date = null, ?Warehouse $warehouse = null): SalesInvoice
+    {
+        $item ??= $this->item;
+        $invoice = SalesInvoice::query()->create(['number' => 'INV-'.uniqid(), 'trans_date' => $date ?? today()->toDateString(), 'customer_id' => $this->customer->id, 'branch_id' => $this->customer->branch_id, 'taxable' => true, 'inclusive_tax' => false,
+            'payment_term_id' => $this->customer->payment_term_id, 'created_by' => $this->owner->id]);
+        $invoice->lines()->create(['sort' => 0, 'item_id' => $item->id, 'quantity' => $qty, 'unit_id' => $item->unit1_id, 'base_quantity' => $qty, 'unit_price' => $price, 'tax_code_id' => $this->vat->id, 'warehouse_id' => $warehouse?->id ?? $this->gudangJakarta->id]);
+        $invoice->refreshTotal();
+        $this->docs->created($invoice);
+
+        return $invoice->fresh();
     }
 }

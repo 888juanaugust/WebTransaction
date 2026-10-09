@@ -1,6 +1,6 @@
 # Sales
 
-Module group `sales`. 19 screens in the standard menu.
+Module group `sales`. 20 screens in the standard menu.
 
 ## Behaviours
 
@@ -23,6 +23,7 @@ Module group `sales`. 19 screens in the standard menu.
 ## Screens
 
 - [Order Approvals](#order-approvals)
+- [Settlement Claims](#settlement-claims)
 - [Sales Quotations](#sales-quotations)
 - [Sales Orders](#sales-orders)
 - [Delivery Orders](#delivery-orders)
@@ -51,6 +52,29 @@ Menu key `client__order-approvals` · module `central-orders`
 **Columns:** Customer · Order No. · Date · Branch · Total · Free credit · Stock
 
 **Actions:** Open · Approve · Reject
+
+## Settlement Claims
+
+Menu key `client__settlement-claims` · module `central-claims`
+
+### List
+
+**Columns:** Invoice · Customer · Amount · Filed by · Filed · Status · Decided by
+
+**Filters:** Status
+
+**Actions:** Open
+
+### Form
+
+**Section: The invoice**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Customer | `customer_id` | select | yes |
+| Invoice | `sales_invoice_id` | select | yes |
+| Amount received | `amount` | number | yes |
+| How the money was handed over | `account` | textarea | yes |
 
 ## Sales Quotations
 

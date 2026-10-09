@@ -244,6 +244,7 @@ Menu key `company__access-privilege` · module `settings`
 | Field | Column | Type | Required |
 |---|---|---|---|
 | Order Approvals | `rights.client__order-approvals` | checkbox list |  |
+| Settlement Claims | `rights.client__settlement-claims` | checkbox list |  |
 | Sales Quotations | `rights.customer__sales-quotation` | checkbox list |  |
 | Sales Orders | `rights.customer__sales-order` | checkbox list |  |
 | Delivery Orders | `rights.customer__delivery-order` | checkbox list |  |

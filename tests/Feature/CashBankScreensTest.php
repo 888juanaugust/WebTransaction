@@ -51,7 +51,7 @@ class CashBankScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $receipt = CashReceipt::query()->firstOrFail();
-        $this->assertSame('CB-2611-0001', $receipt->number);
+        $this->assertSame('CB-PST-2611-0001', $receipt->number);
         $this->assertSame(20_000_000, $receipt->amount);
         $this->assertSame(20_000_000, $this->balance('1102'));
         $this->assertNull($receipt->giro);
@@ -69,7 +69,7 @@ class CashBankScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $payment = CashPayment::query()->firstOrFail();
-        $this->assertSame('CB-2611-0002', $payment->number);
+        $this->assertSame('CB-PST-2611-0002', $payment->number);
         $this->assertSame(Giro::OUTSTANDING, $payment->giro->status);
         $this->assertSame(5_000_000, $this->balance('2105'), 'paid by giro: giros payable until it clears');
         $this->assertSame(20_000_000, $this->balance('1102'));

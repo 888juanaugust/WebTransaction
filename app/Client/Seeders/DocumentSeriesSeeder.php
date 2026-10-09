@@ -28,6 +28,7 @@ class DocumentSeriesSeeder extends Seeder
         TransactionType::GoodsReceipt,
         TransactionType::ItemTransfer,
         TransactionType::InventoryAdjustment,
+        TransactionType::CashBankVoucher,
     ];
 
     public function run(): void
