@@ -1,5 +1,8 @@
 <?php
 
+use App\Client\Modules\OrdersModule;
+use App\Client\Screens\CentralScreen;
+
 /*
 |--------------------------------------------------------------------------
 | Central's own layer
@@ -17,14 +20,14 @@ return [
     // Central's modules, each a class implementing App\Modules\Module.
     // They register after the standard modules of config/modules.php.
     'modules' => [
-        App\Client\Modules\OrdersModule::class,
+        OrdersModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing
     // App\Domain\Access\ScreenKey, values starting "client__". Rights, menus and
     // the standard's pages pick them up with the base's MenuKey.
     'screens' => [
-        App\Client\Screens\CentralScreen::class,
+        CentralScreen::class,
     ],
 
     // Optional modules Central starts with, by module key, when erp:install

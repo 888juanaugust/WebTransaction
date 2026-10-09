@@ -71,9 +71,9 @@ edits listed at the end.
 
 - `App\Client\Modules\OrdersModule::boot()` registers an `ApprovalType` for `SalesOrder`
   after the base's, which replaces it. It wraps `OrderApproval::type()`:
-  - `beforeApprove`: the actor is an administrator or the customer's marketing seat
-    (otherwise "Only this customer's marketing or the owner approves an order"); then the
-    base credit check; then the split check of §6.
+  - `beforeApprove`: when the customer has a marketing seat, the actor is that seat or an
+    administrator (otherwise refused); a customer with no seat yet follows the base's
+    approval rules and right; then the base credit check; then the split check of §6.
   - `changed`: the base's status write, then `Reservations::sync()` — reserve when the
     request is approved, release otherwise.
 - `App\Client\Seeders\PreferenceSeeder` switches *Sales Order Approval* on and sets the
@@ -84,10 +84,11 @@ edits listed at the end.
 ## 5. The stock reservations ledger
 
 - `stock_reservations(id, sales_order_id, sales_order_line_id, item_id, warehouse_id,
-  base_quantity decimal 18,4, status held | released | consumed, reason, posting_id,
-  created_at, resolved_at)`, indexed on item, warehouse and status. Append-only: a row is
-  never edited after it is resolved; a partial consume resolves the held row and opens a
-  new held row for the remainder.
+  kind held | consumed | released | reopened, quantity decimal 18,4 signed, reason,
+  posting_id, reverses_id, created_by, created_at)`, indexed on item + warehouse, order +
+  line, and posting. Append-only, enforced by a database trigger: a hold is positive; a
+  consume, a release is negative; a reopen is positive again and names the row it
+  reverses. What a line holds is the sum of its rows, so a partial consume is one row.
 - `App\Client\Domain\Stock\Reservations`:
   - `reserve(SalesOrder)` runs inside the caller's transaction. Lines are taken in item,
     warehouse, id order; a group item is exploded into its components with
@@ -99,7 +100,9 @@ edits listed at the end.
   - `release(SalesOrder, reason)`: held → released.
   - `available(item, warehouse)`, `heldSum(item, warehouse)`, `heldByOrder(order)`.
   - `sync(order, request)`: approved and nothing held → reserve; not approved and
-    something held → release.
+    something held → release. Only under the Sales Order Approval rule: with the rule
+    off, orders are approved on entry and nothing is held (the base's own tests run that
+    way).
 - A posting writer registered in the module's `boot()` runs inside every delivery's
   posting transaction: each outgoing stock movement whose delivery line pulls from an order
   line consumes that line's held rows (same item and warehouse) up to the movement's
@@ -107,14 +110,17 @@ edits listed at the end.
   `delivered_elsewhere`. Then, for every item and warehouse the posting touched, on hand −
   held must not be negative: goods reserved for other orders cannot leave. On unpost, the
   rows that posting consumed are reopened as new held rows.
-- No expiry job. Rejection releases; so does any edit that reopens the approval.
+- No expiry job. An edit that reopens the approval releases; a rejected order holds
+  nothing (only an awaiting order can be rejected). A re-posted delivery first gives
+  back what its superseded posting consumed, so nothing is counted twice.
 
 ## 6. Splitting an order across warehouses
 
 - `App\Client\Domain\Orders\OrderSplitter::plan(SalesOrder): SplitPlan` is pure. Warehouse
   priority: the line's warehouse (or the customer's default), then the other active
-  warehouses of the customer's branch by code, then the other warehouses by the total
-  available of the order's items, largest first. Lines are walked in order and allocated
+  warehouses of the customer's branch by name, then the other warehouses by the total
+  available of the order's items, largest first. A group item counts the sets its
+  components can make. Lines are walked in order and allocated
   greedily; a line may split. The plan holds one share list per warehouse and the
   shortfalls; `needsSplit()` is true when more than one warehouse ships.
 - `OrderSplitter::execute(SalesOrder, SplitPlan, User $actor)` runs in one transaction:
@@ -130,8 +136,9 @@ edits listed at the end.
 - `beforeApprove` refuses an order whose plan needs a split unless the approval comes
   through the splitter: "Goods sit in several warehouses — approve from Order Approvals".
 - Screen **Order Approvals** (`client__order-approvals`, Sales group, a work screen): the
-  orders awaiting approval the user may see, with customer, number, total, available credit
-  and stock coverage. *Approve* opens the plan — one block per warehouse with its lines, and
+  orders awaiting approval the user may see, with customer, number, total, free credit
+  (only with the see-credit-data right) and stock coverage (one warehouse, n warehouses,
+  short). Approve shows only to the engine's eligible user who also holds the seat. *Approve* opens the plan — one block per warehouse with its lines, and
   the shortfalls — and confirms the split and the approvals, or approves plainly when one
   warehouse covers it. *Reject* takes a reason.
 
@@ -146,6 +153,10 @@ Allowed by CLAUDE.md where the client layer cannot reach, and limited to:
 - `app/Filament/Resources/Settings/DocumentSeries/DocumentSeriesResource.php` — the example
   renders with a sample code.
 - `app/Filament/Resources/Company/Branches/BranchResource.php` — code, latitude, longitude.
+- `lang/id.json` — the Indonesian of Central's strings (the translation guard reads this
+  file only).
+- `app/Client/database/migrations/…widen_document_counter_period_keys` widens
+  `document_counters.period_key` to hold the branch prefix.
 
 ## Tests
 
