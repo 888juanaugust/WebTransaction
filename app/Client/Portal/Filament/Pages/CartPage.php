@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Client\Portal\Filament\Pages;
 
 use App\Client\Models\PortalCartLine;
+use App\Client\Portal\Domain\BuyerOrderPlacer;
 use App\Client\Portal\Domain\Cart;
 use App\Client\Portal\Domain\CartEstimate;
 use App\Client\Portal\Portal;
 use App\Domain\Shared\Format;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -93,6 +97,27 @@ class CartPage extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('checkout')->label(__('Place the order'))->icon('heroicon-m-paper-airplane')->color('primary')
+                ->visible(fn () => app(Cart::class)->count(Portal::buyer()) > 0)
+                ->modalHeading(__('Place the order'))
+                ->modalDescription(fn () => __('Total :total. The order goes to your marketing for approval; prices are set when it is placed.', ['total' => Format::money($this->estimate()['total'])]))
+                ->schema([
+                    TextInput::make('po_number')->label(__('Your PO number'))->maxLength(60),
+                    Textarea::make('note')->label(__('Note for us'))->rows(2)->maxLength(500),
+                    Checkbox::make('terms')->label(__('I order on the credit terms agreed with the company.'))->accepted()->required(),
+                ])
+                ->action(function (array $data): void {
+                    $buyer = Portal::buyer();
+                    $cart = app(Cart::class);
+                    $cart->forBuyer($buyer)->forceFill(['po_number' => $data['po_number'] ?: null, 'note' => $data['note'] ?: null])->save();
+                    try {
+                        $order = app(BuyerOrderPlacer::class)->checkout($buyer, $cart);
+                        Notification::make()->title(__('Order :number placed', ['number' => $order->number]))->body(__('It is with your marketing for approval.'))->success()->persistent()->send();
+                        $this->redirect(Home::getUrl());
+                    } catch (RuntimeException $e) {
+                        Notification::make()->title(__('Cannot place the order'))->body($e->getMessage())->danger()->persistent()->send();
+                    }
+                }),
             Action::make('clear')->label(__('Clear the cart'))->icon('heroicon-m-trash')->color('gray')
                 ->requiresConfirmation()
                 ->visible(fn () => app(Cart::class)->count(Portal::buyer()) > 0)
