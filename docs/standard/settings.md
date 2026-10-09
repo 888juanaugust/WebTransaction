@@ -243,6 +243,7 @@ Menu key `company__access-privilege` · module `settings`
 
 | Field | Column | Type | Required |
 |---|---|---|---|
+| Order Approvals | `rights.client__order-approvals` | checkbox list |  |
 | Sales Quotations | `rights.customer__sales-quotation` | checkbox list |  |
 | Sales Orders | `rights.customer__sales-order` | checkbox list |  |
 | Delivery Orders | `rights.customer__delivery-order` | checkbox list |  |
@@ -258,6 +259,7 @@ Menu key `company__access-privilege` · module `settings`
 | Salesman Commissions | `rights.company__salesman-commission` | checkbox list |  |
 | Sales Targets | `rights.budget-target__sales-target` | checkbox list |  |
 | Check-ins | `rights.customer__sales-check-in` | checkbox list |  |
+| Customer Teams | `rights.client__teams` | checkbox list |  |
 
 **Section: Purchasing**
 

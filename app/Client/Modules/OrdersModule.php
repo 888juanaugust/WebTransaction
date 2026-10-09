@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Client\Modules;
 
+use App\Client\Screens\CentralScreen;
 use App\Client\Seeders\BranchSeeder;
+use App\Client\Seeders\CentralGroupSeeder;
 use App\Client\Seeders\DocumentSeriesSeeder;
 use App\Modules\BaseModule;
 
@@ -23,11 +25,11 @@ final class OrdersModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [];
+        return [CentralScreen::Teams, CentralScreen::OrderApprovals];
     }
 
     public static function defaultSeeders(): array
     {
-        return [BranchSeeder::class, DocumentSeriesSeeder::class];
+        return [BranchSeeder::class, DocumentSeriesSeeder::class, CentralGroupSeeder::class];
     }
 }

@@ -24,7 +24,7 @@ return [
     // App\Domain\Access\ScreenKey, values starting "client__". Rights, menus and
     // the standard's pages pick them up with the base's MenuKey.
     'screens' => [
-        // App\Client\Screens\CentralScreen::class,
+        App\Client\Screens\CentralScreen::class,
     ],
 
     // Optional modules Central starts with, by module key, when erp:install

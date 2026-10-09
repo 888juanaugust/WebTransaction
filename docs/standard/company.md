@@ -67,7 +67,7 @@ Menu key `company__branch` · module `company` · switched by Preferences → Fe
 
 ### List
 
-**Columns:** Active · Name · Phone number · Users · Default
+**Columns:** Active · Branch code · Name · Phone number · Users · Default
 
 **Filters:** Active
 
@@ -79,9 +79,12 @@ Menu key `company__branch` · module `company` · switched by Preferences → Fe
 
 | Field | Column | Type | Required |
 |---|---|---|---|
+| Branch code | `code` | text | yes |
 | Name | `name` | text | yes |
 | Phone number | `phone_number` | text |  |
 | Address | `address` | textarea |  |
+| Latitude | `latitude` | number |  |
+| Longitude | `longitude` | number |  |
 | Default branch | `is_default` | toggle |  |
 | Active | `is_active` | toggle |  |
 
