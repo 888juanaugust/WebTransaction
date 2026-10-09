@@ -20,9 +20,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
 
 const base = process.env.APP_URL_SMOKE ?? 'http://127.0.0.1:8000';
-const email = process.env.ADMIN_EMAIL ?? 'admin@example.test';
-const password = process.env.ADMIN_PASSWORD || 'password';
-const pages = process.argv.slice(2).length ? process.argv.slice(2) : ['/admin'];
+// `--portal` signs in at the buyer portal with PORTAL_EMAIL / PORTAL_PASSWORD instead of the staff panel.
+const portal = process.argv.includes('--portal');
+const email = portal ? (process.env.PORTAL_EMAIL ?? 'buyer@example.test') : (process.env.ADMIN_EMAIL ?? 'admin@example.test');
+const password = (portal ? process.env.PORTAL_PASSWORD : process.env.ADMIN_PASSWORD) || 'password';
+const given = process.argv.slice(2).filter((a) => a !== '--portal');
+const pages = given.length ? given : [portal ? '/portal' : '/admin'];
+const loginPath = portal ? '/portal/login' : '/admin/login';
 const out = path.join(root, 'storage/app/smoke');
 await fs.mkdir(out, { recursive: true });
 
@@ -30,7 +34,7 @@ const executablePath = await fs.access('/opt/pw-browsers/chromium').then(() => '
 const browser = await chromium.launch({ headless: true, executablePath });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
-    await page.goto(`${base}/admin/login`, { waitUntil: 'networkidle' });
+    await page.goto(`${base}${loginPath}`, { waitUntil: 'networkidle' });
     await page.fill('input[type=email]', email);
     await page.fill('input[type=password]', password);
     await page.click('button[type=submit]');

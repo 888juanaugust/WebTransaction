@@ -6,6 +6,7 @@ namespace App\Client\Portal;
 
 use App\Client\Models\CustomerUser;
 use App\Client\Portal\Domain\CreditStrip;
+use App\Client\Portal\Filament\Pages\EditPortalProfile;
 use App\Client\Portal\Filament\Pages\Home;
 use App\Client\Portal\Http\DocumentController;
 use App\Client\Portal\Http\EndInactiveBuyerSessions;
@@ -82,6 +83,7 @@ class PortalPanelProvider extends PanelProvider
             ->authPasswordBroker('customer_users')
             ->login()
             ->passwordReset()
+            ->profile(EditPortalProfile::class, isSimple: true)
             ->defaultAvatarProvider(InitialsAvatar::class)
             ->brandName(fn (): string => AdminPanelProvider::brandName().' · '.__('Portal'))
             ->colors(array_merge([

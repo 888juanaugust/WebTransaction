@@ -1,6 +1,6 @@
 # Buyer portal — design
 
-Sub-project 4 of `docs/ROADMAP.md`. Status: approved 2026-10-12.
+Sub-project 4 of `docs/ROADMAP.md`. Status: approved 2026-10-12; built 2026-10-12.
 
 ## Goal
 
