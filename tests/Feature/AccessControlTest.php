@@ -62,6 +62,14 @@ class AccessControlTest extends TestCase
     }
 
     /** An operator in the named seeded groups. */
+    /** A Sales operator stripped of Central's special rights: the base rules are tested on the right itself, not on the group's shape. */
+    private function creditBlindSales(): User
+    {
+        AccessGroup::query()->where('name', 'Sales')->firstOrFail()->syncSpecialRights([]);
+
+        return $this->operator('Sales');
+    }
+
     private function operator(string ...$groups): User
     {
         $user = User::factory()->create();
@@ -134,7 +142,7 @@ class AccessControlTest extends TestCase
     {
         $customer = $this->sampleCustomer(['credit_limit_amount_enabled' => true, 'credit_limit_amount' => 5_000_000]);
 
-        $this->operator('Sales');
+        $this->creditBlindSales();
         Livewire::test(EditCustomer::class, ['record' => $customer->getRouteKey()])
             ->assertFormFieldHidden('credit_limit_amount')
             ->assertFormFieldHidden('credit_limit_mode')
@@ -232,7 +240,7 @@ class AccessControlTest extends TestCase
         $this->actingAsAdmin();
         $customer = $this->sampleCustomer(['credit_limit_amount' => 987_654_321, 'credit_limit_amount_enabled' => true]);
 
-        $this->operator('Sales'); // edits customers, no "see credit data", no "see cost"
+        $this->creditBlindSales(); // edits customers, no "see credit data", no "see cost"
         $page = Livewire::test(EditCustomer::class, ['record' => $customer->getRouteKey()]);
         $this->assertNull($page->get('data.credit_limit_amount'));
         $page->assertDontSee('987654321')->assertDontSee('987.654.321');
@@ -287,7 +295,7 @@ class AccessControlTest extends TestCase
             fclose($out);
         };
 
-        $this->operator('Sales'); // creates and updates customers, no "see credit data"
+        $this->creditBlindSales(); // creates and updates customers, no "see credit data"
         $write([$customer->number, 'Acme Trading', '', '', '', '', '', '', '', '', '', '', '999999999', '']);
         $result = app(MasterImporter::class)->import('customers', $csv);
         $this->assertSame(0, $result['updated']);

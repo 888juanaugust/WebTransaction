@@ -51,7 +51,7 @@ class RightsMatrixTest extends TestCase
         // Inventory owns the catalogue, the price list and cost; never credit data.
         $this->assertEqualsCanonicalizing(['view', 'create', 'update', 'delete', 'print'], $this->rights(CentralGroups::INVENTORY, CentralScreen::PriceList));
         $this->assertEqualsCanonicalizing(['view', 'create', 'update', 'delete', 'print'], $this->rights(CentralGroups::INVENTORY, MenuKey::ItemsAndServices));
-        $this->assertSame([HakKhusus::SeeCost->value], $this->special(CentralGroups::INVENTORY));
+        $this->assertSame([HakKhusus::ApproveTransactions->value, HakKhusus::SeeCost->value], $this->special(CentralGroups::INVENTORY));
 
         // A Warehouse account delivers and sees stock; nothing else.
         $this->assertEqualsCanonicalizing(['view', 'create', 'update', 'print'], $this->rights(CentralGroups::WAREHOUSE, MenuKey::DeliveryOrders));

@@ -254,7 +254,7 @@ class StockLedgerTest extends TestCase
         $this->adjust('2026-11-01', [[10, 50_000, null]]);
         $counter = User::factory()->create();
         $approver = User::factory()->create();
-        AccessGroup::query()->where('name', 'Warehouse')->firstOrFail()->users()->attach([$counter->id, $approver->id]); // carries "approve transactions"
+        AccessGroup::query()->where('name', 'Inventory')->firstOrFail()->users()->attach([$counter->id, $approver->id]); // Central's stock keepers carry "approve transactions"
 
         $order = StockOpnameOrder::query()->create(['number' => 'SOO-1', 'trans_date' => '2026-11-09', 'start_date' => '2026-11-10', 'person_charged' => 'Alex Doe', 'warehouse_id' => $this->main->id, 'created_by' => $counter->id]);
         $result = StockOpnameResult::query()->create(['number' => 'SOR-1', 'trans_date' => '2026-11-10', 'stock_opname_order_id' => $order->id, 'created_by' => $counter->id]);
