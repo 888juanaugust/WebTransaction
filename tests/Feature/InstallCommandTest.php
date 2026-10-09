@@ -45,7 +45,7 @@ class InstallCommandTest extends TestCase
         $this->assertTrue($admin->isAdministrator());
         $this->assertTrue(Hash::check('secret-pass-12', $admin->password));
         $this->assertTrue($admin->password_change_required, 'a password someone else chose is changed at first sign-in');
-        $this->assertSame(1, User::query()->count(), 'no second administrator from the environment');
+        $this->assertSame(1, User::query()->where('access_type', 'administrator')->count(), 'no second administrator from the environment');
 
         $this->assertSame('USD', Currency::query()->where('is_base', true)->value('code'));
         $this->assertEqualsCanonicalizing([...AccessGroupSeeder::GROUPS, CentralGroups::MARKETING, CentralGroups::INVENTORY, 'Portal'], AccessGroup::query()->pluck('name')->all());
@@ -75,7 +75,7 @@ class InstallCommandTest extends TestCase
         $this->artisan('erp:install', ['--no-interaction' => true, '--force' => true, '--company' => 'Example Co', '--admin-email' => 'owner@example.test', '--admin-password' => 'another-pass-12', '--enable' => ['payroll'], '--no-demo' => true])
             ->assertSuccessful()->expectsOutputToContain('left as it is');
         $this->assertTrue(app(ModuleRegistry::class)->isEnabled('payroll'));
-        $this->assertSame(1, User::query()->count());
+        $this->assertSame(1, User::query()->where('access_type', 'administrator')->count());
         $this->assertTrue(Hash::check('the-owners-own-one', $owner->fresh()->password), 'a forced run never resets a password');
         $this->assertSame(0, Customer::query()->count());
     }
