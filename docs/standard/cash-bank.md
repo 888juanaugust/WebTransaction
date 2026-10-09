@@ -1,6 +1,6 @@
 # Cash & Bank
 
-Module group `cash-bank`. 9 screens in the standard menu.
+Module group `cash-bank`. 10 screens in the standard menu.
 
 ## Behaviours
 
@@ -14,6 +14,7 @@ Module group `cash-bank`. 9 screens in the standard menu.
 
 ## Screens
 
+- [Expense Claims](#expense-claims)
 - [Payments](#payments)
 - [Receipts](#receipts)
 - [Bank Transfers](#bank-transfers)
@@ -23,6 +24,29 @@ Module group `cash-bank`. 9 screens in the standard menu.
 - [Bank Reconciliation](#bank-reconciliation)
 - [Virtual Accounts](#virtual-accounts) (not reproduced)
 - [e-Payment](#e-payment) (not reproduced)
+
+## Expense Claims
+
+Menu key `client__expense-claims` · module `central-claims`
+
+### List
+
+**Columns:** fields.date · Sales · Customer · Spent on · Amount · Status · Decided by
+
+**Filters:** Status
+
+**Actions:** Open
+
+### Form
+
+**Section: The expense**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| fields.date | `trans_date` | date | yes |
+| Amount | `amount` | number | yes |
+| For a customer | `customer_id` | select |  |
+| Spent on | `description` | textarea | yes |
 
 ## Payments
 

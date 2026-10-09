@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Client\Modules;
 
+use App\Client\Models\ExpenseClaim;
+use App\Client\Models\ReturnClaim;
+use App\Client\Models\ReturnClaimLine;
 use App\Client\Models\SettlementClaim;
 use App\Client\Screens\CentralScreen;
 use App\Modules\BaseModule;
@@ -22,11 +25,11 @@ final class ClaimsModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [CentralScreen::SettlementClaims];
+        return [CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::ReturnClaims];
     }
 
     public static function morphMap(): array
     {
-        return ['settlement_claim' => SettlementClaim::class];
+        return ['settlement_claim' => SettlementClaim::class, 'expense_claim' => ExpenseClaim::class, 'return_claim' => ReturnClaim::class, 'return_claim_line' => ReturnClaimLine::class];
     }
 }

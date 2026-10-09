@@ -32,6 +32,7 @@ class ClientServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/config/pricelist.php', 'pricelist');
+        $this->mergeConfigFrom(__DIR__.'/config/claims.php', 'claims');
         $this->app->singleton(Reservations::class);
         // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
         $this->app->bind(Prices::class, CentralPrices::class);

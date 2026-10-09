@@ -232,6 +232,7 @@ Menu key `company__access-privilege` · module `settings`
 
 | Field | Column | Type | Required |
 |---|---|---|---|
+| Expense Claims | `rights.client__expense-claims` | checkbox list |  |
 | Payments | `rights.cash-bank__other-payment` | checkbox list |  |
 | Receipts | `rights.cash-bank__other-deposit` | checkbox list |  |
 | Bank Transfers | `rights.cash-bank__bank-transfer` | checkbox list |  |
@@ -245,6 +246,7 @@ Menu key `company__access-privilege` · module `settings`
 |---|---|---|---|
 | Order Approvals | `rights.client__order-approvals` | checkbox list |  |
 | Settlement Claims | `rights.client__settlement-claims` | checkbox list |  |
+| Return Claims | `rights.client__return-claims` | checkbox list |  |
 | Sales Quotations | `rights.customer__sales-quotation` | checkbox list |  |
 | Sales Orders | `rights.customer__sales-order` | checkbox list |  |
 | Delivery Orders | `rights.customer__delivery-order` | checkbox list |  |
