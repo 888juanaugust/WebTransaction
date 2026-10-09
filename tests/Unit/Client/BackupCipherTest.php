@@ -58,6 +58,7 @@ class BackupCipherTest extends TestCase
     {
         $cipher = $this->cipher();
         $encrypted = $this->encrypt($cipher, random_bytes(BackupCipher::CHUNK + 10));
+        $fullChunks = $this->encrypt($cipher, random_bytes(BackupCipher::CHUNK * 2)); // the final chunk full, so trailing bytes are a read of their own
 
         foreach ([
             [$this->cipher(), $encrypted, 'key is wrong'],
@@ -65,7 +66,7 @@ class BackupCipherTest extends TestCase
             [$cipher, substr($encrypted, 0, -50), 'altered or the key'],
             [$cipher, substr($encrypted, 0, strlen(BackupCipher::MAGIC) + SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES + BackupCipher::CHUNK + SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_ABYTES), 'no end marker'],
             [$cipher, substr($encrypted, 0, 20), 'inside the header'],
-            [$cipher, $encrypted.'extra', 'after its end marker'],
+            [$cipher, $fullChunks.'extra', 'after its end marker'],
             [$cipher, 'not ours at all', 'not a backup'],
         ] as [$with, $bytes, $message]) {
             try {
