@@ -8,9 +8,12 @@ use App\Client\Console\BackupCommand;
 use App\Client\Console\BackupKeyCommand;
 use App\Client\Console\HealthCommand;
 use App\Client\Console\IntegrityCommand;
+use App\Client\Console\LaunchCheckCommand;
 use App\Client\Console\RestoreCommand;
 use App\Client\Domain\Ops\Health\OpsHealth;
 use App\Client\Models\BackupRun;
+use App\Client\Models\LaunchAttestation;
+use App\Client\Screens\CentralScreen;
 use App\Modules\BaseModule;
 use Illuminate\Console\Scheduling\Schedule;
 
@@ -28,17 +31,17 @@ final class OpsModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [];
+        return [CentralScreen::LaunchReadiness];
     }
 
     public static function morphMap(): array
     {
-        return ['backup_run' => BackupRun::class];
+        return ['backup_run' => BackupRun::class, 'launch_attestation' => LaunchAttestation::class];
     }
 
     public static function commands(): array
     {
-        return [BackupCommand::class, BackupKeyCommand::class, RestoreCommand::class, HealthCommand::class, IntegrityCommand::class];
+        return [BackupCommand::class, BackupKeyCommand::class, RestoreCommand::class, HealthCommand::class, IntegrityCommand::class, LaunchCheckCommand::class];
     }
 
     public static function schedule(Schedule $schedule): void

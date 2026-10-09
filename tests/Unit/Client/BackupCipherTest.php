@@ -3,10 +3,10 @@
 namespace Tests\Unit\Client;
 
 use App\Client\Domain\Ops\Backup\BackupCipher;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Tests\TestCase;
 
-/** The cipher: a round trip, chunks, and every way a file can be wrong refused. */
+/** The cipher (on the application, for the translator): a round trip, chunks, and every way a file can be wrong refused. */
 class BackupCipherTest extends TestCase
 {
     private function cipher(): BackupCipher

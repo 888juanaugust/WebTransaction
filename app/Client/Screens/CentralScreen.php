@@ -24,6 +24,7 @@ enum CentralScreen: string implements ScreenKey
     case BuyerAccounts = 'client__buyer-accounts';
     case Website = 'client__website';
     case SiteImages = 'client__site-images';
+    case LaunchReadiness = 'client__launch-readiness';
 
     public function modul(): Modul
     {
@@ -32,6 +33,7 @@ enum CentralScreen: string implements ScreenKey
             self::PriceList, self::WarehouseAccounts, self::Fulfilment => Modul::Inventory,
             self::ExpenseClaims => Modul::CashBank,
             self::Website, self::SiteImages => Modul::Company,
+            self::LaunchReadiness => Modul::Settings,
         };
     }
 
@@ -51,6 +53,7 @@ enum CentralScreen: string implements ScreenKey
             self::BuyerAccounts => __('Buyer Accounts'),
             self::Website => __('Website'),
             self::SiteImages => __('Website Images'),
+            self::LaunchReadiness => __('Launch Readiness'),
         };
     }
 
@@ -65,6 +68,7 @@ enum CentralScreen: string implements ScreenKey
             self::WarehouseAccounts => 520,
             self::Website => 530,
             self::SiteImages => 535,
+            self::LaunchReadiness => 41,
             self::BuyerAccounts => 515,
             self::ExpenseClaims => 30,
             self::PriceList => 85,
@@ -77,7 +81,7 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::OrderApprovals, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
-            self::Teams, self::CustomerPrices, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages => ScreenKind::Setup,
+            self::Teams, self::CustomerPrices, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness => ScreenKind::Setup,
         };
     }
 

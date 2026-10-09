@@ -116,11 +116,12 @@ class LedgerIntegrity
     {
         $findings = [];
         foreach (self::SETTLED as $class) {
-            $class::query()->orderBy('id')->chunk(200, function ($documents) use (&$findings): void {
+            $query = $class::query()->orderBy('id');
+            if (method_exists($class, 'scopeApproved')) {
+                $query->approved(); // an awaiting document has no postings and no cache to agree with
+            }
+            $query->chunk(200, function ($documents) use (&$findings): void {
                 foreach ($documents as $document) {
-                    if (($document->getAttribute('approval_status') ?? 'approved') !== 'approved') {
-                        continue;
-                    }
                     $paid = $this->settlement->paidAmount($document);
                     if (method_exists($document, 'isCredit') && $document->isCredit()) {
                         $paid = -$paid;

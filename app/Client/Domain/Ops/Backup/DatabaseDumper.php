@@ -29,7 +29,7 @@ class DatabaseDumper
         $name = $connection ?? (string) config('database.default');
         $config = (array) config("database.connections.{$name}");
         if (($config['driver'] ?? null) !== 'pgsql') {
-            throw new RuntimeException("Backups dump PostgreSQL only; connection [{$name}] is ".($config['driver'] ?? 'undefined').'.');
+            throw new RuntimeException(__('Backups dump PostgreSQL only; connection [:name] is ', ['name' => $name]).($config['driver'] ?? 'undefined').'.');
         }
 
         return new self($config, (string) config('ops.backup.pg_dump'), (string) config('ops.backup.psql'), (int) config('ops.backup.timeout_seconds'));
@@ -56,12 +56,12 @@ class DatabaseDumper
         $process->run();
         if (! $process->isSuccessful()) {
             @unlink($path);
-            throw new RuntimeException('pg_dump failed: '.trim($process->getErrorOutput() ?: 'no error output'));
+            throw new RuntimeException(__('pg_dump failed: ').trim($process->getErrorOutput() ?: 'no error output'));
         }
         $bytes = (int) @filesize($path);
         if ($bytes === 0) {
             @unlink($path);
-            throw new RuntimeException('pg_dump produced an empty file; that is not a backup.');
+            throw new RuntimeException(__('pg_dump produced an empty file; that is not a backup.'));
         }
 
         return $bytes;
@@ -91,7 +91,7 @@ class DatabaseDumper
         ], env: $this->environment(), timeout: $this->timeout);
         $process->run();
         if (! $process->isSuccessful()) {
-            throw new RuntimeException('psql failed: '.trim($process->getErrorOutput() ?: $process->getOutput()));
+            throw new RuntimeException(__('psql failed: ').trim($process->getErrorOutput() ?: $process->getOutput()));
         }
     }
 

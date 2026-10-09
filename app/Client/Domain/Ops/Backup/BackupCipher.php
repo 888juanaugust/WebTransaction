@@ -26,7 +26,7 @@ class BackupCipher
     public function __construct(#[SensitiveParameter] private readonly string $key)
     {
         if (strlen($this->key) !== SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES) {
-            throw new RuntimeException('The backup key must be exactly '.SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES.' bytes; make one with php artisan central:backup-key.');
+            throw new RuntimeException(__('The backup key must be exactly ').SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES.' bytes; make one with php artisan central:backup-key.');
         }
     }
 
@@ -41,11 +41,11 @@ class BackupCipher
     {
         $encoded = (string) config('ops.backup.encryption_key');
         if ($encoded === '') {
-            throw new RuntimeException('BACKUP_ENCRYPTION_KEY is not set. Backups are refused without one; run php artisan central:backup-key and keep the key off this server.');
+            throw new RuntimeException(__('BACKUP_ENCRYPTION_KEY is not set. Backups are refused without one; run php artisan central:backup-key and keep the key off this server.'));
         }
         $key = base64_decode($encoded, true);
         if ($key === false) {
-            throw new RuntimeException('BACKUP_ENCRYPTION_KEY is not valid base64.');
+            throw new RuntimeException(__('BACKUP_ENCRYPTION_KEY is not valid base64.'));
         }
 
         return new self($key);
@@ -64,7 +64,7 @@ class BackupCipher
         // One chunk read ahead, so the last one is known to be last whatever feof() says of an exact multiple.
         $chunk = $this->read($in);
         if ($chunk === '') {
-            throw new RuntimeException('Refusing to write an empty backup.');
+            throw new RuntimeException(__('Refusing to write an empty backup.'));
         }
         $bytes = 0;
         while (true) {
@@ -89,11 +89,11 @@ class BackupCipher
     public function decrypt($in, $out = null): int
     {
         if ((string) fread($in, strlen(self::MAGIC)) !== self::MAGIC) {
-            throw new RuntimeException('This is not a backup written by this system: the file header does not match.');
+            throw new RuntimeException(__('This is not a backup written by this system: the file header does not match.'));
         }
         $header = (string) fread($in, SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES);
         if (strlen($header) !== SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES) {
-            throw new RuntimeException('The backup file is truncated: it stops inside the header.');
+            throw new RuntimeException(__('The backup file is truncated: it stops inside the header.'));
         }
         $stream = sodium_crypto_secretstream_xchacha20poly1305_init_pull($header, $this->key);
         $bytes = 0;
@@ -102,17 +102,17 @@ class BackupCipher
         while (! feof($in)) {
             $chunk = fread($in, $cipherChunk);
             if ($chunk === false) {
-                throw new RuntimeException('Could not read the backup file.');
+                throw new RuntimeException(__('Could not read the backup file.'));
             }
             if ($chunk === '') {
                 continue;
             }
             if ($final) {
-                throw new RuntimeException('The backup file has data after its end marker: it has been altered.');
+                throw new RuntimeException(__('The backup file has data after its end marker: it has been altered.'));
             }
             $result = sodium_crypto_secretstream_xchacha20poly1305_pull($stream, $chunk);
             if ($result === false) {
-                throw new RuntimeException('The backup failed authentication: the file has been altered or the key is wrong.');
+                throw new RuntimeException(__('The backup failed authentication: the file has been altered or the key is wrong.'));
             }
             [$plain, $tag] = $result;
             $bytes += strlen($plain);
@@ -122,7 +122,7 @@ class BackupCipher
             $final = $tag === SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL;
         }
         if (! $final) {
-            throw new RuntimeException('The backup file is truncated: it has no end marker. Do not restore from it.');
+            throw new RuntimeException(__('The backup file is truncated: it has no end marker. Do not restore from it.'));
         }
 
         return $bytes;
@@ -135,7 +135,7 @@ class BackupCipher
         while (strlen($buffer) < self::CHUNK && ! feof($in)) {
             $piece = fread($in, self::CHUNK - strlen($buffer));
             if ($piece === false) {
-                throw new RuntimeException('Could not read the plaintext being backed up.');
+                throw new RuntimeException(__('Could not read the plaintext being backed up.'));
             }
             if ($piece === '') {
                 break;
@@ -151,7 +151,7 @@ class BackupCipher
     {
         $written = fwrite($handle, $bytes);
         if ($written === false || $written !== strlen($bytes)) {
-            throw new RuntimeException('Short write during the backup: the destination is probably full.');
+            throw new RuntimeException(__('Short write during the backup: the destination is probably full.'));
         }
     }
 }

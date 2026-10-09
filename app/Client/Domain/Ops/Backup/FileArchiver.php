@@ -32,7 +32,7 @@ class FileArchiver
     public function archiveTo(string $path): int
     {
         if (! is_dir($this->root)) {
-            throw new RuntimeException("Nothing to archive: {$this->root} does not exist.");
+            throw new RuntimeException(__('Nothing to archive: :root does not exist.', ['root' => $this->root]));
         }
         @unlink($path);
         $archive = new PharData($path);
@@ -43,7 +43,7 @@ class FileArchiver
         }
         if ($count === 0) {
             @unlink($path);
-            throw new RuntimeException('Refusing to write an archive with no files in it.');
+            throw new RuntimeException(__('Refusing to write an archive with no files in it.'));
         }
 
         return $count;
@@ -53,7 +53,7 @@ class FileArchiver
     public function extractTo(string $archivePath, string $destination): void
     {
         if (! is_dir($destination) && ! mkdir($destination, 0755, true) && ! is_dir($destination)) {
-            throw new RuntimeException("Could not create {$destination}.");
+            throw new RuntimeException(__('Could not create :destination.', ['destination' => $destination]));
         }
         (new PharData($archivePath))->extractTo($destination, null, true);
     }

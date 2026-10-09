@@ -7,6 +7,7 @@ namespace App\Client;
 use App\Client\Domain\Ops\Backup\BackupCipher;
 use App\Client\Domain\Ops\Backup\DatabaseDumper;
 use App\Client\Domain\Ops\Backup\FileArchiver;
+use App\Client\Domain\Ops\Launch\LaunchReadiness;
 use App\Client\Domain\Pricing\CentralPrices;
 use App\Client\Domain\Stock\Reservations;
 use App\Client\Portal\PortalPanelProvider;
@@ -48,6 +49,7 @@ class ClientServiceProvider extends ServiceProvider
         $this->app->register(PortalPanelProvider::class);
         $this->app->singleton(Reservations::class);
         $this->app->scoped(SiteSettings::class);
+        $this->app->scoped(LaunchReadiness::class);
         // Backups: the cipher, the dumper and the archiver read their config when asked for, never earlier.
         $this->app->bind(BackupCipher::class, fn () => BackupCipher::fromConfig());
         $this->app->bind(DatabaseDumper::class, fn () => DatabaseDumper::fromConfig());

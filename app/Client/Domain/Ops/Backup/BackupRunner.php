@@ -88,11 +88,11 @@ class BackupRunner
         $storage = Storage::disk($disk ?? (string) config('ops.backup.disk'));
         $in = $storage->readStream($remotePath);
         if ($in === null || $in === false) {
-            throw new RuntimeException("Backup artefact not found: {$remotePath}");
+            throw new RuntimeException(__('Backup artefact not found: :remotePath', ['remotePath' => $remotePath]));
         }
         $out = fopen($localPath, 'wb');
         if ($out === false) {
-            throw new RuntimeException("Could not open {$localPath} to write the plaintext.");
+            throw new RuntimeException(__('Could not open :localPath to write the plaintext.', ['localPath' => $localPath]));
         }
         try {
             return $this->cipher->decrypt($in, $out);
@@ -145,13 +145,13 @@ class BackupRunner
     {
         $in = fopen($localPath, 'rb');
         if ($in === false) {
-            throw new RuntimeException("Could not read {$localPath}.");
+            throw new RuntimeException(__('Could not read :localPath.', ['localPath' => $localPath]));
         }
         $encrypted = $localPath.'.enc';
         $out = fopen($encrypted, 'wb');
         if ($out === false) {
             fclose($in);
-            throw new RuntimeException("Could not open {$encrypted}.");
+            throw new RuntimeException(__('Could not open :encrypted.', ['encrypted' => $encrypted]));
         }
         try {
             $this->cipher->encrypt($in, $out);
@@ -176,7 +176,7 @@ class BackupRunner
     {
         $in = $storage->readStream($remotePath);
         if ($in === null || $in === false) {
-            throw new RuntimeException("Wrote {$remotePath} but cannot read it back: the destination accepted it and lost it.");
+            throw new RuntimeException(__('Wrote :remotePath but cannot read it back: the destination accepted it and lost it.', ['remotePath' => $remotePath]));
         }
         try {
             return $this->cipher->decrypt($in, null);
