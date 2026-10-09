@@ -80,6 +80,7 @@ class CheckoutTest extends TestCase
         $this->assertTrue(auth('customer')->check());
         $this->assertFalse(auth('web')->user()?->is(PortalActor::user()) ?? false, 'the Portal user is taken off the web guard');
 
+        $this->actingAsStaff($this->marketing);
         app(ApprovalEngine::class)->approve($order, $this->marketing);
         $this->assertSame(PriceReason::CustomerPrice->value, $order->fresh()->lines()->first()->price_reason, 'the stamp at approval agrees');
     }

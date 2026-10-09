@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Client\Portal;
 
 use App\Client\Models\CustomerUser;
+use App\Client\Portal\Domain\CreditStrip;
 use App\Client\Portal\Filament\Pages\Home;
+use App\Client\Portal\Http\DocumentController;
 use App\Client\Portal\Http\EndInactiveBuyerSessions;
 use App\Client\Portal\Http\PortalLocale;
 use App\Domain\Audit\Auditor;
@@ -21,16 +23,19 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -100,6 +105,14 @@ class PortalPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Client/Portal/Filament/Pages'), for: 'App\Client\Portal\Filament\Pages')
             ->discoverWidgets(in: app_path('Client/Portal/Filament/Widgets'), for: 'App\Client\Portal\Filament\Widgets')
             ->pages([Home::class])
+            ->authenticatedRoutes(function (): void {
+                // A buyer's document as a PDF, from a signed link only (PortalDocuments::url).
+                Route::get('/document/{alias}/{id}', DocumentController::class)->whereNumber('id')->middleware('signed')->name('document');
+            })
+            // Above every page: the buyer's free credit, what they owe and what is on order, and the aging banner when it applies.
+            ->renderHook(PanelsRenderHook::PAGE_START, fn (): View|string => ($buyer = auth('customer')->user()) instanceof CustomerUser && $buyer->customer
+                ? view('client.portal.credit-strip', ['strip' => app(CreditStrip::class)->of($buyer->customer)])
+                : '')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
