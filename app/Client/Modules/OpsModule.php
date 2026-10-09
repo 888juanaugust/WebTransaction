@@ -6,7 +6,9 @@ namespace App\Client\Modules;
 
 use App\Client\Console\BackupCommand;
 use App\Client\Console\BackupKeyCommand;
+use App\Client\Console\HealthCommand;
 use App\Client\Console\RestoreCommand;
+use App\Client\Domain\Ops\Health\OpsHealth;
 use App\Client\Models\BackupRun;
 use App\Modules\BaseModule;
 use Illuminate\Console\Scheduling\Schedule;
@@ -35,11 +37,14 @@ final class OpsModule extends BaseModule
 
     public static function commands(): array
     {
-        return [BackupCommand::class, BackupKeyCommand::class, RestoreCommand::class];
+        return [BackupCommand::class, BackupKeyCommand::class, RestoreCommand::class, HealthCommand::class];
     }
 
     public static function schedule(Schedule $schedule): void
     {
+        // The heartbeat the scheduler check reads: a minute without it means cron is not running.
+        $schedule->call(fn () => OpsHealth::beat())->everyMinute()->name('ops-heartbeat')->withoutOverlapping()->onOneServer();
+        $schedule->command('central:health --alert')->hourly()->withoutOverlapping()->onOneServer();
         // Not runInBackground(): the exit code of a failed backup must reach the scheduler.
         $schedule->command('central:backup')->dailyAt('02:15')->withoutOverlapping(60)->onOneServer();
     }
