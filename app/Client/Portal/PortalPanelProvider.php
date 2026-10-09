@@ -8,6 +8,7 @@ use App\Client\Models\CustomerUser;
 use App\Client\Portal\Filament\Pages\Home;
 use App\Client\Portal\Http\EndInactiveBuyerSessions;
 use App\Client\Portal\Http\PortalLocale;
+use App\Domain\Audit\Auditor;
 use App\Filament\Support\InitialsAvatar;
 use App\Providers\Filament\AdminPanelProvider;
 use Filament\Enums\ThemeMode;
@@ -21,6 +22,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -56,6 +58,12 @@ class PortalPanelProvider extends PanelProvider
         Event::listen(Login::class, function (Login $event): void {
             if ($event->user instanceof CustomerUser) {
                 $event->user->forceFill(['last_login_at' => now()])->saveQuietly();
+            }
+        });
+        // A buyer setting or resetting their password is on the record, with nobody as the actor.
+        Event::listen(PasswordReset::class, function (PasswordReset $event): void {
+            if ($event->user instanceof CustomerUser) {
+                Auditor::log('portal_password_reset', $event->user, null, ['email' => $event->user->email]);
             }
         });
     }

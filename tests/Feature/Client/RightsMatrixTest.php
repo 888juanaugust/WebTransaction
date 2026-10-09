@@ -34,7 +34,7 @@ class RightsMatrixTest extends TestCase
 
     public function test_the_six_roles_exist_with_their_decisive_rights(): void
     {
-        $this->assertEqualsCanonicalizing(['Administrator', 'Accounting', 'Finance', 'Sales', 'Purchasing', 'Warehouse', 'Marketing', 'Inventory'], AccessGroup::query()->pluck('name')->all());
+        $this->assertEqualsCanonicalizing(['Administrator', 'Accounting', 'Finance', 'Sales', 'Purchasing', 'Warehouse', 'Marketing', 'Inventory', 'Portal'], AccessGroup::query()->pluck('name')->all());
 
         // Sales works its orders and reads prices; never approves, never sees cost.
         $this->assertEqualsCanonicalizing(['view', 'create', 'update', 'print'], $this->rights(CentralGroups::SALES, MenuKey::SalesOrders));

@@ -1,6 +1,6 @@
 # Sales
 
-Module group `sales`. 22 screens in the standard menu.
+Module group `sales`. 23 screens in the standard menu.
 
 ## Behaviours
 
@@ -46,6 +46,7 @@ Module group `sales`. 22 screens in the standard menu.
 - [Check-ins](#check-ins)
 - [Customer Prices](#customer-prices)
 - [Customer Teams](#customer-teams)
+- [Buyer Accounts](#buyer-accounts)
 
 ## Order Approvals
 
@@ -896,4 +897,25 @@ Menu key `client__teams` · module `central-orders`
 **Filters:** Sales seat · Marketing seat · Team complete
 
 **Actions:** Assign team
+
+## Buyer Accounts
+
+Menu key `client__buyer-accounts` · module `central-portal`
+
+### List
+
+**Columns:** Customer · Name · Email · Invited · Last sign-in · Active
+
+**Filters:** Customer · Active
+
+**Actions:** Edit · Send invitation
+
+### Form
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Customer | `customer_id` | select | yes |
+| Name | `name` | text | yes |
+| Email | `email` | text | yes |
+| Phone | `phone` | text |  |
 

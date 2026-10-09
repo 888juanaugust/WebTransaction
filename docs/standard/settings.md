@@ -265,6 +265,7 @@ Menu key `company__access-privilege` · module `settings`
 | Check-ins | `rights.customer__sales-check-in` | checkbox list |  |
 | Customer Prices | `rights.client__customer-prices` | checkbox list |  |
 | Customer Teams | `rights.client__teams` | checkbox list |  |
+| Buyer Accounts | `rights.client__buyer-accounts` | checkbox list |  |
 
 **Section: Purchasing**
 
