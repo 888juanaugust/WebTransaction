@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Sales\PriceCategories;
 
 use App\Domain\Access\MenuKey;
+use App\Domain\Shared\Format;
 use App\Filament\Resources\Sales\PriceCategories\Pages\ManagePriceCategories;
 use App\Filament\Support\MasterResource;
 use App\Models\Sales\PriceCategory;
@@ -38,6 +39,8 @@ class PriceCategoryResource extends MasterResource
         return $schema->components([
             TextInput::make('name')->label(__('Category name'))->required()->maxLength(100)->unique(ignoreRecord: true),
             Textarea::make('notes')->label(__('fields.memo'))->rows(3),
+            TextInput::make('blanket_discount_percent')->label(__('Discount on every item (%)'))->numeric()->minValue(0)->maxValue(100)->default(0)
+                ->helperText(__('Off the list price for customers in this category, unless an item has a price or discount of its own here.')),
             Toggle::make('is_default')->label(__('Default level'))->inline(false),
         ])->columns(1);
     }
@@ -48,6 +51,7 @@ class PriceCategoryResource extends MasterResource
             ->columns([
                 TextColumn::make('notes')->label(__('fields.memo'))->limit(60)->placeholder('—'),
                 TextColumn::make('name')->label(__('Category name'))->searchable()->sortable(),
+                TextColumn::make('blanket_discount_percent')->label(__('Discount (%)'))->alignEnd()->formatStateUsing(fn ($state) => Format::quantity((string) $state)),
                 IconColumn::make('is_default')->label(__('Default'))->boolean(),
             ])
             ->defaultSort('name')

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Client;
 
+use App\Client\Domain\Pricing\CentralPrices;
 use App\Client\Domain\Stock\Reservations;
+use App\Domain\Sales\Contracts\Prices;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -29,7 +31,10 @@ class ClientServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->mergeConfigFrom(__DIR__.'/config/pricelist.php', 'pricelist');
         $this->app->singleton(Reservations::class);
+        // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
+        $this->app->bind(Prices::class, CentralPrices::class);
     }
 
     public function boot(): void {}

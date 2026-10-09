@@ -80,6 +80,9 @@ class ItemResource extends MasterResource
                     NumberFields::make(TransactionType::Item, __('Item code')),
                     Select::make('item_type')->label(__('Item type'))->options(ItemType::class)->default(ItemType::Inventory)->required()->native(false)->live(),
                     TextInput::make('upc_no')->label(__('UPC / barcode'))->maxLength(50),
+                    TextInput::make('part_number')->label(__('Part number'))->maxLength(100)->disabled()->dehydrated(false),
+                    TextInput::make('vehicle')->label(__('Vehicle'))->maxLength(150)->disabled()->dehydrated(false),
+                    TextInput::make('product_type')->label(__('Product type'))->maxLength(100)->disabled()->dehydrated(false),
                     Select::make('unit1_id')->label(__('Base unit'))->relationship('unit1', 'name')->preload()->required()->native(false)
                         ->default(fn () => Unit::query()->where('name', 'PCS')->value('id')),
                     Select::make('brand_id')->label(__('Brand'))->relationship('brand', 'name')->preload()->searchable()->native(false),

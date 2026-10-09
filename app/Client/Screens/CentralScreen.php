@@ -13,11 +13,14 @@ enum CentralScreen: string implements ScreenKey
 {
     case Teams = 'client__teams';
     case OrderApprovals = 'client__order-approvals';
+    case PriceList = 'client__price-list';
+    case CustomerPrices = 'client__customer-prices';
 
     public function modul(): Modul
     {
         return match ($this) {
-            self::Teams, self::OrderApprovals => Modul::Sales,
+            self::Teams, self::OrderApprovals, self::CustomerPrices => Modul::Sales,
+            self::PriceList => Modul::Inventory,
         };
     }
 
@@ -26,6 +29,8 @@ enum CentralScreen: string implements ScreenKey
         return match ($this) {
             self::Teams => __('Customer Teams'),
             self::OrderApprovals => __('Order Approvals'),
+            self::PriceList => __('Price List'),
+            self::CustomerPrices => __('Customer Prices'),
         };
     }
 
@@ -33,6 +38,8 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::OrderApprovals => 15,
+            self::PriceList => 85,
+            self::CustomerPrices => 505,
             self::Teams => 510,
         };
     }
@@ -40,8 +47,8 @@ enum CentralScreen: string implements ScreenKey
     public function kind(): ScreenKind
     {
         return match ($this) {
-            self::OrderApprovals => ScreenKind::Work,
-            self::Teams => ScreenKind::Setup,
+            self::OrderApprovals, self::PriceList => ScreenKind::Work,
+            self::Teams, self::CustomerPrices => ScreenKind::Setup,
         };
     }
 

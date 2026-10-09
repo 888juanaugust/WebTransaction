@@ -1,6 +1,7 @@
 <?php
 
 use App\Client\Modules\OrdersModule;
+use App\Client\Modules\PriceListModule;
 use App\Client\Screens\CentralScreen;
 
 /*
@@ -21,6 +22,7 @@ return [
     // They register after the standard modules of config/modules.php.
     'modules' => [
         OrdersModule::class,
+        PriceListModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing
