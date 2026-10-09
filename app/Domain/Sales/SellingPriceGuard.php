@@ -8,6 +8,7 @@ use App\Domain\Access\HakAkses;
 use App\Domain\Access\HakKhusus;
 use App\Domain\Currency\Currencies;
 use App\Domain\Currency\CurrencyRates;
+use App\Domain\Sales\Contracts\Prices;
 use App\Domain\Shared\Format;
 use App\Models\Inventory\Item;
 use App\Models\Sales\Customer;
@@ -64,7 +65,7 @@ final class SellingPriceGuard
                 $expected = (string) $source->getAttribute('unit_price');
                 $discount = (string) ($source->getAttribute('discount_percent') ?? 0);
             } else {
-                $resolved = PriceResolver::resolve($customer, $item, $line->unit_id ? (int) $line->unit_id : null, $document->trans_date, (string) $line->base_quantity);
+                $resolved = app(Prices::class)->resolve($customer, $item, $line->unit_id ? (int) $line->unit_id : null, $document->trans_date, (string) $line->base_quantity);
                 [$expected, $discount] = [$resolved['price'], $resolved['discount_percent']];
             }
             if (BigDecimal::of((string) $line->unit_price)->minus($expected)->abs()->isGreaterThan($tolerance)) {

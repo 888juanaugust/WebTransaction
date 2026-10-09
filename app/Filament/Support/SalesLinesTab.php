@@ -7,7 +7,7 @@ namespace App\Filament\Support;
 use App\Domain\Access\HakAkses;
 use App\Domain\Access\HakKhusus;
 use App\Domain\Inventory\Units\UnitConverter;
-use App\Domain\Sales\PriceResolver;
+use App\Domain\Sales\Contracts\Prices;
 use App\Models\Inventory\Item;
 use App\Models\Sales\Customer;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -30,7 +30,7 @@ final class SalesLinesTab
                 $item->loadMissing('units');
                 $baseQuantity = is_numeric($get('quantity')) ? UnitConverter::toBase($item, (string) $get('quantity'), $unitId ?? $item->unit1_id) : null;
 
-                return PriceResolver::resolve($customer, $item, $unitId, $get('../../trans_date') ?: today(), $baseQuantity);
+                return app(Prices::class)->resolve($customer, $item, $unitId, $get('../../trans_date') ?: today(), $baseQuantity);
             },
             salesman: true,
             groupItems: true,

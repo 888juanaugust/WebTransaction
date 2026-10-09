@@ -13,6 +13,8 @@ use App\Domain\Inventory\Costing\Recoster;
 use App\Domain\Pengaturan\Preferensi;
 use App\Domain\Posting\DocumentGuard;
 use App\Domain\Posting\PostingService;
+use App\Domain\Sales\Contracts\Prices;
+use App\Domain\Sales\ListPrices;
 use App\Models\User;
 use App\Modules\ModuleContext;
 use App\Modules\ModuleRegistry;
@@ -36,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(FulfilmentService::class);
         $this->app->singleton(ApprovalEngine::class);
         $this->app->singleton(GiroService::class);
+        $this->app->bind(Prices::class, ListPrices::class); // the price source every selling line reads; an installation may bind its own
         $this->app->singleton(Reconciler::class);
         $this->app->scoped(ModuleRegistry::class, fn ($app) => new ModuleRegistry(
             array_merge((array) config('modules.modules', []), (array) config('client.modules', [])),
