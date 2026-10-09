@@ -38,7 +38,7 @@ verifier's key), READ (view, print).
 | Administrator | every base and Central screen | | | every special right |
 | Sales | | Sales Quotations, Sales Orders, Check-ins, Customers, Collections; FILE on Settlement Claims, Expense Claims, Return Claims | Delivery Orders, Sales Invoices, Sales Receipts, Sales Returns, Items, Stock by Warehouse, Order Fulfilment, Price Categories, Sales Targets, Salesman Commissions, Price List, Customer Prices, Calendar, Contacts | See credit data |
 | Marketing | | Sales' WORK plus Order Approvals; Sales Orders with delete (erasing drafts); FILE on Settlement Claims | Sales' READ | See credit data, Approve transactions |
-| Inventory | the Inventory group's screens, Price List, Customer Prices, Warehouse Accounts, Fulfilment | Delivery Orders, Goods Receipts, Sales Returns, Return Claims | Sales Orders, Purchase Orders | See cost |
+| Inventory | the Inventory group's screens, Price List, Customer Prices, Fulfilment | Delivery Orders, Goods Receipts, Sales Returns, Return Claims | Sales Orders, Purchase Orders | See cost |
 | Warehouse | | Fulfilment, Delivery Orders | Stock by Warehouse | none |
 | Finance | the Cash & Bank, General Ledger, Tax and Reports groups' screens, Sales Receipts, Sales Invoices, Sales Down Payments, Invoice Exchanges, Purchase Invoices, Purchase Payments, Purchase Down Payments, Payment Orders, Expense Accruals, Sales Targets, Salesman Commissions, Settlement Claims, Expense Claims, Collections | Customers | Vendors, Sales Orders, Purchase Orders, Delivery Orders, Goods Receipts, Sales Returns, Calendar, Contacts, Customer Teams | See credit data, Override credit limit, Export data |
 

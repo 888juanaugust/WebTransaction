@@ -71,13 +71,13 @@ class CentralGroupSeeder extends Seeder
                 [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
             ],
             CentralGroups::INVENTORY => [
-                $this->grant([...$this->byModule(Modul::Inventory), CentralScreen::PriceList, CentralScreen::CustomerPrices], self::ALL)
+                $this->grant([...$this->byModule(Modul::Inventory), CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::Fulfilment], self::ALL)
                     + $this->grant([MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, CentralScreen::ReturnClaims], self::WORK)
                     + $this->grant([MenuKey::SalesOrders, MenuKey::PurchaseOrders], self::READ),
                 [HakKhusus::SeeCost],
             ],
             CentralGroups::WAREHOUSE => [
-                $this->grant([MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse], self::READ),
+                $this->grant([CentralScreen::Fulfilment, MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse], self::READ),
                 [],
             ],
             CentralGroups::FINANCE => [

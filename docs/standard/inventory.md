@@ -1,6 +1,6 @@
 # Inventory
 
-Module group `inventory`. 14 screens in the standard menu.
+Module group `inventory`. 16 screens in the standard menu.
 
 ## Behaviours
 
@@ -14,6 +14,7 @@ Module group `inventory`. 14 screens in the standard menu.
 
 ## Screens
 
+- [Fulfilment](#fulfilment)
 - [Purchase Requisitions](#purchase-requisitions)
 - [Item Transfers](#item-transfers)
 - [Inventory Adjustments](#inventory-adjustments)
@@ -28,6 +29,19 @@ Module group `inventory`. 14 screens in the standard menu.
 - [Stock by Warehouse](#stock-by-warehouse)
 - [Minimum Stock](#minimum-stock)
 - [Price List](#price-list)
+- [Warehouse Accounts](#warehouse-accounts)
+
+## Fulfilment
+
+Menu key `client__fulfilment` · module `central-warehouse`
+
+### List
+
+**Columns:** Order No. · Customer · Date · Branch · Held here
+
+**Filters:** Warehouse
+
+**Actions:** Pick list · Deliver
 
 ## Purchase Requisitions
 
@@ -473,4 +487,14 @@ Menu key `client__price-list` · module `central-price-list`
 | Effective from | `effective_from` | date | yes |
 | This file replaces the whole list | `is_full_replacement` | toggle |  |
 | Notes | `note` | textarea |  |
+
+## Warehouse Accounts
+
+Menu key `client__warehouse-accounts` · module `central-warehouse`
+
+### List
+
+**Columns:** Warehouse · Branch · Account · Status
+
+**Actions:** Bind account · Unbind
 

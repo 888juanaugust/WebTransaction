@@ -1,6 +1,6 @@
 # Sales
 
-Module group `sales`. 21 screens in the standard menu.
+Module group `sales`. 22 screens in the standard menu.
 
 ## Behaviours
 
@@ -24,6 +24,7 @@ Module group `sales`. 21 screens in the standard menu.
 
 - [Order Approvals](#order-approvals)
 - [Settlement Claims](#settlement-claims)
+- [Collections](#collections)
 - [Return Claims](#return-claims)
 - [Sales Quotations](#sales-quotations)
 - [Sales Orders](#sales-orders)
@@ -76,6 +77,18 @@ Menu key `client__settlement-claims` · module `central-claims`
 | Invoice | `sales_invoice_id` | select | yes |
 | Amount received | `amount` | number | yes |
 | How the money was handed over | `account` | textarea | yes |
+
+## Collections
+
+Menu key `client__collections` · module `central-collections`
+
+### List
+
+**Columns:** Customer · Invoice · Date · Due · Age · Balance · Aging · To do · Last contact · Promise
+
+**Filters:** To do
+
+**Actions:** Record contact · History · File a settlement claim
 
 ## Return Claims
 

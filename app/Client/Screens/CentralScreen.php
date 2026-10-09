@@ -19,12 +19,14 @@ enum CentralScreen: string implements ScreenKey
     case ExpenseClaims = 'client__expense-claims';
     case ReturnClaims = 'client__return-claims';
     case Collections = 'client__collections';
+    case WarehouseAccounts = 'client__warehouse-accounts';
+    case Fulfilment = 'client__fulfilment';
 
     public function modul(): Modul
     {
         return match ($this) {
             self::Teams, self::OrderApprovals, self::CustomerPrices, self::SettlementClaims, self::ReturnClaims, self::Collections => Modul::Sales,
-            self::PriceList => Modul::Inventory,
+            self::PriceList, self::WarehouseAccounts, self::Fulfilment => Modul::Inventory,
             self::ExpenseClaims => Modul::CashBank,
         };
     }
@@ -40,6 +42,8 @@ enum CentralScreen: string implements ScreenKey
             self::ExpenseClaims => __('Expense Claims'),
             self::ReturnClaims => __('Return Claims'),
             self::Collections => __('Collections'),
+            self::WarehouseAccounts => __('Warehouse Accounts'),
+            self::Fulfilment => __('Fulfilment'),
         };
     }
 
@@ -50,6 +54,8 @@ enum CentralScreen: string implements ScreenKey
             self::SettlementClaims => 20,
             self::ReturnClaims => 25,
             self::Collections => 22,
+            self::Fulfilment => 20,
+            self::WarehouseAccounts => 520,
             self::ExpenseClaims => 30,
             self::PriceList => 85,
             self::CustomerPrices => 505,
@@ -60,8 +66,8 @@ enum CentralScreen: string implements ScreenKey
     public function kind(): ScreenKind
     {
         return match ($this) {
-            self::OrderApprovals, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections => ScreenKind::Work,
-            self::Teams, self::CustomerPrices => ScreenKind::Setup,
+            self::OrderApprovals, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
+            self::Teams, self::CustomerPrices, self::WarehouseAccounts => ScreenKind::Setup,
         };
     }
 

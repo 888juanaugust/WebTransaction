@@ -45,9 +45,9 @@ Confirm with the client's accountant before relying on these figures:
 | Company | `company` (always on)<br>`departments` (Preferences → Features → Departments)<br>`projects` (Preferences → Features → Projects)<br>`payroll` (Preferences → Features → Payroll entries and salary components) | 16 | [company.md](company.md) |
 | General Ledger | `general-ledger` (always on)<br>`payroll` (Preferences → Features → Payroll entries and salary components)<br>`budgets` (Preferences → Features → Budgets and targets) | 9 | [general-ledger.md](general-ledger.md) |
 | Cash & Bank | `central-claims` (always on)<br>`cash-bank` (always on) | 7 | [cash-bank.md](cash-bank.md) |
-| Sales | `central-orders` (always on)<br>`central-claims` (always on)<br>`sales` (always on)<br>`sales-extras` (Preferences → Features → Sales extras: check-ins, commissions, targets)<br>`central-price-list` (always on) | 20 | [sales.md](sales.md) |
+| Sales | `central-orders` (always on)<br>`central-claims` (always on)<br>`central-collections` (always on)<br>`sales` (always on)<br>`sales-extras` (Preferences → Features → Sales extras: check-ins, commissions, targets)<br>`central-price-list` (always on) | 21 | [sales.md](sales.md) |
 | Purchasing | `purchasing` (always on) | 12 | [purchasing.md](purchasing.md) |
-| Inventory | `purchasing` (always on)<br>`inventory` (always on)<br>`central-price-list` (always on) | 14 | [inventory.md](inventory.md) |
+| Inventory | `central-warehouse` (always on)<br>`purchasing` (always on)<br>`inventory` (always on)<br>`central-price-list` (always on) | 16 | [inventory.md](inventory.md) |
 | Fixed Assets | `fixed-assets` (Preferences → Features → Fixed assets) | 7 | [fixed-assets.md](fixed-assets.md) |
 | Tax | `tax` (Preferences → Features → Tax) | 3 | [tax.md](tax.md) |
 | Reports | `reports` (always on)<br>`tax` (Preferences → Features → Tax)<br>`payroll` (Preferences → Features → Payroll entries and salary components) | 4 | [reports.md](reports.md) |

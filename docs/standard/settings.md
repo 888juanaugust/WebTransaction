@@ -246,6 +246,7 @@ Menu key `company__access-privilege` · module `settings`
 |---|---|---|---|
 | Order Approvals | `rights.client__order-approvals` | checkbox list |  |
 | Settlement Claims | `rights.client__settlement-claims` | checkbox list |  |
+| Collections | `rights.client__collections` | checkbox list |  |
 | Return Claims | `rights.client__return-claims` | checkbox list |  |
 | Sales Quotations | `rights.customer__sales-quotation` | checkbox list |  |
 | Sales Orders | `rights.customer__sales-order` | checkbox list |  |
@@ -286,6 +287,7 @@ Menu key `company__access-privilege` · module `settings`
 
 | Field | Column | Type | Required |
 |---|---|---|---|
+| Fulfilment | `rights.client__fulfilment` | checkbox list |  |
 | Purchase Requisitions | `rights.vendor__purchase-requisition` | checkbox list |  |
 | Item Transfers | `rights.inventory__item-transfer` | checkbox list |  |
 | Inventory Adjustments | `rights.inventory__item-adjustment` | checkbox list |  |
@@ -300,6 +302,7 @@ Menu key `company__access-privilege` · module `settings`
 | Stock by Warehouse | `rights.inventory__stock-warehouse` | checkbox list |  |
 | Minimum Stock | `rights.inventory__minimum-stock-item` | checkbox list |  |
 | Price List | `rights.client__price-list` | checkbox list |  |
+| Warehouse Accounts | `rights.client__warehouse-accounts` | checkbox list |  |
 
 **Section: Fixed Assets**
 
