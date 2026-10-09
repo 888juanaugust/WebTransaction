@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Client;
 
+use App\Client\Domain\Ops\Backup\BackupCipher;
+use App\Client\Domain\Ops\Backup\DatabaseDumper;
+use App\Client\Domain\Ops\Backup\FileArchiver;
 use App\Client\Domain\Pricing\CentralPrices;
 use App\Client\Domain\Stock\Reservations;
 use App\Client\Portal\PortalPanelProvider;
@@ -40,10 +43,15 @@ class ClientServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/config/claims.php', 'claims');
         $this->mergeConfigFrom(__DIR__.'/config/portal.php', 'portal');
         $this->mergeConfigFrom(__DIR__.'/config/site.php', 'site');
+        $this->mergeConfigFrom(__DIR__.'/config/ops.php', 'ops');
         // The buyer portal: a second panel on the customer guard (sub-project 4).
         $this->app->register(PortalPanelProvider::class);
         $this->app->singleton(Reservations::class);
         $this->app->scoped(SiteSettings::class);
+        // Backups: the cipher, the dumper and the archiver read their config when asked for, never earlier.
+        $this->app->bind(BackupCipher::class, fn () => BackupCipher::fromConfig());
+        $this->app->bind(DatabaseDumper::class, fn () => DatabaseDumper::fromConfig());
+        $this->app->bind(FileArchiver::class, fn () => FileArchiver::fromConfig());
         // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
         $this->app->bind(Prices::class, CentralPrices::class);
     }

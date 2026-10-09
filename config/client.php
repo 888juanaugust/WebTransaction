@@ -2,6 +2,7 @@
 
 use App\Client\Modules\ClaimsModule;
 use App\Client\Modules\CollectionsModule;
+use App\Client\Modules\OpsModule;
 use App\Client\Modules\OrdersModule;
 use App\Client\Modules\PortalModule;
 use App\Client\Modules\PriceListModule;
@@ -33,6 +34,7 @@ return [
         WarehouseModule::class,
         PortalModule::class,
         SiteModule::class,
+        OpsModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing
