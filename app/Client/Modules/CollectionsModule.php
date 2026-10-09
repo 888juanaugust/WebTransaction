@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Client\Modules;
 
 use App\Client\Console\DebtNoticesCommand;
+use App\Client\Models\CollectionContact;
 use App\Client\Models\DebtNotice;
+use App\Client\Screens\CentralScreen;
 use App\Modules\BaseModule;
 use Illuminate\Console\Scheduling\Schedule;
 
@@ -22,12 +24,12 @@ final class CollectionsModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [];
+        return [CentralScreen::Collections];
     }
 
     public static function morphMap(): array
     {
-        return ['debt_notice' => DebtNotice::class];
+        return ['debt_notice' => DebtNotice::class, 'collection_contact' => CollectionContact::class];
     }
 
     public static function commands(): array
