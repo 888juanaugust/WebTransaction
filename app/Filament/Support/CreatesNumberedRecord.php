@@ -6,6 +6,7 @@ namespace App\Filament\Support;
 
 use App\Domain\Numbering\NumberGenerator;
 use App\Domain\Numbering\TransactionType;
+use App\Models\Company\Branch;
 use App\Models\Settings\DocumentSeries;
 use Carbon\CarbonImmutable;
 
@@ -27,7 +28,9 @@ trait CreatesNumberedRecord
 
         $series = DocumentSeries::query()->findOrFail($data['series_id'] ?? app(NumberGenerator::class)->defaultSeries($this->transactionType(), auth()->user())?->id);
         $date = isset($data['trans_date']) ? CarbonImmutable::parse($data['trans_date']) : CarbonImmutable::today();
-        $data['number'] = app(NumberGenerator::class)->next($series, $date);
+        // A document tagged to no branch is numbered under the default branch when the format carries a code.
+        $branch = (isset($data['branch_id']) ? Branch::query()->find($data['branch_id']) : null)?->code ?? Branch::default()?->code;
+        $data['number'] = app(NumberGenerator::class)->next($series, $date, $branch);
         $data['series_id'] = $series->id;
 
         return $data;

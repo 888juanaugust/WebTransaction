@@ -10,7 +10,8 @@ use InvalidArgumentException;
 /**
  * An ordered list of tokens, stored as JSON on the series. "SO-YYMM-####" is
  * [text "SO-", short year, month, text "-", counter]. A pattern must hold
- * exactly one counter.
+ * exactly one counter. A branch component ("SO-BR-YYMM-####") renders the
+ * document's branch code and gives each branch its own counter.
  */
 final class NumberPattern
 {
@@ -31,11 +32,11 @@ final class NumberPattern
 
     /**
      * Parses the short notation DESIGN.md uses: YYYY, YY, MM, RM (Roman month),
-     * DD, a run of # for the counter; anything else is separator text.
+     * DD, BR (branch code), a run of # for the counter; anything else is separator text.
      */
     public static function fromFormat(string $format): self
     {
-        preg_match_all('/YYYY|YY|MM|RM|DD|#+|[^#YMRD]+|./', $format, $matches);
+        preg_match_all('/YYYY|YY|MM|RM|DD|BR|#+|[^#YMRDB]+|./', $format, $matches);
         $parts = [];
         foreach ($matches[0] as $piece) {
             $parts[] = match (true) {
@@ -44,6 +45,7 @@ final class NumberPattern
                 $piece === 'MM' => ['token' => PatternToken::Month->value, 'text' => null],
                 $piece === 'RM' => ['token' => PatternToken::RomanMonth->value, 'text' => null],
                 $piece === 'DD' => ['token' => PatternToken::Day->value, 'text' => null],
+                $piece === 'BR' => ['token' => PatternToken::Branch->value, 'text' => null],
                 $piece[0] === '#' => ['token' => PatternToken::Counter->value, 'text' => null],
                 default => ['token' => PatternToken::Text->value, 'text' => $piece],
             };
@@ -52,11 +54,17 @@ final class NumberPattern
         return new self(self::mergeText($parts));
     }
 
-    public function render(CarbonInterface $date, int $counter, int $digits): string
+    /** Whether the number carries the branch code, so each branch counts alone. */
+    public function hasBranch(): bool
+    {
+        return in_array(PatternToken::Branch->value, array_column($this->parts, 'token'), true);
+    }
+
+    public function render(CarbonInterface $date, int $counter, int $digits, ?string $branch = null): string
     {
         $out = '';
         foreach ($this->parts as $part) {
-            $out .= PatternToken::from($part['token'])->render($date, $counter, $digits, $part['text'] ?? null);
+            $out .= PatternToken::from($part['token'])->render($date, $counter, $digits, $part['text'] ?? null, $branch);
         }
 
         return $out;

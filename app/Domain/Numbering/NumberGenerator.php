@@ -9,17 +9,21 @@ use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 /**
  * Draws the next number of a series for a date. The counter advances in one
  * INSERT … ON CONFLICT … RETURNING statement, so concurrent saves never share
  * a number; call it inside the transaction that saves the document, and the
- * number is released with a rollback like everything else in it.
+ * number is released with a rollback like everything else in it. A series
+ * whose format carries the branch code counts each branch alone.
  */
 final class NumberGenerator
 {
-    public function next(DocumentSeries $series, CarbonInterface $date): string
+    /** @param  string|null  $branch  the document's branch code, needed when the format carries it */
+    public function next(DocumentSeries $series, CarbonInterface $date, ?string $branch = null): string
     {
+        $pattern = $series->pattern();
         $row = DB::selectOne(
             <<<'SQL'
                 INSERT INTO document_counters (document_series_id, period_key, last_value)
@@ -28,21 +32,35 @@ final class NumberGenerator
                 DO UPDATE SET last_value = document_counters.last_value + 1
                 RETURNING last_value
             SQL,
-            [$series->id, $series->reset_rule->periodKey($date)],
+            [$series->id, $this->periodKey($series, $date, $branch)],
         );
 
-        return $series->pattern()->render($date, (int) $row->last_value, $series->counter_digits);
+        return $pattern->render($date, (int) $row->last_value, $series->counter_digits, $branch);
     }
 
     /** The number the next save would get, without consuming it. */
-    public function preview(DocumentSeries $series, CarbonInterface $date): string
+    public function preview(DocumentSeries $series, CarbonInterface $date, ?string $branch = null): string
     {
         $last = (int) DB::table('document_counters')
             ->where('document_series_id', $series->id)
-            ->where('period_key', $series->reset_rule->periodKey($date))
+            ->where('period_key', $this->periodKey($series, $date, $branch))
             ->value('last_value');
 
-        return $series->pattern()->render($date, $last + 1, $series->counter_digits);
+        return $series->pattern()->render($date, $last + 1, $series->counter_digits, $branch);
+    }
+
+    /** The counter row: the reset period, prefixed with the branch code when the format carries one. */
+    private function periodKey(DocumentSeries $series, CarbonInterface $date, ?string $branch): string
+    {
+        $key = $series->reset_rule->periodKey($date);
+        if (! $series->pattern()->hasBranch()) {
+            return $key;
+        }
+        if ($branch === null || $branch === '') {
+            throw new InvalidArgumentException(__('This number format carries the branch code; the document needs a branch with a code.'));
+        }
+
+        return "{$branch}:{$key}";
     }
 
     /** The series a user may pick for a transaction type, the default first. */

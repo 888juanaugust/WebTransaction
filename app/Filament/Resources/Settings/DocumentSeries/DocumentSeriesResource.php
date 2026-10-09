@@ -104,7 +104,7 @@ class DocumentSeriesResource extends MasterResource
     private static function example(mixed $pattern, int $digits): string
     {
         try {
-            return NumberPattern::fromArray(array_values((array) $pattern))->render(CarbonImmutable::today(), 412, $digits);
+            return NumberPattern::fromArray(array_values((array) $pattern))->render(CarbonImmutable::today(), 412, $digits, 'JKT');
         } catch (Throwable) {
             return 'Add exactly one counter component to see an example.';
         }

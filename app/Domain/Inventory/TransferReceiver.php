@@ -35,7 +35,7 @@ final class TransferReceiver
             $series = $this->numbers->defaultSeries(TransactionType::ItemTransfer, auth()->user());
 
             $receive = ItemTransfer::query()->create([
-                'number' => $number ?: $this->numbers->next($series, $date),
+                'number' => $number ?: $this->numbers->next($series, $date, $send->branch?->code),
                 'series_id' => $number ? null : $series?->id,
                 'trans_date' => $date,
                 'item_transfer_type' => ItemTransfer::RECEIVE,

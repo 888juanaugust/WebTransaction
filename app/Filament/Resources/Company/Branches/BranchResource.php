@@ -39,9 +39,14 @@ class BranchResource extends MasterResource
         return $schema->components([
             Tabs::make('branch')->tabs([
                 Tab::make(__('General'))->schema([
+                    TextInput::make('code')->label(__('Branch code'))->required()->maxLength(8)->alphaNum()->unique(ignoreRecord: true)
+                        ->dehydrateStateUsing(fn (?string $state) => strtoupper(trim((string) $state)))
+                        ->helperText(__('Short and unique; document numbers carry it (SO-JKT-2610-0001).')),
                     TextInput::make('name')->label(__('fields.name'))->required()->maxLength(100)->unique(ignoreRecord: true),
                     TextInput::make('phone_number')->label(__('Phone number'))->tel()->maxLength(30),
                     Textarea::make('address')->label(__('Address'))->rows(3),
+                    TextInput::make('latitude')->label(__('Latitude'))->numeric()->minValue(-90)->maxValue(90)->step(0.000001),
+                    TextInput::make('longitude')->label(__('Longitude'))->numeric()->minValue(-180)->maxValue(180)->step(0.000001),
                     Toggle::make('is_default')->label(__('Default branch'))->inline(false),
                     self::activeToggle()->inline(false),
                 ]),
@@ -59,6 +64,7 @@ class BranchResource extends MasterResource
             ->modifyQueryUsing(fn ($query) => $query->with('users'))
             ->columns([
                 self::activeColumn(),
+                TextColumn::make('code')->label(__('Branch code'))->fontFamily('mono')->searchable()->sortable()->placeholder('—'),
                 TextColumn::make('name')->label(__('fields.name'))->searchable()->sortable(),
                 TextColumn::make('phone_number')->label(__('Phone number'))->placeholder('—'),
                 self::usersColumn(),

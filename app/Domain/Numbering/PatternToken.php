@@ -6,6 +6,7 @@ namespace App\Domain\Numbering;
 
 use Carbon\CarbonInterface;
 use Filament\Support\Contracts\HasLabel;
+use InvalidArgumentException;
 
 /** The components a number format is made of, as the Numbering screen lists them. */
 enum PatternToken: string implements HasLabel
@@ -15,6 +16,7 @@ enum PatternToken: string implements HasLabel
     case Month = 'month';
     case RomanMonth = 'roman_month';
     case Day = 'day';
+    case Branch = 'branch';
     case Counter = 'counter';
     case Text = 'text';
 
@@ -26,12 +28,14 @@ enum PatternToken: string implements HasLabel
             self::Month => __('Month (10)'),
             self::RomanMonth => __('Month, Roman (X)'),
             self::Day => __('Day (17)'),
+            self::Branch => __('Branch code (JKT)'),
             self::Counter => __('Counter'),
             self::Text => __('Separator text'),
         };
     }
 
-    public function render(CarbonInterface $date, int $counter, int $digits, ?string $text = null): string
+    /** @param  string|null  $branch  the document's branch code; a format with a branch component needs one */
+    public function render(CarbonInterface $date, int $counter, int $digits, ?string $text = null, ?string $branch = null): string
     {
         return match ($this) {
             self::Year => $date->format('Y'),
@@ -39,6 +43,7 @@ enum PatternToken: string implements HasLabel
             self::Month => $date->format('m'),
             self::RomanMonth => self::ROMAN[$date->month],
             self::Day => $date->format('d'),
+            self::Branch => $branch !== null && $branch !== '' ? $branch : throw new InvalidArgumentException(__('This number format carries the branch code; the document needs a branch with a code.')),
             self::Counter => str_pad((string) $counter, $digits, '0', STR_PAD_LEFT),
             self::Text => (string) $text,
         };

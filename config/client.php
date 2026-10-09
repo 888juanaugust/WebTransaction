@@ -17,7 +17,7 @@ return [
     // Central's modules, each a class implementing App\Modules\Module.
     // They register after the standard modules of config/modules.php.
     'modules' => [
-        // App\Client\Modules\ReservationsModule::class,
+        App\Client\Modules\OrdersModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing
