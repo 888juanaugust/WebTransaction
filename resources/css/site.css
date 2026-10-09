@@ -1149,3 +1149,147 @@
         }
     }
 }
+
+@layer components {
+    /* Promo carousel: one frame, the active slide on top, the rest held underneath. */
+    .site-promos {
+        position: relative;
+        margin: 1.25rem auto 0;
+        width: min(100% - 2rem, 72rem);
+    }
+    .site-promos__track {
+        position: relative;
+        display: grid;
+        overflow: hidden;
+        border-radius: var(--ae-radius);
+        box-shadow: var(--ae-shadow-card);
+        background: var(--ae-surface);
+        aspect-ratio: 5 / 2;
+    }
+    @media (max-width: 40rem) {
+        .site-promos__track {
+            aspect-ratio: 4 / 3;
+        }
+    }
+    .site-promo {
+        grid-area: 1 / 1;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--duration-medium) var(--ease-smooth-out), visibility 0s var(--duration-medium);
+    }
+    .site-promo.is-active {
+        opacity: 1;
+        visibility: visible;
+        transition-delay: 0s;
+    }
+    .site-promo__image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .site-promo__body {
+        position: relative;
+        display: grid;
+        gap: 0.5rem;
+        justify-items: start;
+        width: 100%;
+        padding: clamp(1.25rem, 4vw, 2.5rem);
+        background: linear-gradient(to top, rgb(13 18 30 / 0.82), rgb(13 18 30 / 0.35) 60%, transparent);
+        color: #ffffff;
+    }
+    .site-promo__title {
+        font-size: clamp(1.375rem, 1rem + 1.6vw, 2.25rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        text-wrap: balance;
+    }
+    .site-promo__text {
+        max-width: 36rem;
+        color: rgb(255 255 255 / 0.85);
+    }
+    .site-promo__body .site-btn {
+        margin-top: 0.5rem;
+    }
+    .site-promos__controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+    .site-promos__arrow {
+        display: inline-grid;
+        place-items: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 1px solid var(--ae-card-edge);
+        border-radius: var(--ae-radius-full);
+        background: var(--ae-surface);
+        color: var(--ae-muted);
+        transition: color var(--duration-quick) var(--ease-smooth-out), border-color var(--duration-quick) var(--ease-smooth-out);
+    }
+    .site-promos__arrow:hover {
+        color: var(--ae-ink);
+        border-color: var(--ae-accent-soft);
+    }
+    .site-promos__arrow svg {
+        width: 1rem;
+        height: 1rem;
+    }
+    .site-promos__dots {
+        display: flex;
+        gap: 0.375rem;
+    }
+    .site-promos__dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--ae-line);
+        transition: background var(--duration-quick) var(--ease-smooth-out), transform var(--duration-quick) var(--ease-smooth-out);
+    }
+    .site-promos__dot[aria-current='true'] {
+        background: var(--ae-accent);
+        transform: scale(1.25);
+    }
+
+    /* Gallery */
+    .site-gallery {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.875rem;
+        margin-top: 1.5rem;
+    }
+    @media (min-width: 48rem) {
+        .site-gallery {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    .site-gallery__item {
+        overflow: hidden;
+        border: 1px solid var(--ae-card-edge);
+        border-radius: var(--ae-radius);
+        background: var(--ae-surface);
+        box-shadow: var(--ae-shadow-card);
+    }
+    .site-gallery__image {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        transition: transform var(--duration-medium) var(--ease-smooth-out);
+    }
+    .site-gallery__item:hover .site-gallery__image {
+        transform: scale(1.03);
+    }
+    .site-gallery__caption {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        color: var(--ae-muted);
+    }
+}

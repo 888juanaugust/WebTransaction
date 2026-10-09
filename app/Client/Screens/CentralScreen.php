@@ -22,6 +22,8 @@ enum CentralScreen: string implements ScreenKey
     case WarehouseAccounts = 'client__warehouse-accounts';
     case Fulfilment = 'client__fulfilment';
     case BuyerAccounts = 'client__buyer-accounts';
+    case Website = 'client__website';
+    case SiteImages = 'client__site-images';
 
     public function modul(): Modul
     {
@@ -29,6 +31,7 @@ enum CentralScreen: string implements ScreenKey
             self::Teams, self::OrderApprovals, self::CustomerPrices, self::SettlementClaims, self::ReturnClaims, self::Collections, self::BuyerAccounts => Modul::Sales,
             self::PriceList, self::WarehouseAccounts, self::Fulfilment => Modul::Inventory,
             self::ExpenseClaims => Modul::CashBank,
+            self::Website, self::SiteImages => Modul::Company,
         };
     }
 
@@ -46,6 +49,8 @@ enum CentralScreen: string implements ScreenKey
             self::WarehouseAccounts => __('Warehouse Accounts'),
             self::Fulfilment => __('Fulfilment'),
             self::BuyerAccounts => __('Buyer Accounts'),
+            self::Website => __('Website'),
+            self::SiteImages => __('Website Images'),
         };
     }
 
@@ -58,6 +63,8 @@ enum CentralScreen: string implements ScreenKey
             self::Collections => 22,
             self::Fulfilment => 20,
             self::WarehouseAccounts => 520,
+            self::Website => 530,
+            self::SiteImages => 535,
             self::BuyerAccounts => 515,
             self::ExpenseClaims => 30,
             self::PriceList => 85,
@@ -70,7 +77,7 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::OrderApprovals, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
-            self::Teams, self::CustomerPrices, self::WarehouseAccounts, self::BuyerAccounts => ScreenKind::Setup,
+            self::Teams, self::CustomerPrices, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages => ScreenKind::Setup,
         };
     }
 

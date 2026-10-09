@@ -1,6 +1,6 @@
 # Company
 
-Module group `company`. 16 screens in the standard menu.
+Module group `company`. 18 screens in the standard menu.
 
 ## Behaviours
 
@@ -15,6 +15,8 @@ Module group `company`. 16 screens in the standard menu.
 - Month-end process closes months in order; a closed month refuses any addition, change or deletion dated in it, on the old and the new date of an edit; reopening takes a special right and is audited.
 - The activity log is the append-only record of who did what, with the document's revisions before and after each change.
 - Currencies carry their decimals (none for the rupiah, two for the dollar) and a table of rates, each from a date: rupiah per one unit, and the Minister of Finance's weekly rate for VAT when it differs. A document takes the latest rate on or before its date. Foreign currencies are offered on documents only while Multiple currencies is on and a foreign currency is active; without one, nothing on any screen changes.
+- Website (Central) is where the Owner overrides what the public site says: contact details, the about texts, the partners, the roadmap and the values the legal pages cite, each in Bahasa Indonesia and English. A value left as written in the client config is not stored; a changed one is, and every change is audited with the value before and after. The public site reads the stored value first and the config otherwise; the two legal pages stay Indonesian whatever the visitor chose.
+- Website Images (Central) holds the pictures the public home page shows: a promo is a slide of the carousel with a title, a text and a link; a photo goes in the gallery with its caption. An image shows while active and within its dates, in its order; the file lives on the public disk under promo/.
 
 ## Screens
 
@@ -34,6 +36,8 @@ Module group `company`. 16 screens in the standard menu.
 - [Memorized Transactions](#memorized-transactions)
 - [Calendar](#calendar)
 - [Activity Log](#activity-log)
+- [Website](#website)
+- [Website Images](#website-images)
 
 ## Currencies
 
@@ -476,4 +480,100 @@ Menu key `company__audit` · module `company`
 **Filters:** Trans date · Created at · Transaction type · User · Action
 
 **Actions:** View
+
+## Website
+
+Menu key `client__website` · module `central-site`
+
+### Filters and inputs
+
+#### Tab: Contact
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Phone | `contact.phone` | text |  |
+| WhatsApp | `contact.whatsapp` | text |  |
+| Email | `contact.email` | text |  |
+| Head office city | `contact.city` | text |  |
+| Business hours (Bahasa Indonesia) | `contact.hours.id` | text |  |
+| Business hours (English) | `contact.hours.en` | text |  |
+
+#### Tab: About
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Short name | `short_name` | text |  |
+| Tagline (Bahasa Indonesia) | `tagline.id` | text |  |
+| Tagline (English) | `tagline.en` | text |  |
+| Summary (Bahasa Indonesia) | `summary.id` | textarea |  |
+| Summary (English) | `summary.en` | textarea |  |
+| Profile (Bahasa Indonesia) | `profile.id` | textarea |  |
+| Profile (English) | `profile.en` | textarea |  |
+
+#### Tab: Partners
+
+**Line grid "Partners":** Name · Country · Since · Field (Bahasa Indonesia) · Field (English) · Notes (Bahasa Indonesia) · Notes (English)
+
+#### Tab: Roadmap
+
+**Line grid "Roadmap":** Title (Bahasa Indonesia) · Title (English) · Status · Notes (Bahasa Indonesia) · Notes (English)
+
+#### Tab: Legal
+
+**Section: Identity**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Entity | `legal.entity` | text |  |
+| NIB | `legal.nib` | text |  |
+| Established | `legal.established` | text |  |
+
+**Section: Privacy policy**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Effective since | `legal.privacy.effective_since` | date |  |
+| Version | `legal.privacy.version` | text |  |
+| Privacy email | `legal.privacy.email` | text |  |
+| Correction within (hours) | `legal.privacy.correction_hours` | number |  |
+| Breach notice within (hours) | `legal.privacy.breach_notice_hours` | number |  |
+| Server location | `legal.privacy.server_location` | text |  |
+
+**Section: Terms of sale**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Effective since | `legal.terms.effective_since` | date |  |
+| Version | `legal.terms.version` | text |  |
+| Late fee (% per month) | `legal.terms.late_fee_percent_per_month` | number |  |
+| Claim within (working days) | `legal.terms.claim_days` | number |  |
+| Dispute forum | `legal.terms.dispute_forum` | text |  |
+
+## Website Images
+
+Menu key `client__site-images` · module `central-site`
+
+### List
+
+**Columns:** Image · Kind · Title · Show from · Show until · Order · Active
+
+**Filters:** Kind
+
+**Actions:** Edit · Delete
+
+### Form
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Kind | `kind` | select | yes |
+| Image | `image_path` | file | yes |
+| Title (Bahasa Indonesia) | `title.id` | text | yes |
+| Title (English) | `title.en` | text | yes |
+| Text (Bahasa Indonesia) | `text.id` | textarea |  |
+| Text (English) | `text.en` | textarea |  |
+| Link | `link` | text |  |
+| Order | `sort` | number |  |
+| Show from | `show_from` | date |  |
+| Show until | `show_until` | date |  |
+| Active | `is_active` | toggle |  |
 

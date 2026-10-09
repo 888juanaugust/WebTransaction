@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client\Site\Http;
 
+use App\Client\Models\SiteImage;
 use App\Client\Site\Copy;
 use App\Client\Site\Legal;
 use App\Domain\Shared\Locales;
@@ -19,6 +20,8 @@ class SiteController
     public function home(): View
     {
         return view('client.site.home', [
+            'promos' => SiteImage::query()->live(SiteImage::PROMO)->get(),
+            'photos' => SiteImage::query()->live(SiteImage::PHOTO)->get(),
             'categories' => Copy::records('categories'),
             'partners' => array_slice(Copy::records('partners'), 0, 3),
             'branches' => $this->branches(),

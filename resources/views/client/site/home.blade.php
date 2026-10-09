@@ -6,7 +6,7 @@
 
 @section('content')
 
-    @includeWhen(! empty($promos), 'client.site.partials.promos', ['promos' => $promos ?? []])
+    @includeWhen($promos->isNotEmpty(), 'client.site.partials.promos')
 
     {{-- The company, and nothing but the company: one statement, two actions, and where it is. --}}
     <section class="site-hero">
@@ -86,6 +86,8 @@
             </div>
         </div>
     </section>
+
+    @includeWhen($photos->isNotEmpty(), 'client.site.partials.photos')
 
     {{-- About, with the partners condensed beside it. --}}
     <section class="site-section" data-reveal>

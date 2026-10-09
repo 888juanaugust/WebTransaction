@@ -34,7 +34,6 @@ if (reduceMotion || !('IntersectionObserver' in window)) {
             }
         }
     }, { threshold: 0.2 });
-    targets.forEach((el) => el.classList.add('is-in-wait'));
     targets.forEach((el) => io.observe(el));
 }
 

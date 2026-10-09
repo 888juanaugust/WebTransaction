@@ -9,6 +9,7 @@ use App\Client\Domain\Stock\Reservations;
 use App\Client\Portal\PortalPanelProvider;
 use App\Client\Site\Http\SiteContentSecurityPolicy;
 use App\Client\Site\Http\SiteLocale;
+use App\Client\Site\SiteSettings;
 use App\Domain\Sales\Contracts\Prices;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -42,6 +43,7 @@ class ClientServiceProvider extends ServiceProvider
         // The buyer portal: a second panel on the customer guard (sub-project 4).
         $this->app->register(PortalPanelProvider::class);
         $this->app->singleton(Reservations::class);
+        $this->app->scoped(SiteSettings::class);
         // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
         $this->app->bind(Prices::class, CentralPrices::class);
     }

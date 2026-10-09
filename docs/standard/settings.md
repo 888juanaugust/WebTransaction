@@ -213,6 +213,8 @@ Menu key `company__access-privilege` · module `settings`
 | Memorized Transactions | `rights.company__memorize-transaction` | checkbox list |  |
 | Calendar | `rights.company__calendar` | checkbox list |  |
 | Activity Log | `rights.company__audit` | checkbox list |  |
+| Website | `rights.client__website` | checkbox list |  |
+| Website Images | `rights.client__site-images` | checkbox list |  |
 
 **Section: General Ledger**
 
