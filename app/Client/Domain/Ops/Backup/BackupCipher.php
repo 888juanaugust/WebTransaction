@@ -61,21 +61,21 @@ class BackupCipher
         [$stream, $header] = sodium_crypto_secretstream_xchacha20poly1305_init_push($this->key);
         $this->write($out, self::MAGIC);
         $this->write($out, $header);
-        $bytes = 0;
-        while (! feof($in)) {
-            $chunk = fread($in, self::CHUNK);
-            if ($chunk === false) {
-                throw new RuntimeException('Could not read the plaintext being backed up.');
-            }
-            if ($chunk === '') {
-                continue;
-            }
-            $bytes += strlen($chunk);
-            $tag = feof($in) ? SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL : SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_MESSAGE;
-            $this->write($out, sodium_crypto_secretstream_xchacha20poly1305_push($stream, $chunk, '', $tag));
-        }
-        if ($bytes === 0) {
+        // One chunk read ahead, so the last one is known to be last whatever feof() says of an exact multiple.
+        $chunk = $this->read($in);
+        if ($chunk === '') {
             throw new RuntimeException('Refusing to write an empty backup.');
+        }
+        $bytes = 0;
+        while (true) {
+            $next = $this->read($in);
+            $tag = $next === '' ? SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_FINAL : SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_TAG_MESSAGE;
+            $this->write($out, sodium_crypto_secretstream_xchacha20poly1305_push($stream, $chunk, '', $tag));
+            $bytes += strlen($chunk);
+            if ($next === '') {
+                break;
+            }
+            $chunk = $next;
         }
 
         return $bytes;
@@ -126,6 +126,24 @@ class BackupCipher
         }
 
         return $bytes;
+    }
+
+    /** Up to one chunk of plaintext, however the stream hands it out. @param  resource  $in */
+    private function read($in): string
+    {
+        $buffer = '';
+        while (strlen($buffer) < self::CHUNK && ! feof($in)) {
+            $piece = fread($in, self::CHUNK - strlen($buffer));
+            if ($piece === false) {
+                throw new RuntimeException('Could not read the plaintext being backed up.');
+            }
+            if ($piece === '') {
+                break;
+            }
+            $buffer .= $piece;
+        }
+
+        return $buffer;
     }
 
     /** @param  resource  $handle */
