@@ -211,7 +211,7 @@ class StockLedgerTest extends TestCase
         $this->assertSame('4.0000', $this->cache($this->branch)->qty_on_hand);
         $this->assertSame(240_000, $this->cache($this->branch)->total_value);
         $this->assertSame('partial', $send->fresh()->status);
-        $this->assertSame('TRF-2611-0001', $receive->number);
+        $this->assertSame('TRF-PST-2611-0001', $receive->number);
 
         // A receipt deleted gives its quantity back: the goods are in transit again and can be received.
         $second = app(TransferReceiver::class)->receive($send->fresh(), [$send->lines()->first()->id => 2], CarbonImmutable::parse('2026-11-08'));

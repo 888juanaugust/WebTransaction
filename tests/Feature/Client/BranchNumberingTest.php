@@ -49,8 +49,14 @@ class BranchNumberingTest extends TestCase
         $this->assertSame('SO-JKT-2611-0001', $gen->next($series, $oct->addMonth(), 'JKT'));
         $this->assertSame('SO-SBY-2610-0002', $gen->preview($series, $oct, 'SBY'));
 
-        $this->expectException(InvalidArgumentException::class);
-        $gen->next($series, $oct);
+        // A document tagged to no branch is numbered under the default branch; without a code there, it is refused.
+        try {
+            $gen->next($series, $oct);
+            $this->fail('the default branch has no code yet');
+        } catch (InvalidArgumentException) {
+        }
+        Branch::query()->create(['name' => 'Head Office', 'code' => 'PST', 'is_default' => true]);
+        $this->assertSame('SO-PST-2610-0001', $gen->next($series, $oct));
     }
 
     public function test_the_defaults_give_the_head_office_a_code_and_the_branched_series_their_token(): void

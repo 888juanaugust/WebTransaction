@@ -69,7 +69,7 @@ class SalesScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $order = SalesOrder::query()->firstOrFail();
-        $this->assertSame('SO-2611-0001', $order->number);
+        $this->assertSame('SO-PST-2611-0001', $order->number);
         $this->assertSame(1_665_000, $order->total);
         $this->assertSame('awaiting', $order->approval_status);
 
@@ -86,13 +86,13 @@ class SalesScreensTest extends TestCase
         $this->actingAs($approver);
         Livewire::test(ListSalesOrders::class)
             ->callTableAction('approve', $order)
-            ->assertNotified('SO-2611-0001 approved');
+            ->assertNotified('SO-PST-2611-0001 approved');
         $this->assertSame('approved', $order->fresh()->approval_status);
         $this->assertSame($approver->id, $order->fresh()->approved_by);
 
         $this->actingAsAdmin();
         Livewire::test(ListSalesOrders::class)->assertTableActionVisible('deliver', $order);
-        $this->get(DeliveryResource::getUrl('create', ['source' => $order->id]))->assertOk()->assertSee('From order SO-2611-0001');
+        $this->get(DeliveryResource::getUrl('create', ['source' => $order->id]))->assertOk()->assertSee('From order SO-PST-2611-0001');
 
         Livewire::withQueryParams(['source' => $order->id])
             ->test(CreateDelivery::class)
@@ -102,7 +102,7 @@ class SalesScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $delivery = Delivery::query()->firstOrFail();
-        $this->assertSame('DO-2611-0001', $delivery->number);
+        $this->assertSame('DO-PST-2611-0001', $delivery->number);
         $this->assertSame('10.0000', $delivery->lines()->first()->base_quantity);
         $this->assertSame('sales_order_line', $delivery->lines()->first()->source_line_type);
         $this->assertSame('10.0000', StockQuery::onHand($this->item->id), 'goods left the warehouse at delivery');
@@ -116,7 +116,7 @@ class SalesScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $invoice = SalesInvoice::query()->firstOrFail();
-        $this->assertSame('INV-2611-0001', $invoice->number);
+        $this->assertSame('INV-PST-2611-0001', $invoice->number);
         $this->assertSame(1_665_000, $invoice->total, 'billed at the order price carried through the delivery');
         $this->assertSame('unpaid', $invoice->payment_status);
         $this->assertSame('processed', $delivery->fresh()->status);

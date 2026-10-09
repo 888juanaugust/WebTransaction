@@ -28,8 +28,7 @@ trait CreatesNumberedRecord
 
         $series = DocumentSeries::query()->findOrFail($data['series_id'] ?? app(NumberGenerator::class)->defaultSeries($this->transactionType(), auth()->user())?->id);
         $date = isset($data['trans_date']) ? CarbonImmutable::parse($data['trans_date']) : CarbonImmutable::today();
-        // A document tagged to no branch is numbered under the default branch when the format carries a code.
-        $branch = (isset($data['branch_id']) ? Branch::query()->find($data['branch_id']) : null)?->code ?? Branch::default()?->code;
+        $branch = isset($data['branch_id']) ? Branch::query()->find($data['branch_id'])?->code : null; // none: numbered under the default branch
         $data['number'] = app(NumberGenerator::class)->next($series, $date, $branch);
         $data['series_id'] = $series->id;
 

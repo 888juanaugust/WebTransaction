@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Numbering;
 
+use App\Models\Company\Branch;
 use App\Models\Settings\DocumentSeries;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -24,6 +25,7 @@ final class NumberGenerator
     public function next(DocumentSeries $series, CarbonInterface $date, ?string $branch = null): string
     {
         $pattern = $series->pattern();
+        $branch = $this->branchCode($series, $branch);
         $row = DB::selectOne(
             <<<'SQL'
                 INSERT INTO document_counters (document_series_id, period_key, last_value)
@@ -41,6 +43,7 @@ final class NumberGenerator
     /** The number the next save would get, without consuming it. */
     public function preview(DocumentSeries $series, CarbonInterface $date, ?string $branch = null): string
     {
+        $branch = $this->branchCode($series, $branch);
         $last = (int) DB::table('document_counters')
             ->where('document_series_id', $series->id)
             ->where('period_key', $this->periodKey($series, $date, $branch))
@@ -53,14 +56,22 @@ final class NumberGenerator
     private function periodKey(DocumentSeries $series, CarbonInterface $date, ?string $branch): string
     {
         $key = $series->reset_rule->periodKey($date);
+
+        return $series->pattern()->hasBranch() ? "{$branch}:{$key}" : $key;
+    }
+
+    /** The code the number carries: the document's branch, else the default branch (a document tagged to no branch is numbered under it). */
+    private function branchCode(DocumentSeries $series, ?string $branch): ?string
+    {
         if (! $series->pattern()->hasBranch()) {
-            return $key;
+            return null;
         }
-        if ($branch === null || $branch === '') {
+        $code = $branch ?: Branch::default()?->code;
+        if ($code === null || $code === '') {
             throw new InvalidArgumentException(__('This number format carries the branch code; the document needs a branch with a code.'));
         }
 
-        return "{$branch}:{$key}";
+        return $code;
     }
 
     /** The series a user may pick for a transaction type, the default first. */

@@ -58,7 +58,7 @@ class InventoryScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $adjustment = InventoryAdjustment::query()->firstOrFail();
-        $this->assertSame('ADJ-2611-0001', $adjustment->number);
+        $this->assertSame('ADJ-PST-2611-0001', $adjustment->number);
         $this->assertSame('24.0000', $adjustment->lines()->first()->base_quantity);
         $this->assertSame('24.0000', StockQuery::onHand($this->item->id));
 

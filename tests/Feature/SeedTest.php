@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Client\Access\CentralGroups;
 use App\Domain\Inventory\StockQuery;
 use App\Models\Inventory\Item;
 use App\Models\Inventory\Unit;
@@ -22,7 +23,7 @@ class SeedTest extends TestCase
         $this->assertSame(env('ADMIN_EMAIL') ?: 'admin@example.test', User::query()->value('email'));
         $this->assertNotNull(Unit::query()->where('name', 'PCS')->first());
         $this->assertNotNull(Warehouse::default());
-        $this->assertEqualsCanonicalizing(AccessGroupSeeder::GROUPS, AccessGroup::query()->pluck('name')->all());
+        $this->assertEqualsCanonicalizing([...AccessGroupSeeder::GROUPS, CentralGroups::MARKETING, CentralGroups::INVENTORY], AccessGroup::query()->pluck('name')->all());
         $this->assertSame(0, Customer::query()->count());
         $this->assertSame(0, Item::query()->count());
     }
