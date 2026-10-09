@@ -1,6 +1,6 @@
 # Public site — design
 
-Sub-project 5 of `docs/ROADMAP.md`. Status: approved 2026-10-13.
+Sub-project 5 of `docs/ROADMAP.md`. Status: approved 2026-10-13; built 2026-10-13.
 
 ## Goal
 
@@ -69,23 +69,26 @@ and optional dates**; **no public catalogue**.
   `Auditor::log('site_setting_changed')` before/after). Cached per request; a change
   bumps the sitemap `lastmod`.
 - Screen **Website** (`client__website`, Modul::Company, Setup): a page whose form has
-  tabs Contact (phone, WhatsApp, email, hours), About (tagline and about text, id/en),
-  Partners (repeater: name, city, kind), Roadmap (repeater: title id/en, text id/en,
-  quarter), Legal (the terms' values). Saves through `SiteSettings`. Administrator only.
+  tabs Contact (phone, WhatsApp, email, city, hours id/en), About (short name, tagline,
+  summary and profile, id/en), Partners (repeater: name, country, since, field and
+  description id/en), Roadmap (repeater: title and description id/en, status), Legal
+  (identity and the values the two legal pages cite). Saves through `SiteSettings`; a value
+  put back to the config's own is forgotten. Administrator only.
 - `SiteCopyTest`: every pair in the config has both sides non-blank; a setting overrides
   the config; the rendered English page shows the English side.
 
-## 4. Promos
-- `site_promos(id, title jsonb {id,en}, text jsonb {id,en}, image_path, link, is_active,
-  show_from, show_until, sort, timestamps)`, `RecordsActivity`. Image on the `public` disk
-  under `promo/` (`storage:link` added to `.claude/hooks/session-start.sh` and
-  `docs/DEPLOY.md`; sub-project 6 carries it into the deploy kit). `SitePromo::live()` =
+## 4. Promos and photos (the user's note: any picture, the goods or anything)
+- One table, `site_images(id, kind promo|photo, title jsonb {id,en}, text jsonb {id,en},
+  image_path, link, is_active, show_from, show_until, sort, timestamps)`, `RecordsActivity`.
+  Image on the `public` disk under `promo/` (`storage:link` in `.claude/hooks/session-start.sh`
+  and `docs/DEPLOY.md`; sub-project 6 carries it into the deploy kit). `SiteImage::live(kind)` =
   active and today within the dates (null = open), by `sort`.
-- Screen **Promos** (`client__promos`, Modul::Company, Setup): `ManageRecords` over the
-  table — image upload (jpg/png/webp, 2 MB), titles and texts in both languages, link,
-  active, dates, sort. Administrator and Marketing ALL.
-- The home carousel renders the live promos server-side (one slide, no script needed;
-  `site.js` rotates several, pauses on hover and under reduced motion shows dots only).
+- Screen **Website Images** (`client__site-images`, Modul::Company, Setup): `ManageRecords`
+  over the table: kind, image upload (jpg/png/webp, 2 MB, with the editor), titles in both
+  languages, a promo's text and link, active, dates, order. Administrator and Marketing ALL.
+- The home renders the live promos as the carousel (one slide needs no script; `site.js`
+  rotates several, pauses on hover and focus, stops under reduced motion) and the live
+  photos as a gallery with captions. The sitemap's `lastmod` is the latest setting or image.
 
 ## 5. Portal: global stock (the user's note)
 - `Reservations::availableAnywhere(itemId)`: on hand minus held, summed over active
@@ -102,17 +105,17 @@ None in code. `public/robots.txt` removed (static file would shadow the route);
 - `app/Client/routes/site.php`; `app/Client/Site/{Copy,SiteSettings,Sitemap}.php`;
   `app/Client/Site/Http/{SiteLocale,SiteContentSecurityPolicy,SiteController,
   LanguageController,RobotsController}.php`; `app/Client/config/site.php`.
-- `app/Client/Models/{SiteSetting,SitePromo}.php`; migrations `2026_10_13_0001..0002`.
-- `app/Client/Modules/SiteModule.php` (key `central-site`, screens Website, Promos,
-  morph `site_setting`, `site_promo`); `CentralScreen::{Website,Promos}`;
-  `app/Client/Filament/Pages/Website.php`, `app/Client/Filament/Resources/Promos/…`.
+- `app/Client/Models/{SiteSetting,SiteImage}.php`; migrations `2026_10_13_0001..0002`.
+- `app/Client/Modules/SiteModule.php` (key `central-site`, screens Website, SiteImages,
+  morph `site_setting`, `site_image`); `CentralScreen::{Website,SiteImages}`;
+  `app/Client/Filament/Pages/Website.php`, `app/Client/Filament/Resources/SiteImages/…`.
 - Views `resources/views/client/site/*.blade.php`; `resources/css/site.css`,
   `resources/js/site.js`; `public/favicon.svg`.
 - Rights in `CentralGroupSeeder`; `lang/id.json`; notes `docs/standard/_notes/company.md`;
   spec `docs/superpowers/specs/2026-10-13-public-site-design.md`; roadmap row 5;
   `tools/ui-smoke/smoke.mjs` accepts the public pages without login.
 - Tests `tests/Feature/Client/Site/{SiteRoutesTest, SiteLanguageTest, SiteCopyTest,
-  PromoTest, WebsiteScreensTest}.php`; `tests/Feature/Client/Portal/CartTest` update.
+  WebsiteScreensTest}.php`; `tests/Feature/Client/Portal/CartTest` update.
 
 ## Order of work (TDD per step, commit per step)
 1. Spec; commit.

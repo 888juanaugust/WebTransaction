@@ -44,6 +44,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan erp:install --no-interaction --company="Example Co" --currency=IDR \
   --admin-email=owner@example.co.id            # no --admin-password: one is made and printed once
+php artisan storage:link                     # the public site's images, served from storage/app/public
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 chown -R erp:erp storage bootstrap/cache
 ```

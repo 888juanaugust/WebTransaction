@@ -52,6 +52,8 @@ if [ -f composer.json ]; then
     php artisan erp:install --no-interaction --demo -q 2>/dev/null \
       || php artisan migrate --force -q 2>/dev/null \
       || say "the database could not be installed or migrated"
+    # The public site's images are served from storage/app/public.
+    php artisan storage:link -q 2>/dev/null || true
   fi
 fi
 

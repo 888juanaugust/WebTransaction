@@ -21,11 +21,13 @@ const root = path.resolve(here, '../..');
 
 const base = process.env.APP_URL_SMOKE ?? 'http://127.0.0.1:8000';
 // `--portal` signs in at the buyer portal with PORTAL_EMAIL / PORTAL_PASSWORD instead of the staff panel.
+// `--public` signs in nowhere: the public site, shot at desktop and phone width, in light and dark.
 const portal = process.argv.includes('--portal');
+const isPublic = process.argv.includes('--public');
 const email = portal ? (process.env.PORTAL_EMAIL ?? 'buyer@example.test') : (process.env.ADMIN_EMAIL ?? 'admin@example.test');
 const password = (portal ? process.env.PORTAL_PASSWORD : process.env.ADMIN_PASSWORD) || 'password';
-const given = process.argv.slice(2).filter((a) => a !== '--portal');
-const pages = given.length ? given : [portal ? '/portal' : '/admin'];
+const given = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const pages = given.length ? given : [isPublic ? '/' : portal ? '/portal' : '/admin'];
 const loginPath = portal ? '/portal/login' : '/admin/login';
 const out = path.join(root, 'storage/app/smoke');
 await fs.mkdir(out, { recursive: true });
@@ -34,12 +36,30 @@ const executablePath = await fs.access('/opt/pw-browsers/chromium').then(() => '
 const browser = await chromium.launch({ headless: true, executablePath });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
-    await page.goto(`${base}${loginPath}`, { waitUntil: 'networkidle' });
-    await page.fill('input[type=email]', email);
-    await page.fill('input[type=password]', password);
-    await page.click('button[type=submit]');
-    await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 20000 });
-    for (const p of pages) {
+    if (isPublic) {
+        for (const p of pages) {
+            const slug = p.replace(/^\/+/, '').replace(/[^\w-]+/g, '-') || 'home';
+            for (const [name, viewport, scheme] of [['desktop', { width: 1440, height: 900 }, 'light'], ['phone', { width: 390, height: 844 }, 'light'], ['dark', { width: 1440, height: 900 }, 'dark']]) {
+                await page.setViewportSize(viewport);
+                await page.emulateMedia({ colorScheme: scheme });
+                await page.goto(`${base}${p}`, { waitUntil: 'networkidle' });
+                // The whole page in view, so sections that settle in as they arrive have all arrived.
+                const height = await page.evaluate(() => document.documentElement.scrollHeight);
+                await page.setViewportSize({ width: viewport.width, height: Math.min(height, 16000) });
+                await page.waitForTimeout(700);
+                const file = path.join(out, `site-${slug}-${name}.png`);
+                await page.screenshot({ path: file, fullPage: true });
+                console.log(`${page.url()} (${name}) → ${file}`);
+            }
+        }
+    } else {
+        await page.goto(`${base}${loginPath}`, { waitUntil: 'networkidle' });
+        await page.fill('input[type=email]', email);
+        await page.fill('input[type=password]', password);
+        await page.click('button[type=submit]');
+        await page.waitForURL((u) => !u.pathname.endsWith('/login'), { timeout: 20000 });
+    }
+    for (const p of isPublic ? [] : pages) {
         await page.goto(`${base}${p}`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(500);
         const file = path.join(out, `${p.replace(/^\/+/, '').replace(/[^\w-]+/g, '-') || 'admin'}.png`);
