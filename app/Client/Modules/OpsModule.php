@@ -31,7 +31,7 @@ final class OpsModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [CentralScreen::LaunchReadiness];
+        return [CentralScreen::Operations, CentralScreen::LaunchReadiness];
     }
 
     public static function morphMap(): array
