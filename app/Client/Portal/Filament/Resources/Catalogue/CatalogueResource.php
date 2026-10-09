@@ -17,7 +17,6 @@ use App\Domain\Shared\Format;
 use App\Models\Inventory\Item;
 use App\Models\Inventory\ItemBrand;
 use App\Models\Inventory\ItemCategory;
-use App\Models\Inventory\Warehouse;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -29,7 +28,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 
-/** Catalogue: every item on sale, with the buyer's own price and whether their home warehouse has it. Add to cart from here. */
+/** Catalogue: every item on sale, with the buyer's own price and whether the company's warehouses have it. Add to cart from here. */
 class CatalogueResource extends PortalResource
 {
     protected static ?string $model = Item::class;
@@ -63,7 +62,6 @@ class CatalogueResource extends PortalResource
     public static function table(Table $table): Table
     {
         $customer = Portal::customer();
-        $warehouseId = $customer->default_warehouse_id ?? Warehouse::default()?->id;
         $version = PriceListVersion::current();
         $ctn = fn (Item $item): ?int => $version ? (int) PriceListItem::query()->where('version_id', $version->id)->where('item_id', $item->id)->value('qty_per_ctn') ?: null : null;
 
@@ -81,7 +79,7 @@ class CatalogueResource extends PortalResource
                     ->state(fn (Item $r) => self::priceText($r, $customer))
                     ->description(fn (Item $r) => __('per :unit', ['unit' => $r->unit1?->name])),
                 TextColumn::make('availability')->label(__('Stock'))->badge()
-                    ->state(fn (Item $r) => app(CartEstimate::class)->availability($r->id, $warehouseId, '1'))
+                    ->state(fn (Item $r) => app(CartEstimate::class)->availability($r->id, '1'))
                     ->formatStateUsing(fn (string $state) => CartEstimate::availabilityLabel($state))
                     ->color(fn (string $state) => CartEstimate::availabilityColor($state)),
             ])

@@ -148,6 +148,16 @@ final class Reservations
         return self::scale(BigDecimal::of((string) StockReservation::query()->where('item_id', $itemId)->where('warehouse_id', $warehouseId)->sum('quantity')));
     }
 
+    /** On hand less what orders hold, over every active warehouse: what a buyer may count on, wherever it sits. */
+    public function availableAnywhere(int $itemId): string
+    {
+        $warehouses = Warehouse::query()->where('is_active', true)->pluck('id');
+        $onHand = (string) (ItemCost::query()->where('item_id', $itemId)->whereIn('warehouse_id', $warehouses)->sum('qty_on_hand') ?: '0');
+        $held = (string) (StockReservation::query()->where('item_id', $itemId)->whereIn('warehouse_id', $warehouses)->sum('quantity') ?: '0');
+
+        return self::scale(BigDecimal::of($onHand)->minus($held));
+    }
+
     /** On hand less what orders hold. */
     public function available(int $itemId, int $warehouseId): string
     {

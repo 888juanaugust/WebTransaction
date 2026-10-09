@@ -19,7 +19,7 @@ use Brick\Math\BigDecimal;
 
 /**
  * What the cart would cost today, line by line, from the customer's own
- * rules — never stored. Availability from the customer's home warehouse as a
+ * rules — never stored. Availability from every warehouse's stock as a
  * badge, the customer's free credit and whether the cart exceeds it, and
  * whether the account is frozen. The order itself is priced again when placed.
  */
@@ -56,7 +56,7 @@ final class CartEstimate
             $base = UnitConverter::toBase($item, (string) $line->quantity, (int) $line->unit_id);
             $answer = $this->prices->resolve($customer, $item, (int) $line->unit_id, $today, $base);
             $unpriced = ($answer['reason'] ?? null) === PriceReason::Unpriced->value || ! BigDecimal::of($answer['price'])->isPositive();
-            $rows[] = ['line' => $line, 'base_quantity' => $base, 'unit_price' => $answer['price'], 'discount_percent' => $answer['discount_percent'], 'reason' => (string) ($answer['reason'] ?? ''), 'unpriced' => $unpriced, 'availability' => $this->availability($item->id, $warehouse?->id, $base)];
+            $rows[] = ['line' => $line, 'base_quantity' => $base, 'unit_price' => $answer['price'], 'discount_percent' => $answer['discount_percent'], 'reason' => (string) ($answer['reason'] ?? ''), 'unpriced' => $unpriced, 'availability' => $this->availability($item->id, $base)];
             $calc[] = ['quantity' => (string) $line->quantity, 'unit_price' => $unpriced ? '0' : $answer['price'], 'discount_percent' => $answer['discount_percent'], 'discount_amount' => 0, 'tax_code_id' => $tax?->id];
         }
         $totals = LineCalculator::compute($calc, $tax !== null, (bool) $customer->default_inc_tax);
@@ -98,12 +98,10 @@ final class CartEstimate
         return $freeze > 0 && $this->credit->oldestUnpaidDays($customer) > $freeze;
     }
 
-    public function availability(int $itemId, ?int $warehouseId, string $baseQuantity): string
+    /** Against the stock of every warehouse: a buyer's branch is the admin's choice, and goods ship from wherever they sit. */
+    public function availability(int $itemId, string $baseQuantity): string
     {
-        if ($warehouseId === null) {
-            return self::ASK;
-        }
-        $available = BigDecimal::of($this->reservations->available($itemId, $warehouseId));
+        $available = BigDecimal::of($this->reservations->availableAnywhere($itemId));
         if ($available->isLessThanOrEqualTo(0)) {
             return self::ASK;
         }

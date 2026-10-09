@@ -3,6 +3,7 @@
 namespace Tests\Feature\Client\Portal;
 
 use App\Client\Domain\Pricing\PriceReason;
+use App\Client\Domain\Stock\Reservations;
 use App\Client\Models\CustomerPriceRule;
 use App\Client\Models\CustomerUser;
 use App\Client\Models\PortalCart;
@@ -114,8 +115,11 @@ class CartTest extends TestCase
         $this->assertSame(0, $this->cart()->count($this->buyer));
     }
 
-    public function test_the_estimate_prices_from_the_customers_rules_and_reads_the_home_warehouse(): void
+    public function test_the_estimate_prices_from_the_customers_rules_and_counts_stock_in_every_warehouse(): void
     {
+        $this->actingAsStaff($this->owner);
+        $this->stock($this->gudangSurabaya, 10);
+        $this->actingAsBuyer($this->buyer);
         $this->rule->forceFill(['is_active' => true])->saveQuietly();
         $this->customer->forceFill(['credit_limit_amount_enabled' => true, 'credit_limit_amount' => 1_000_000])->saveQuietly();
         $this->cart()->add($this->buyer, $this->item, $this->item->unit1_id, 10);
@@ -132,7 +136,9 @@ class CartTest extends TestCase
         $this->assertSame(455_400, $estimate['tax_total'], '12 % VAT on an 11/12 base');
         $this->assertSame(4_595_400, $estimate['total']);
         $this->assertSame(CartEstimate::AVAILABLE, $pcs['availability'], '10 of 30 on the shelf');
-        $this->assertSame(CartEstimate::LIMITED, $ctn['availability'], '36 asked, 30 on the shelf');
+        $this->assertSame(CartEstimate::AVAILABLE, $ctn['availability'], '36 asked, 30 in Jakarta and 10 in Surabaya');
+        $this->assertSame('40.0000', app(Reservations::class)->availableAnywhere($this->item->id));
+        $this->assertSame(CartEstimate::LIMITED, app(CartEstimate::class)->availability($this->item->id, '41'));
         $this->assertSame(1_000_000, $estimate['free_credit']);
         $this->assertTrue($estimate['over_credit']);
         $this->assertFalse($estimate['frozen']);
