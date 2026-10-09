@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client;
 
+use App\Client\Domain\Stock\Reservations;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -26,7 +27,10 @@ use Illuminate\Support\ServiceProvider;
  */
 class ClientServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->singleton(Reservations::class);
+    }
 
     public function boot(): void {}
 }
