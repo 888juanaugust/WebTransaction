@@ -1,6 +1,7 @@
 <?php
 
 use App\Client\Modules\ClaimsModule;
+use App\Client\Modules\CollectionsModule;
 use App\Client\Modules\OrdersModule;
 use App\Client\Modules\PriceListModule;
 use App\Client\Screens\CentralScreen;
@@ -25,6 +26,7 @@ return [
         OrdersModule::class,
         PriceListModule::class,
         ClaimsModule::class,
+        CollectionsModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing
