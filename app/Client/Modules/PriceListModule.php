@@ -9,7 +9,6 @@ use App\Client\Models\PriceListImport;
 use App\Client\Models\PriceListItem;
 use App\Client\Models\PriceListVersion;
 use App\Client\Screens\CentralScreen;
-use App\Client\Seeders\PriceListGroupSeeder;
 use App\Modules\BaseModule;
 
 /**
@@ -41,6 +40,6 @@ final class PriceListModule extends BaseModule
 
     public static function defaultSeeders(): array
     {
-        return [PriceListGroupSeeder::class];
+        return [];
     }
 }

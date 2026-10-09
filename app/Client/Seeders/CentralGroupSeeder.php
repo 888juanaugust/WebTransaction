@@ -8,45 +8,109 @@ use App\Client\Access\CentralGroups;
 use App\Client\Screens\CentralScreen;
 use App\Domain\Access\Hak;
 use App\Domain\Access\HakKhusus;
+use App\Domain\Access\MenuKey;
+use App\Domain\Access\ScreenKey;
+use App\Filament\Modul;
 use App\Models\Settings\AccessGroup;
 use Illuminate\Database\Seeder;
 
 /**
- * Central's roles on top of the base's groups: Marketing (the Sales rights,
- * plus approving orders and seeing credit data) and Inventory (the Warehouse
- * rights plus cost). Sales never approves. A group the owner already shaped
- * on the Access Groups screen is left alone; Central's own screens are
- * granted to the groups that work them.
+ * Central's roles: the rights of the six groups of CLAUDE.md's role table,
+ * over the base's screens and Central's own. Sales never approves, Finance
+ * never approves credit nor changes a price, Inventory never sees credit
+ * data, a Warehouse account sees only its own screens.
+ *
+ * The base seeds its own groups first; Central reshapes the ones that are
+ * its roles the first time it runs, and leaves alone a group the owner has
+ * shaped since (a group already holding a right on a Central screen).
+ * Accounting and Purchasing stay as the base shapes them.
  */
 class CentralGroupSeeder extends Seeder
 {
+    public const ADMINISTRATOR = 'Administrator';
+
+    private const ALL = [Hak::View, Hak::Create, Hak::Update, Hak::Delete, Hak::Print];
+
+    private const WORK = [Hak::View, Hak::Create, Hak::Update, Hak::Print];
+
+    private const READ = [Hak::View, Hak::Print];
+
     public function run(): void
     {
-        $sales = CentralGroups::find(CentralGroups::SALES);
-        $warehouse = CentralGroups::find(CentralGroups::WAREHOUSE);
+        foreach ($this->matrix() as $name => [$rights, $special]) {
+            $group = AccessGroup::query()->firstOrCreate(['name' => $name], ['restriction_type' => 'preferences']);
+            if ($this->shapedByCentral($group)) {
+                continue;
+            }
+            $group->syncRights($rights);
+            $group->syncSpecialRights(array_map(fn (HakKhusus $r) => $r->value, $special));
+        }
+    }
 
-        $marketing = AccessGroup::query()->firstOrCreate(['name' => CentralGroups::MARKETING], ['restriction_type' => 'preferences']);
-        if (! $marketing->rights()->exists() && $sales !== null) {
-            $marketing->syncRights($sales->load('rights')->rightsMatrix() + [
-                CentralScreen::OrderApprovals->value => [Hak::View->value, Hak::Update->value],
-            ]);
-            $marketing->syncSpecialRights([HakKhusus::ApproveTransactions->value, HakKhusus::SeeCreditData->value]);
+    /** @return array<string, array{0: array<string, list<string>>, 1: list<HakKhusus>}> */
+    public function matrix(): array
+    {
+        $salesWork = [MenuKey::SalesQuotations, MenuKey::SalesOrders, MenuKey::CheckIns, MenuKey::Customers];
+        $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, MenuKey::Calendar, MenuKey::Contacts];
+
+        return [
+            self::ADMINISTRATOR => [
+                $this->grant([...MenuKey::cases(), ...CentralScreen::cases()], self::ALL),
+                HakKhusus::cases(),
+            ],
+            CentralGroups::SALES => [
+                $this->grant($salesWork, self::WORK) + $this->grant($salesRead, self::READ),
+                [HakKhusus::SeeCreditData],
+            ],
+            CentralGroups::MARKETING => [
+                $this->grant([MenuKey::SalesOrders], self::ALL) + $this->grant([...$salesWork, CentralScreen::OrderApprovals], self::WORK) + $this->grant($salesRead, self::READ),
+                [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
+            ],
+            CentralGroups::INVENTORY => [
+                $this->grant([...$this->byModule(Modul::Inventory), CentralScreen::PriceList, CentralScreen::CustomerPrices], self::ALL)
+                    + $this->grant([MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns], self::WORK)
+                    + $this->grant([MenuKey::SalesOrders, MenuKey::PurchaseOrders], self::READ),
+                [HakKhusus::SeeCost],
+            ],
+            CentralGroups::WAREHOUSE => [
+                $this->grant([MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse], self::READ),
+                [],
+            ],
+            CentralGroups::FINANCE => [
+                $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports), MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions], self::ALL)
+                    + $this->grant([MenuKey::Customers], self::WORK)
+                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams], self::READ),
+                [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],
+            ],
+        ];
+    }
+
+    /** A group holding a right on any Central screen has been through this seeder, or the owner's hands, already. */
+    private function shapedByCentral(AccessGroup $group): bool
+    {
+        return $group->rights()->where('menu_key', 'like', 'client__%')->exists();
+    }
+
+    /** @return list<MenuKey> */
+    private function byModule(Modul ...$moduls): array
+    {
+        return array_values(array_filter(MenuKey::cases(), fn (MenuKey $k) => in_array($k->modul(), $moduls, true)));
+    }
+
+    /**
+     * @param  list<ScreenKey>  $keys
+     * @param  list<Hak>  $rights
+     * @return array<string, list<string>>
+     */
+    private function grant(array $keys, array $rights): array
+    {
+        $out = [];
+        foreach ($keys as $key) {
+            if ($key->isReplicated()) {
+                $out[$key->value] = array_map(fn (Hak $h) => $h->value, $rights);
+            }
         }
 
-        $inventory = AccessGroup::query()->firstOrCreate(['name' => CentralGroups::INVENTORY], ['restriction_type' => 'preferences']);
-        if (! $inventory->rights()->exists() && $warehouse !== null) {
-            $inventory->syncRights($warehouse->load('rights')->rightsMatrix());
-            $inventory->syncSpecialRights([HakKhusus::SeeCost->value]);
-        }
-
-        if ($sales !== null && $sales->specialRights()->where('right', HakKhusus::ApproveTransactions->value)->exists()) {
-            $sales->syncSpecialRights($sales->specialRights()->pluck('right')->reject(HakKhusus::ApproveTransactions->value)->values()->all());
-        }
-
-        $administrator = CentralGroups::find('Administrator');
-        if ($administrator !== null && ! $administrator->rights()->where('menu_key', CentralScreen::Teams->value)->exists()) {
-            $all = array_map(fn (Hak $h) => $h->value, Hak::cases());
-            $administrator->syncRights($administrator->load('rights')->rightsMatrix() + array_fill_keys(array_map(fn (CentralScreen $s) => $s->value, CentralScreen::cases()), $all));
-        }
+        return $out;
     }
 }
