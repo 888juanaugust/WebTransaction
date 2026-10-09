@@ -7,7 +7,10 @@ namespace App\Client;
 use App\Client\Domain\Pricing\CentralPrices;
 use App\Client\Domain\Stock\Reservations;
 use App\Client\Portal\PortalPanelProvider;
+use App\Client\Site\Http\SiteContentSecurityPolicy;
+use App\Client\Site\Http\SiteLocale;
 use App\Domain\Sales\Contracts\Prices;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -35,6 +38,7 @@ class ClientServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/config/pricelist.php', 'pricelist');
         $this->mergeConfigFrom(__DIR__.'/config/claims.php', 'claims');
         $this->mergeConfigFrom(__DIR__.'/config/portal.php', 'portal');
+        $this->mergeConfigFrom(__DIR__.'/config/site.php', 'site');
         // The buyer portal: a second panel on the customer guard (sub-project 4).
         $this->app->register(PortalPanelProvider::class);
         $this->app->singleton(Reservations::class);
@@ -42,5 +46,17 @@ class ClientServiceProvider extends ServiceProvider
         $this->app->bind(Prices::class, CentralPrices::class);
     }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        // The public site (sub-project 5). Registered once the application has
+        // booted, after the base's routes/web.php, so the site's "/" replaces
+        // the base's redirect to the panel: for one method and URI the route
+        // registered last wins. The route cache is built the same way.
+        $this->app->booted(function (): void {
+            if ($this->app->routesAreCached()) {
+                return;
+            }
+            Route::middleware(['web', SiteLocale::class, SiteContentSecurityPolicy::class])->group(__DIR__.'/routes/site.php');
+        });
+    }
 }
