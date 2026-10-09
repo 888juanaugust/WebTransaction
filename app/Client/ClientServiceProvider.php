@@ -6,6 +6,7 @@ namespace App\Client;
 
 use App\Client\Domain\Pricing\CentralPrices;
 use App\Client\Domain\Stock\Reservations;
+use App\Client\Portal\PortalPanelProvider;
 use App\Domain\Sales\Contracts\Prices;
 use Illuminate\Support\ServiceProvider;
 
@@ -33,6 +34,9 @@ class ClientServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/config/pricelist.php', 'pricelist');
         $this->mergeConfigFrom(__DIR__.'/config/claims.php', 'claims');
+        $this->mergeConfigFrom(__DIR__.'/config/portal.php', 'portal');
+        // The buyer portal: a second panel on the customer guard (sub-project 4).
+        $this->app->register(PortalPanelProvider::class);
         $this->app->singleton(Reservations::class);
         // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
         $this->app->bind(Prices::class, CentralPrices::class);

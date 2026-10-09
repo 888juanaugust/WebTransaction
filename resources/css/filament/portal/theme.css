@@ -1,0 +1,55 @@
+/*
+ * The buyer portal's theme: the workspace's tokens, typeface and components
+ * (docs/design/DESIGN.md), without the workspace shell. The sidebar stays on;
+ * the pages are the buyer's own.
+ */
+@import '../admin/theme.css';
+
+@source '../../../../app/Client/Portal/**/*';
+@source '../../../../resources/views/client/portal/**/*';
+
+/* The credit strip above every page: free credit, exposure, open orders, and the aging banner when it applies. */
+.ae-credit-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ae-gap-card, 1rem);
+    margin-bottom: var(--ae-gap-card, 1rem);
+}
+
+.ae-credit-strip__item {
+    flex: 1 1 12rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--ae-radius-md, 10px);
+    background: var(--ae-surface);
+    border: 1px solid var(--ae-card-edge);
+}
+
+.ae-credit-strip__label {
+    font-size: 0.75rem;
+    color: var(--ae-muted);
+}
+
+.ae-credit-strip__value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ae-credit-strip__value--danger {
+    color: var(--ae-danger-fg);
+}
+
+.ae-aging-banner {
+    margin-bottom: var(--ae-gap-card, 1rem);
+    padding: 0.75rem 1rem;
+    border-radius: var(--ae-radius-md, 10px);
+    border: 1px solid var(--ae-warning-fg);
+    background: var(--ae-warning-bg);
+    color: var(--ae-warning-fg);
+}
+
+.ae-aging-banner--frozen {
+    border-color: var(--ae-danger-fg);
+    background: var(--ae-danger-bg);
+    color: var(--ae-danger-fg);
+}
