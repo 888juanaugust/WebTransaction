@@ -10,11 +10,4 @@ use App\Filament\Support\ManageMaster;
 class ManageCustomerPriceRules extends ManageMaster
 {
     protected static string $resource = CustomerPriceRuleResource::class;
-
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        $data['created_by'] = auth()->id();
-
-        return $data;
-    }
 }

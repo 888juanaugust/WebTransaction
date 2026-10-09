@@ -1,10 +1,11 @@
 # Sales
 
-Module group `sales`. 18 screens in the standard menu.
+Module group `sales`. 19 screens in the standard menu.
 
 ## Behaviours
 
 - The chain is quotation → order → delivery (partial or several) → invoice (from one or several deliveries, or direct) → receipt. Fulfilment status (waiting, partial, processed, closed) is derived from quantities; "Pull" picks open upstream documents of the customer, "Process" opens the next document prefilled.
+- Central prices every selling line through one source (customer rules first, always): the customer's own rules on Customer Prices (a price or a discount, for one item or every item, from a quantity, between dates; the item's rule before the blanket one, the highest reached quantity break first), then the tier's rules for the item (the price category's adjustments and item prices), then the tier's blanket discount (a field on the price category, or the item's larger own discount), then the list price of the price list version in force on the document's date, last the base's item price; an item nothing prices is unpriced and its order cannot be approved. At approval every order line is stamped with its reason and the version it came from; the price itself was fixed when the line was saved.
 - Prices are typed freely by those with the right; otherwise they come from the customer's price category and the price adjustments in force on the document's date. Discount adjustments come from the customer's discount category (a price category), else their price category. An item that uses wholesale prices takes the highest quantity break its line reaches and is priced again when the quantity or unit changes; an item with a minimum sale quantity is not sold below it.
 - Receipts propose the payment term's early-payment discount when paid within its discount days (on the open balance, tax included); the same holds for vendor payments. Discounts per line and per document; other charges to any account; tax included or excluded per document.
 - The order's approval, when the Sales Order Approval rule is on, follows the approval rules and the credit check: amount limit (open receivables plus open orders), age limit, and the company's freeze days.
@@ -38,6 +39,7 @@ Module group `sales`. 18 screens in the standard menu.
 - [Sales Targets](#sales-targets)
 - [e-Commerce Links](#e-commerce-links) (not reproduced)
 - [Check-ins](#check-ins)
+- [Customer Prices](#customer-prices)
 - [Customer Teams](#customer-teams)
 
 ## Order Approvals
@@ -482,7 +484,7 @@ Menu key `customer__price-category` · module `sales`
 
 ### List
 
-**Columns:** Notes · Category name · Default
+**Columns:** Notes · Category name · Discount (%) · Default
 
 **Actions:** Edit · Delete
 
@@ -492,6 +494,7 @@ Menu key `customer__price-category` · module `sales`
 |---|---|---|---|
 | Category name | `name` | text | yes |
 | Notes | `notes` | textarea |  |
+| Discount on every item (%) | `blanket_discount_percent` | number |  |
 | Default level | `is_default` | toggle |  |
 
 ## Customers
@@ -788,6 +791,32 @@ Menu key `customer__sales-check-in` · module `sales-extras` · switched by Pref
 | Latitude | `latitude` | number |  |
 | Longitude | `longitude` | number |  |
 | Notes | `notes` | textarea |  |
+
+## Customer Prices
+
+Menu key `client__customer-prices` · module `central-price-list`
+
+### List
+
+**Columns:** Customer · Item · From qty · Price · Discount (%) · Effective from · Effective until · Reason · Active
+
+**Filters:** Customer · Active
+
+**Actions:** Edit · Delete
+
+### Form
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Customer | `customer_id` | select | yes |
+| Item | `item_id` | select |  |
+| From quantity (base units) | `min_base_quantity` | number | yes |
+| Price per base unit | `price` | number |  |
+| Discount (%) | `discount_percent` | number |  |
+| Effective from | `effective_from` | date |  |
+| Effective until | `effective_until` | date |  |
+| Reason | `reason` | text | yes |
+| Active | `is_active` | toggle |  |
 
 ## Customer Teams
 

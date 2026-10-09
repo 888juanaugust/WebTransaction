@@ -259,6 +259,7 @@ Menu key `company__access-privilege` · module `settings`
 | Salesman Commissions | `rights.company__salesman-commission` | checkbox list |  |
 | Sales Targets | `rights.budget-target__sales-target` | checkbox list |  |
 | Check-ins | `rights.customer__sales-check-in` | checkbox list |  |
+| Customer Prices | `rights.client__customer-prices` | checkbox list |  |
 | Customer Teams | `rights.client__teams` | checkbox list |  |
 
 **Section: Purchasing**
@@ -295,6 +296,7 @@ Menu key `company__access-privilege` · module `settings`
 | Order Fulfilment | `rights.inventory__backorder-inquiry` | checkbox list |  |
 | Stock by Warehouse | `rights.inventory__stock-warehouse` | checkbox list |  |
 | Minimum Stock | `rights.inventory__minimum-stock-item` | checkbox list |  |
+| Price List | `rights.client__price-list` | checkbox list |  |
 
 **Section: Fixed Assets**
 

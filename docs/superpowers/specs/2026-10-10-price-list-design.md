@@ -1,6 +1,6 @@
 # Price list — design
 
-Sub-project 2 of `docs/ROADMAP.md`. Status: approved 2026-10-10.
+Sub-project 2 of `docs/ROADMAP.md`. Status: approved 2026-10-10; built 2026-10-10.
 
 ## Goal
 

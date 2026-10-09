@@ -1,9 +1,10 @@
 # Inventory
 
-Module group `inventory`. 13 screens in the standard menu.
+Module group `inventory`. 14 screens in the standard menu.
 
 ## Behaviours
 
+- Central's list prices are versions (Price List): an upload of the supplier's workbook (read by position, category and product type from the nearest title row, the brand from its column; what cannot be trusted is blocked, what was guessed is annotated) or of the company's own format (the export) is parsed in the background, diffed against the list in force (new, changed with old and new, unchanged, not in the file, errors; the biggest moves), held by the safety brake when more than a fifth of the prices move or one moves by more than half, and published as the next version in one transaction: items named are created or refreshed, items not named keep their price (switched off only when the file is a full replacement), earlier versions are superseded and the item's cached selling price refreshed. A version is never edited; the export of the list in force is the import format.
 - Stock is per warehouse; cost is a moving average per item per warehouse. Every movement carries its document's date; a back-dated or edited document recosts what came after it, never before the first open period.
 - Items are of four types (inventory, non-inventory, service, group) with any number of units and conversion ratios, a selling price per price category, a purchase price, default accounts, a tax code, a minimum stock and an opening stock per warehouse. A group item (bundle) keeps no stock of its own: selling, delivering or taking back a group moves its stocked components (quantity per group unit, in each component's unit), each at its own cost and on its own inventory and cost of sales accounts. Groups are sold, never bought, received or counted.
 - Adjustments change quantity and/or value per warehouse against an adjustment account, and record opening stock. Transfers move goods between warehouses with an in-transit stage. Stock opname orders a count per warehouse; the result is compared with the system and its variance posted as an adjustment, approved by someone other than the counter.
@@ -26,6 +27,7 @@ Module group `inventory`. 13 screens in the standard menu.
 - [Order Fulfilment](#order-fulfilment)
 - [Stock by Warehouse](#stock-by-warehouse)
 - [Minimum Stock](#minimum-stock)
+- [Price List](#price-list)
 
 ## Purchase Requisitions
 
@@ -222,6 +224,9 @@ Menu key `inventory__item` · module `inventory`
 | Item code | `number` | text |  |
 | Item type | `item_type` | select | yes |
 | UPC / barcode | `upc_no` | text |  |
+| Part number | `part_number` | text |  |
+| Vehicle | `vehicle` | text |  |
+| Product type | `product_type` | text |  |
 | Base unit | `unit1_id` | select | yes |
 | Brand | `brand_id` | select |  |
 | Category | `category_id` | select |  |
@@ -439,4 +444,33 @@ Menu key `inventory__minimum-stock-item` · module `inventory`
 **Columns:** Vendor · Item name · Item code · Unit · Available · On order · Requested · Minimum · To order
 
 **Actions:** Order · Request
+
+## Price List
+
+Menu key `client__price-list` · module `central-price-list`
+
+### List
+
+**Columns:** File · Uploaded by · Uploaded · Status · Rows · Blocked · Diff · Brake · Version
+
+**Filters:** Status
+
+**Actions:** Review
+
+### Form
+
+**Section: File**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Price list file | `stored_path` | file | yes |
+| Format | `format` | radio | yes |
+
+**Section: Taking effect**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Effective from | `effective_from` | date | yes |
+| This file replaces the whole list | `is_full_replacement` | toggle |  |
+| Notes | `note` | textarea |  |
 

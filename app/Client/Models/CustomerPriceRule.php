@@ -22,6 +22,13 @@ class CustomerPriceRule extends Model implements HasAuditReference
 
     protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $rule): void {
+            $rule->created_by ??= auth()->id();
+        });
+    }
+
     protected function casts(): array
     {
         return ['min_base_quantity' => 'decimal:4', 'price' => 'integer', 'discount_percent' => 'decimal:4', 'effective_from' => 'date', 'effective_until' => 'date', 'is_active' => 'boolean'];
