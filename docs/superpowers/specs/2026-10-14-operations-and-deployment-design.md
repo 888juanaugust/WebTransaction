@@ -1,6 +1,6 @@
 # Operations and deployment — design
 
-Sub-project 6 of `docs/ROADMAP.md`. Status: approved 2026-10-14.
+Sub-project 6 of `docs/ROADMAP.md`. Status: approved 2026-10-14; built 2026-10-14.
 
 ## Goal
 

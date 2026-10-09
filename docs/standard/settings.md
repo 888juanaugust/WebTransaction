@@ -1,6 +1,6 @@
 # Settings
 
-Module group `settings`. 8 screens in the standard menu.
+Module group `settings`. 10 screens in the standard menu.
 
 ## Behaviours
 
@@ -22,6 +22,8 @@ Module group `settings`. 8 screens in the standard menu.
 - One approval engine serves them all. At every save a document gets a request: approved on the spot when no active rule covers it, otherwise waiting under the covering rule with the highest "from amount". Sales orders wait only while the Sales Order Approval rule is on, and stock counts always wait; without a covering rule anyone with the "approve transactions" right approves them. The person who entered a document never approves it while Segregation of Duties is on, and each approval of a sales order passes the credit check.
 - A waiting or rejected document is still in the books, but nothing is made from it (no Pull, no Process), it does not print, and no payment settles it. An edit that changes the amount, the branch or the lines asks for approval again; a note does not. Until someone decides, a request follows rule changes; decisions only ever grow.
 - Seeded: inactive rules for sales returns, purchase returns and vendor claims, approved by any one member of Accounting.
+- Operations (Central) is how the box stands now, for the administrator: the seven health checks (the database, Redis, the queue, failed jobs, the scheduler's heartbeat written every minute, the age of the last off-site backup, the disk), each healthy, warning or critical by thresholds in the client config; the backups (never, failing, stale, local or ok) with the last ten runs; and the ledger integrity findings, every cache read against its ledger. The hourly sweep (`central:health --alert`) mails every active administrator and the extra address once per critical incident, throttled for six hours and re-armed when the box recovers; the nightly sweep (`central:integrity --notify`) mails the findings while a drift stands and repairs nothing. A backup can be asked for from the screen; the worker takes it. `central:backup` dumps the database, encrypts it and the kept files, stores them on the configured disk, reads every artefact back before calling the run verified, and prunes past 14 daily and 12 monthly copies, never the newest; `central:restore --into` is the drill into a scratch database, and the live database is restored only with `--force`.
+- Launch Readiness (Central) lists what still stands between the system and going live: eleven items the system checks on every read (the production environment, mail, the company identity, the site's contact details and partners, a published price list, staff passwords, the administrators' second factor, an off-site backup, ledger integrity, a real approved invoice) and six a person attests with their name, the date and the evidence (PSE registration, KBLI, the legal pages reviewed, the commercial values, the invoice format, the restore drill); attestations are administrators' only, audited and withdrawable with a reason. `central:launch-check` is the same list on the command line and exits 0 only when nothing is outstanding; the deploy script prints it after every release.
 
 ## Screens
 
@@ -33,6 +35,8 @@ Module group `settings`. 8 screens in the standard menu.
 - [Transaction Approvers](#transaction-approvers)
 - [Add-on Store](#add-on-store) (not reproduced)
 - [Financing Program](#financing-program) (not reproduced)
+- [Operations](#operations)
+- [Launch Readiness](#launch-readiness)
 
 ## Preferences
 
@@ -192,6 +196,8 @@ Menu key `company__access-privilege` · module `settings`
 | Numbering | `rights.company__auto-number` | checkbox list |  |
 | Print Layouts | `rights.company__print-layout` | checkbox list |  |
 | Transaction Approvers | `rights.company__user-approval` | checkbox list |  |
+| Operations | `rights.client__operations` | checkbox list |  |
+| Launch Readiness | `rights.client__launch-readiness` | checkbox list |  |
 
 **Section: Company**
 
@@ -519,4 +525,16 @@ Not reproduced: a vendor service of the original product.
 Menu key `company__capital-program` · module `settings`
 
 Not reproduced: a vendor service of the original product.
+
+## Operations
+
+Menu key `client__operations` · module `central-ops`
+
+A read-only screen with its own layout.
+
+## Launch Readiness
+
+Menu key `client__launch-readiness` · module `central-ops`
+
+A read-only screen with its own layout.
 

@@ -127,7 +127,7 @@ class LaunchReadiness
         $mailer = (string) config('mail.default');
         $ok = ! in_array($mailer, ['log', 'array', ''], true);
 
-        return LaunchCheck::checked('mail', __('Mail configured'), __('Invitations, tax invoices, the aging notice and the health alert all go by mail; the log mailer sends nothing.'), $ok, __('MAIL_MAILER=:mailer', ['mailer' => $mailer]), __('Set MAIL_* in .env to the company\'s SMTP'));
+        return LaunchCheck::checked('mail', __('Mail configured'), __('Invitations, tax invoices, the aging notice and the health alert all go by mail; the log mailer sends nothing.'), $ok, __('The mailer is :mailer', ['mailer' => $mailer]), __('Set MAIL_* in .env to the company\'s SMTP'));
     }
 
     private function companyIdentity(): LaunchCheck
