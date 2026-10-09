@@ -1,0 +1,17 @@
+# Central behind Caddy. provision.sh installs this to /etc/caddy/Caddyfile
+# with __DOMAIN__ replaced. Caddy gets and renews the certificate; the
+# application sends its own security headers (content policy, frame and
+# content-type rules, referrer policy, HSTS over HTTPS), so none are added
+# here and none may conflict.
+__DOMAIN__ {
+    root * /srv/central/public
+    encode zstd gzip
+    php_fastcgi unix//run/php/php8.4-fpm.sock
+    file_server
+    request_body {
+        max_size 32MB
+    }
+    log {
+        output file /var/log/caddy/central.log
+    }
+}

@@ -1,0 +1,11 @@
+# The worker's and Caddy's logs. The application log rotates itself
+# (LOG_CHANNEL=daily keeps 14 days).
+/srv/central/storage/logs/worker.log /var/log/caddy/central.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

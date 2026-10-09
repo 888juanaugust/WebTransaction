@@ -1,0 +1,64 @@
+name: Deploy
+
+# Promotion is a branch, not a button: pushing to `production` is the
+# deliberate act, and what follows is mechanical: the full suite, then
+# deploy/deploy.sh on the server over SSH. workflow_dispatch re-deploys the
+# branch as it stands, for the day a deploy died halfway.
+#
+# Secrets (repository → Settings → Secrets → Actions), docs/DEPLOY.md:
+#   DEPLOY_HOST         the server
+#   DEPLOY_USER         central
+#   DEPLOY_SSH_KEY      a private key made for this pipeline, its public half
+#                       in central's authorized_keys
+#   DEPLOY_KNOWN_HOSTS  ssh-keyscan -H <host>, so the pipeline refuses any
+#                       other host
+#
+# Protect the `production` environment with a required reviewer to put a
+# person between green tests and the server.
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, never cancelled mid-flight: a killed deploy leaves
+# the site in maintenance mode.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    uses: ./.github/workflows/laravel.yml
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Prepare SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          if ! [ -s ~/.ssh/known_hosts ]; then
+            echo "DEPLOY_KNOWN_HOSTS is empty: refusing to connect to an unpinned host. Generate it with: ssh-keyscan -H <host>" >&2
+            exit 1
+          fi
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        # The script on the server is the one this commit shipped: git pull
+        # runs first inside deploy.sh, so code and procedure move together.
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            'cd /srv/central && git pull --ff-only && bash deploy/deploy.sh'
