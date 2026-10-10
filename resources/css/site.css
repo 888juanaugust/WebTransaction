@@ -275,18 +275,19 @@
         text-decoration: none;
     }
     .site-brand__mark {
-        display: inline-grid;
-        place-items: center;
-        width: 1.75rem;
+        width: auto;
         height: 1.75rem;
-        border-radius: var(--ae-radius-sm);
-        background: var(--ae-accent-fill);
-        color: var(--ae-on-accent);
-        box-shadow: var(--ae-shadow-btn);
     }
-    .site-brand__mark svg {
-        width: 1rem;
-        height: 1rem;
+    .site-brand__mark--dark {
+        display: none;
+    }
+    @media (prefers-color-scheme: dark) {
+        .site-brand__mark--light {
+            display: none;
+        }
+        .site-brand__mark--dark {
+            display: inline-block;
+        }
     }
     .site-nav__links {
         display: none;

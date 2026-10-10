@@ -66,6 +66,16 @@ class AdminPanelProvider extends PanelProvider
         return trim($company) !== '' ? $company : (string) config('app.name');
     }
 
+    /** The company's mark beside a name, for a panel's header. */
+    public static function brand(string $name): View
+    {
+        return view('filament.shell.brand', [
+            'logo' => (string) config('client.theme.logo', 'images/logo.svg'),
+            'logoDark' => (string) config('client.theme.logo_dark', ''),
+            'name' => $name,
+        ]);
+    }
+
     public function boot(): void
     {
         // Form tabs stand down the left side as icons; the status tabs above a list stay on top.
@@ -142,9 +152,10 @@ class AdminPanelProvider extends PanelProvider
                 AppAuthentication::make()->recoverable(),
             ])
             ->brandName(fn (): string => self::brandName())
-            // The company's mark beside its name; the file is config('client.theme.logo') under public/.
-            ->brandLogo(fn (): View => view('filament.shell.brand', ['logo' => (string) config('client.theme.logo', 'favicon.svg'), 'name' => self::brandName()]))
+            // The company's mark beside its name; the files are config('client.theme.logo') and its dark twin under public/.
+            ->brandLogo(fn (): View => self::brand(self::brandName()))
             ->brandLogoHeight('1.75rem')
+            ->favicon(fn (): string => asset((string) config('client.theme.logo', 'images/logo.svg')))
             ->colors(array_merge([
                 'primary' => '#2f5bea',
                 'gray' => Color::Slate,

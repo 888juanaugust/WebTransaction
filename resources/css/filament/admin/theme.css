@@ -1205,10 +1205,18 @@ html.ae-framed .fi-main {
 }
 
 .ae-brand-mark {
-    width: 28px;
+    width: auto;
     height: 28px;
-    border-radius: 7px;
     flex: none;
+}
+
+.ae-brand-mark-dark,
+.dark .ae-brand-mark-light {
+    display: none;
+}
+
+.dark .ae-brand-mark-dark {
+    display: inline-block;
 }
 
 .ae-brand-name {

@@ -86,6 +86,9 @@ class PortalPanelProvider extends PanelProvider
             ->profile(EditPortalProfile::class, isSimple: true)
             ->defaultAvatarProvider(InitialsAvatar::class)
             ->brandName(fn (): string => AdminPanelProvider::brandName().' · '.__('Portal'))
+            ->brandLogo(fn (): View => AdminPanelProvider::brand(AdminPanelProvider::brandName().' · '.__('Portal')))
+            ->brandLogoHeight('1.75rem')
+            ->favicon(fn (): string => asset((string) config('client.theme.logo', 'images/logo.svg')))
             ->colors(array_merge([
                 'primary' => '#2f5bea',
                 'gray' => Color::Slate,

@@ -60,8 +60,10 @@ return [
         'colors' => [
             // 'primary' => '#0f766e',
         ],
-        // The company's mark, a file under public/, shown beside the name in the panel's header.
-        'logo' => 'favicon.svg',
+        // The company's mark, files under public/, shown beside the name in the panel's header
+        // and on the public site; the dark twin is the same paths in the light blue of a dark ground.
+        'logo' => 'images/logo.svg',
+        'logo_dark' => 'images/logo-dark.svg',
     ],
 
 ];

@@ -40,7 +40,7 @@
     <title>{{ $title !== '' ? $title.' · '.$name : $name.' · '.Copy::text('tagline') }}</title>
     <meta name="description" content="{{ $description }}">
     <link rel="canonical" href="{{ url()->current() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset(config('client.theme.logo')) }}">
 
     <meta property="og:site_name" content="{{ $name }}">
     <meta property="og:title" content="{{ $title !== '' ? $title : $name }}">
@@ -79,9 +79,8 @@
     <header class="site-header">
         <nav class="site-nav" aria-label="{{ __('Main menu') }}">
             <a href="{{ route('site.home') }}" class="site-brand">
-                <span class="site-brand__mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M17.5 7.5A7 7 0 1 0 17.5 16.5"/></svg>
-                </span>
+                <img src="{{ asset(config('client.theme.logo')) }}" alt="" class="site-brand__mark site-brand__mark--light" aria-hidden="true">
+                <img src="{{ asset(config('client.theme.logo_dark') ?: config('client.theme.logo')) }}" alt="" class="site-brand__mark site-brand__mark--dark" aria-hidden="true">
                 <span>{{ Copy::shortName() }}</span>
             </a>
 
