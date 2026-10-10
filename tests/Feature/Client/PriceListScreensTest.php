@@ -12,7 +12,6 @@ use App\Client\Jobs\ParsePriceListImport;
 use App\Client\Models\CustomerPriceRule;
 use App\Client\Models\PriceListImport;
 use App\Client\Models\PriceListVersion;
-use App\Models\Settings\AccessGroup;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -55,9 +54,9 @@ class PriceListScreensTest extends TestCase
     public function test_inventory_works_the_screens_and_sales_only_reads_them(): void
     {
         $inventory = User::factory()->create(['is_active' => true]);
-        AccessGroup::query()->where('name', CentralGroups::INVENTORY)->firstOrFail()->users()->attach($inventory);
+        CentralGroups::find(CentralGroups::PURCHASING)->users()->attach($inventory);
         $sales = User::factory()->create(['is_active' => true]);
-        AccessGroup::query()->where('name', CentralGroups::SALES)->firstOrFail()->users()->attach($sales);
+        CentralGroups::find(CentralGroups::SALES)->users()->attach($sales);
 
         $this->actingAs($inventory);
         $this->get('/admin/client/price-list')->assertOk();

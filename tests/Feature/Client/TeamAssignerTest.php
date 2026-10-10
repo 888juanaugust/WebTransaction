@@ -7,7 +7,6 @@ use App\Client\Domain\Teams\TeamAssigner;
 use App\Models\Company\AuditLog;
 use App\Models\Company\Branch;
 use App\Models\Sales\Customer;
-use App\Models\Settings\AccessGroup;
 use App\Models\User;
 use RuntimeException;
 use Tests\TestCase;
@@ -37,7 +36,7 @@ class TeamAssignerTest extends TestCase
     private function member(string $group, array $branches = []): User
     {
         $user = User::factory()->create(['is_active' => true]);
-        AccessGroup::query()->where('name', $group)->firstOrFail()->users()->attach($user);
+        CentralGroups::claim($group)->users()->attach($user);
         $user->branches()->sync(collect($branches)->map(fn (Branch $b) => $b->id)->all());
 
         return $user;
@@ -46,7 +45,7 @@ class TeamAssignerTest extends TestCase
     public function test_the_seeded_groups_shape_the_roles(): void
     {
         $this->assertNotNull(CentralGroups::find(CentralGroups::MARKETING));
-        $this->assertNotNull(CentralGroups::find(CentralGroups::INVENTORY));
+        $this->assertNotNull(CentralGroups::find(CentralGroups::PURCHASING));
         $this->assertFalse(CentralGroups::find(CentralGroups::SALES)->specialRights()->where('right', 'approve_transactions')->exists(), 'sales never approves');
         $this->assertTrue(CentralGroups::find(CentralGroups::MARKETING)->specialRights()->where('right', 'approve_transactions')->exists());
     }

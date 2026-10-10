@@ -88,7 +88,7 @@ class WarehouseAccounts extends ErpPage implements HasTable
     private static function members(): array
     {
         return User::query()->where('is_active', true)
-            ->whereHas('accessGroups', fn ($q) => $q->where('name', CentralGroups::WAREHOUSE))
+            ->whereHas('accessGroups', fn ($q) => $q->where('role_key', CentralGroups::WAREHOUSE))
             ->orderBy('name')->pluck('name', 'id')->all();
     }
 }

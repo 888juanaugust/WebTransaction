@@ -48,7 +48,7 @@ class InstallCommandTest extends TestCase
         $this->assertSame(1, User::query()->where('access_type', 'administrator')->count(), 'no second administrator from the environment');
 
         $this->assertSame('USD', Currency::query()->where('is_base', true)->value('code'));
-        $this->assertEqualsCanonicalizing([...AccessGroupSeeder::GROUPS, CentralGroups::MARKETING, CentralGroups::INVENTORY, 'Portal'], AccessGroup::query()->pluck('name')->all());
+        $this->assertEqualsCanonicalizing([...AccessGroupSeeder::GROUPS, CentralGroups::NAMES[CentralGroups::MARKETING], CentralGroups::NAMES[CentralGroups::PORTAL]], AccessGroup::query()->pluck('name')->all());
 
         $modules = app(ModuleRegistry::class);
         $this->assertFalse($modules->isEnabled('payroll'));

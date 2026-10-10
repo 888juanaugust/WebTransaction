@@ -96,7 +96,7 @@ class Teams extends ErpPage implements HasTable
     private static function members(string $group): array
     {
         return User::query()->where('is_active', true)
-            ->whereHas('accessGroups', fn ($q) => $q->where('name', $group))
+            ->whereHas('accessGroups', fn ($q) => $q->where('role_key', $group))
             ->orderBy('name')->pluck('name', 'id')->all();
     }
 }

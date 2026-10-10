@@ -164,7 +164,7 @@ class MasterDataTest extends TestCase
         $insider = User::factory()->create();
         $outsider = User::factory()->create();
         $private->users()->attach($insider);
-        $group = AccessGroup::query()->where('name', 'Inventory')->firstOrFail(); // Central's stock keepers open the Warehouses screen
+        $group = AccessGroup::query()->where('name', 'Purchasing')->firstOrFail(); // Central's stock keepers (Purchasing) open the Warehouses screen
         $group->users()->attach([$insider->id, $outsider->id]);
 
         $this->assertEqualsCanonicalizing(['Main Warehouse', 'Branch B store'], Warehouse::query()->where('is_system', false)->visibleTo($insider)->pluck('name')->all());

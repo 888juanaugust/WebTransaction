@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client\Modules;
 
+use App\Client\Console\ReshapeGroupsCommand;
 use App\Client\Domain\Orders\SeatApproval;
 use App\Client\Domain\Stock\Reservations;
 use App\Client\Models\StockReservation;
@@ -12,8 +13,10 @@ use App\Client\Seeders\BranchSeeder;
 use App\Client\Seeders\CentralGroupSeeder;
 use App\Client\Seeders\DocumentSeriesSeeder;
 use App\Client\Seeders\PreferenceSeeder;
+use App\Models\Settings\AccessGroup;
 use App\Modules\BaseModule;
 use App\Modules\ModuleContext;
+use RuntimeException;
 
 /**
  * Central's order flow on top of the base's sales module: branches as
@@ -46,6 +49,18 @@ final class OrdersModule extends BaseModule
         // A delivery consumes what its order lines held; goods held for other orders never leave; an unposted delivery gives the hold back.
         $context->postings->extend(fn ($posting, $builder) => $context->app->make(Reservations::class)->consume($posting, $builder));
         $context->postings->onUnpost(fn ($posting) => $context->app->make(Reservations::class)->unpost($posting));
+
+        // A group that is one of Central's roles may be renamed, never deleted: the team rules read it by its key.
+        AccessGroup::deleting(function (AccessGroup $group): void {
+            if ($group->role_key !== null) {
+                throw new RuntimeException(__(':name is one of Central\'s roles and cannot be deleted; rename it or empty it instead.', ['name' => $group->name]));
+            }
+        });
+    }
+
+    public static function commands(): array
+    {
+        return [ReshapeGroupsCommand::class];
     }
 
     public static function defaultSeeders(): array

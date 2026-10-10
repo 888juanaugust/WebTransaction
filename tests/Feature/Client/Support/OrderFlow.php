@@ -15,7 +15,6 @@ use App\Models\Sales\Customer;
 use App\Models\Sales\Delivery;
 use App\Models\Sales\SalesInvoice;
 use App\Models\Sales\SalesOrder;
-use App\Models\Settings\AccessGroup;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -71,7 +70,7 @@ trait OrderFlow
         $this->marketing = $this->member(CentralGroups::MARKETING, [$this->jakarta, $this->surabaya]);
         $this->sales = $this->member(CentralGroups::SALES, [$this->jakarta]);
         $this->finance = $this->member(CentralGroups::FINANCE, [$this->jakarta, $this->surabaya]);
-        $this->inventory = $this->member(CentralGroups::INVENTORY, [$this->jakarta, $this->surabaya]);
+        $this->inventory = $this->member(CentralGroups::PURCHASING, [$this->jakarta, $this->surabaya]);
         $this->customer = $this->sampleCustomer(['branch_id' => $this->jakarta->id, 'default_warehouse_id' => $this->gudangJakarta->id, 'sales_user_id' => $this->sales->id, 'marketing_user_id' => $this->marketing->id]);
         $this->item = $this->sampleItem();
         $this->vat = TaxCode::default();
@@ -82,7 +81,7 @@ trait OrderFlow
     protected function member(string $group, array $branches = []): User
     {
         $user = User::factory()->create(['is_active' => true]);
-        AccessGroup::query()->where('name', $group)->firstOrFail()->users()->attach($user);
+        CentralGroups::claim($group)->users()->attach($user);
         $user->branches()->sync(collect($branches)->map(fn (Branch $b) => $b->id)->all());
 
         return $user;

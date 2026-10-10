@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Client\Seeders;
 
+use App\Client\Access\CentralGroups;
 use App\Client\Portal\PortalActor;
 use App\Domain\Access\Hak;
 use App\Domain\Access\MenuKey;
 use App\Models\Company\Branch;
-use App\Models\Settings\AccessGroup;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -22,11 +22,11 @@ use Illuminate\Support\Str;
  */
 class PortalUserSeeder extends Seeder
 {
-    public const GROUP = 'Portal';
+    public const GROUP = CentralGroups::PORTAL;
 
     public function run(): void
     {
-        $group = AccessGroup::query()->firstOrCreate(['name' => self::GROUP], ['restriction_type' => 'preferences']);
+        $group = CentralGroups::claim(CentralGroups::PORTAL);
         if (! $group->rights()->exists()) {
             $group->syncRights([
                 MenuKey::SalesOrders->value => [Hak::View->value, Hak::Create->value, Hak::Print->value],

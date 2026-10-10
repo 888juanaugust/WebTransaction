@@ -230,10 +230,18 @@ warehouses. Central's seeded groups are its roles:
 |---|---|---|
 | Sales | Check-ins, orders for own customers, see prices, file pelunasan-piutang claims, returns and expense claims for own customers, customer insight | Approve credit, record payment, see cost, verify anything they filed |
 | Marketing | **Global — reads every branch.** Approve/reject orders of own customers, watch their debt, file pelunasan claims, erase draft orders | Set prices, record payment, see cost |
-| Inventory | Stock work, catalogue, price list, stock statistics incl. cost, post returns | See customer credit data |
+| Purchasing (pembelian) | Stock work, catalogue, price list, stock statistics incl. cost, post returns, the purchasing chain (orders, receipts, returns, vendors, vendor prices) | See customer credit data; purchase invoices and vendor payments (Finance's) |
 | Warehouse (gudang) | **Bound to one warehouse, one active account per warehouse.** Its warehouse's fulfilment queue, pick list, surat jalan, deliver | Anything outside its warehouse; cost; credit; catalogue; orders |
-| Finance | Record receipts and payments, verify claims, manage credit and AR, books, commission rates and targets, tax export | Edit prices, issue credit notes |
+| Finance (keuangan) | Record receipts and payments, verify claims, manage credit and AR, books, month-end close, fixed assets, commission rates and targets, tax export | Edit prices, issue credit notes, reopen a closed period |
 | Owner (Administrator) | Everything + activity log, branches, staff, teams | Verify a claim they themselves filed |
+| Customer | The buyer portal only: a `customer_users` login on the `customer` guard, invited from Buyer Accounts | The staff panel |
+
+Code reads a role through `App\Client\Access\CentralGroups` by the group's `role_key`
+(administrator, finance, purchasing, warehouse, marketing, sales, portal), never by its
+name: the Owner may rename a group (Keuangan, Pembelian, Gudang, Penjualan) on the Access
+Groups screen; a role group cannot be deleted. `CentralGroupSeeder` shapes the groups
+once; `central:reshape-groups` re-applies the matrix to an installed company, audited.
+The base's Accounting group stays as the base seeds it and is not a Central role.
 
 One sales + one marketing form the **team** of a customer (`sales_user_id` /
 `marketing_user_id`, assigned only by the Owner through `TeamAssigner`, audited). The

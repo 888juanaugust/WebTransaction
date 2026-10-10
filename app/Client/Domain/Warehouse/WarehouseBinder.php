@@ -66,7 +66,7 @@ final class WarehouseBinder
     public function holder(Warehouse $warehouse, ?User $except = null): ?User
     {
         return User::query()->where('is_active', true)
-            ->whereHas('accessGroups', fn ($q) => $q->where('name', CentralGroups::WAREHOUSE))
+            ->whereHas('accessGroups', fn ($q) => $q->where('role_key', CentralGroups::WAREHOUSE))
             ->whereIn('id', DB::table('warehouse_users')->where('warehouse_id', $warehouse->id)->select('user_id'))
             ->when($except !== null, fn ($q) => $q->whereKeyNot($except->id))
             ->orderBy('id')->first();
