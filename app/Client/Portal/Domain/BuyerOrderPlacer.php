@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client\Portal\Domain;
 
+use App\Client\Domain\Customers\ShipTo;
 use App\Client\Domain\Pricing\PriceReason;
 use App\Client\Models\CustomerUser;
 use App\Client\Models\PortalCart;
@@ -100,7 +101,7 @@ final class BuyerOrderPlacer
                     'payment_term_id' => $customer->payment_term_id,
                     'po_number' => $poNumber !== null && trim($poNumber) !== '' ? mb_substr(trim($poNumber), 0, 60) : null,
                     'description' => $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 255) : null,
-                    'to_address' => $customer->billAddress() ?: null,
+                    'to_address' => ShipTo::of($customer) ?: null, // the delivery address, as the panel fills it
                     'approval_status' => SalesOrder::AWAITING,
                     'placed_by_customer_user_id' => $buyer->id,
                     'created_by' => $portal->id,

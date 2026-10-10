@@ -156,4 +156,19 @@ class CheckoutTest extends TestCase
         $this->freshRequest();
         $this->actingAsBuyer($this->buyer);
     }
+
+    public function test_the_order_ships_to_the_customers_delivery_address(): void
+    {
+        $this->customer->forceFill(['bill_street' => 'Jl. Tagihan 1', 'bill_city' => 'Jakarta', 'ship_same_as_bill' => false, 'ship_street' => 'Jl. Gudang 9', 'ship_city' => 'Bekasi'])->saveQuietly();
+        $cart = app(Cart::class);
+        $cart->add($this->buyer, $this->item, $this->item->unit1_id, 1);
+
+        $order = app(BuyerOrderPlacer::class)->checkout($this->buyer, $cart);
+        $this->assertSame('Jl. Gudang 9, Bekasi', $order->to_address, 'the delivery address, not the billing one');
+
+        $this->customer->forceFill(['ship_same_as_bill' => true])->saveQuietly();
+        $cart->add($this->buyer, $this->item, $this->item->unit1_id, 1);
+        $again = app(BuyerOrderPlacer::class)->checkout($this->buyer, $cart);
+        $this->assertSame('Jl. Tagihan 1, Jakarta', $again->to_address, 'the billing address while the two are the same');
+    }
 }
