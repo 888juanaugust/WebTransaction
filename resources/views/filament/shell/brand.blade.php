@@ -1,6 +1,5 @@
-{{-- The company's mark beside its name in the topbar: config('client.theme.logo') and its dark twin. --}}
-<span class="ae-brand">
-    <img src="{{ asset($logo) }}" alt="" class="ae-brand-mark ae-brand-mark-light" aria-hidden="true" />
-    <img src="{{ asset($logoDark ?: $logo) }}" alt="" class="ae-brand-mark ae-brand-mark-dark" aria-hidden="true" />
-    <span class="ae-brand-name">{{ $name }}</span>
+{{-- The company's mark alone in the topbar, as the previous system drew it; the name stays for screen readers. --}}
+<span class="ae-brand" role="img" aria-label="{{ $name }}" title="{{ $name }}">
+    <img src="{{ asset($logo) }}" alt="" class="ae-brand-mark ae-brand-mark-light" />
+    <img src="{{ asset($logoDark ?: $logo) }}" alt="" class="ae-brand-mark ae-brand-mark-dark" />
 </span>
