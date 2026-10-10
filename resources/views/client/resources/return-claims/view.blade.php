@@ -23,13 +23,14 @@
     </x-filament::section>
     <x-filament::section :heading="__('What comes back')">
         <table class="w-full text-sm">
-            <thead><tr class="text-left"><th class="py-1 pe-3">{{ __('Item') }}</th><th class="py-1 pe-3 text-end">{{ __('fields.quantity') }}</th><th class="py-1">{{ __('Unit') }}</th></tr></thead>
+            <thead><tr class="text-left"><th class="py-1 pe-3">{{ __('Item') }}</th><th class="py-1 pe-3 text-end">{{ __('fields.quantity') }}</th><th class="py-1 pe-3">{{ __('Unit') }}</th><th class="py-1">{{ __('Condition') }}</th></tr></thead>
             <tbody>
                 @foreach ($record->lines()->with(['item', 'unit'])->get() as $line)
                     <tr class="border-t border-gray-100 dark:border-white/5">
                         <td class="py-1 pe-3">{{ $line->item?->number }} — {{ $line->item?->name }}</td>
                         <td class="py-1 pe-3 text-end ae-money">{{ Format::quantity((string) $line->quantity) }}</td>
-                        <td class="py-1">{{ $line->unit?->name }}</td>
+                        <td class="py-1 pe-3">{{ $line->unit?->name }}</td>
+                        <td class="py-1">{{ \App\Client\Domain\Stock\DamagedGoods::conditionLabels()[$line->condition] ?? $line->condition }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -6,6 +6,7 @@ namespace App\Client\Filament\Resources\ReturnClaims;
 
 use App\Client\Domain\Claims\ClaimStatus;
 use App\Client\Domain\Claims\ReturnClaims;
+use App\Client\Domain\Stock\DamagedGoods;
 use App\Client\Filament\Resources\ReturnClaims\Pages\CreateReturnClaim;
 use App\Client\Filament\Resources\ReturnClaims\Pages\ListReturnClaims;
 use App\Client\Filament\Resources\ReturnClaims\Pages\ViewReturnClaim;
@@ -82,7 +83,9 @@ class ReturnClaimResource extends ErpResource
                         ->options(fn (Get $get) => self::invoiceLines((int) $get('../../sales_invoice_id')))
                         ->required()->native(false)->distinct()->columnSpan(2),
                     TextInput::make('quantity')->label(__('fields.quantity'))->numeric()->minValue(0.0001)->required(),
-                ])->columns(3)->minItems(1)->addActionLabel(__('Add a line'))->reorderable(false),
+                    Select::make('condition')->label(__('Condition'))->options(DamagedGoods::conditionLabels())->default(DamagedGoods::GOOD)->native(false)
+                        ->helperText(__('Damaged goods go to the branch\'s damaged-goods warehouse; the verifier has the last word.')),
+                ])->columns(4)->minItems(1)->addActionLabel(__('Add a line'))->reorderable(false),
             ]),
         ])->columns(1);
     }

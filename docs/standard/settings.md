@@ -288,6 +288,7 @@ Menu key `company__access-privilege` · module `settings`
 |---|---|---|---|
 | Fulfilment | `rights.client__fulfilment` | checkbox list |  |
 | Count Sheets | `rights.client__count-sheets` | checkbox list |  |
+| Damaged Goods | `rights.client__damaged-goods` | checkbox list |  |
 | Purchase Requisitions | `rights.vendor__purchase-requisition` | checkbox list |  |
 | Item Transfers | `rights.inventory__item-transfer` | checkbox list |  |
 | Inventory Adjustments | `rights.inventory__item-adjustment` | checkbox list |  |

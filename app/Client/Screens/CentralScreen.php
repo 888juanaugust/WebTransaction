@@ -25,6 +25,7 @@ enum CentralScreen: string implements ScreenKey
     case Fulfilment = 'client__fulfilment';
     case StockAge = 'client__stock-age';
     case CountSheets = 'client__count-sheets';
+    case DamagedGoods = 'client__damaged-goods';
     case ProductAnalytics = 'client__product-analytics';
     case BuyerAccounts = 'client__buyer-accounts';
     case Website = 'client__website';
@@ -36,7 +37,7 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::Teams, self::OrderApprovals, self::DeliveryWatch, self::CustomerPrices, self::CustomerTypes, self::SettlementClaims, self::ReturnClaims, self::Collections, self::BuyerAccounts => Modul::Sales,
-            self::PriceList, self::WarehouseAccounts, self::Fulfilment, self::StockAge, self::CountSheets => Modul::Inventory,
+            self::PriceList, self::WarehouseAccounts, self::Fulfilment, self::StockAge, self::CountSheets, self::DamagedGoods => Modul::Inventory,
             self::ProductAnalytics => Modul::Reports,
             self::ExpenseClaims => Modul::CashBank,
             self::Website, self::SiteImages => Modul::Company,
@@ -61,6 +62,7 @@ enum CentralScreen: string implements ScreenKey
             self::Fulfilment => __('Fulfilment'),
             self::StockAge => __('Stock Age'),
             self::CountSheets => __('Count Sheets'),
+            self::DamagedGoods => __('Damaged Goods'),
             self::ProductAnalytics => __('Product Analytics'),
             self::BuyerAccounts => __('Buyer Accounts'),
             self::Website => __('Website'),
@@ -81,6 +83,7 @@ enum CentralScreen: string implements ScreenKey
             self::Fulfilment => 20,
             self::StockAge => 86,
             self::CountSheets => 21,
+            self::DamagedGoods => 23,
             self::ProductAnalytics => 90,
             self::WarehouseAccounts => 520,
             self::Website => 530,
@@ -99,7 +102,7 @@ enum CentralScreen: string implements ScreenKey
     public function kind(): ScreenKind
     {
         return match ($this) {
-            self::OrderApprovals, self::DeliveryWatch, self::PriceList, self::CountSheets, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
+            self::OrderApprovals, self::DeliveryWatch, self::PriceList, self::CountSheets, self::DamagedGoods, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
             self::Operations, self::StockAge, self::ProductAnalytics => ScreenKind::Tool,
             self::Teams, self::CustomerPrices, self::CustomerTypes, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness => ScreenKind::Setup,
         };

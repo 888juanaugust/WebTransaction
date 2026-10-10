@@ -151,7 +151,7 @@ final class Reservations
     /** On hand less what orders hold, over every active warehouse: what a buyer may count on, wherever it sits. */
     public function availableAnywhere(int $itemId): string
     {
-        $warehouses = Warehouse::query()->where('is_active', true)->pluck('id');
+        $warehouses = DamagedGoods::saleable(Warehouse::query())->pluck('id'); // damaged goods are never for sale
         $onHand = (string) (ItemCost::query()->where('item_id', $itemId)->whereIn('warehouse_id', $warehouses)->sum('qty_on_hand') ?: '0');
         $held = (string) (StockReservation::query()->where('item_id', $itemId)->whereIn('warehouse_id', $warehouses)->sum('quantity') ?: '0');
 

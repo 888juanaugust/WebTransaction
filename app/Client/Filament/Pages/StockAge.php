@@ -110,7 +110,7 @@ class StockAge extends ErpPage implements HasTable
         }
 
         return $table
-            ->records(fn () => $this->rows())
+            ->records(fn () => $this->rows()->keyBy('key'))
             ->columns($columns)
             ->defaultSort('oldest_days', 'desc')
             ->paginated([25, 50, 100])

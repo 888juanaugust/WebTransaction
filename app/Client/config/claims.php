@@ -15,4 +15,7 @@ return [
     // The expense account a sales expense claim is paid against by default (Freight Out).
     'expense_account' => '6300',
 
+    // The expense account damaged goods are written off to (made in the chart when missing).
+    'damaged_account' => '6600',
+
 ];

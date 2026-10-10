@@ -66,7 +66,7 @@ class Fulfilment extends ErpPage implements HasTable
             return $bound;
         }
         $picked = (int) ($this->tableFilters['warehouse']['value'] ?? 0);
-        $query = Warehouse::query()->visibleTo(auth()->user())->where('is_active', true);
+        $query = Warehouse::query()->visibleTo(auth()->user())->where('is_active', true)->where('scrap_warehouse', false);
 
         return ($picked > 0 ? (clone $query)->find($picked) : null) ?? (clone $query)->where('is_default', true)->first() ?? $query->orderBy('name')->first();
     }
@@ -87,7 +87,7 @@ class Fulfilment extends ErpPage implements HasTable
             ])
             ->filters([
                 SelectFilter::make('warehouse')->label(__('Warehouse'))
-                    ->options(fn () => Warehouse::query()->visibleTo(auth()->user())->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                    ->options(fn () => Warehouse::query()->visibleTo(auth()->user())->where('is_active', true)->where('scrap_warehouse', false)->orderBy('name')->pluck('name', 'id'))
                     ->visible(fn () => ! WarehouseScope::isBound(auth()->user()))
                     ->query(fn (Builder $query) => $query),
             ])

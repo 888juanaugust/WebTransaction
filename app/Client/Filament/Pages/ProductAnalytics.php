@@ -136,7 +136,7 @@ class ProductAnalytics extends ErpPage implements HasTable
         }
 
         return $table
-            ->records(fn () => $this->rows())
+            ->records(fn () => $this->rows()->keyBy('key'))
             ->columns($columns)
             ->paginated([25, 50, 100])
             ->emptyStateHeading(__('Nothing to show for these filters'));

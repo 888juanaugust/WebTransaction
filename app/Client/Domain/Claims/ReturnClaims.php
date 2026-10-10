@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client\Domain\Claims;
 
+use App\Client\Domain\Stock\DamagedGoods;
 use App\Client\Models\ReturnClaim;
 use App\Client\Models\ReturnClaimLine;
 use App\Client\Screens\CentralScreen;
@@ -69,7 +70,8 @@ final class ReturnClaims
             if ($base->isGreaterThan($room)) {
                 throw new RuntimeException(__(':item: only :room more can come back from :number.', ['item' => $line->item?->name, 'room' => $room->toScale(4, RoundingMode::HalfUp)->__toString(), 'number' => $invoice->number]));
             }
-            $rows[] = ['sort' => $sort, 'sales_invoice_line_id' => $line->id, 'item_id' => $line->item_id, 'unit_id' => $line->unit_id, 'quantity' => $quantity->toScale(4, RoundingMode::HalfUp)->__toString(), 'base_quantity' => $base->__toString()];
+            $condition = ($given['condition'] ?? DamagedGoods::GOOD) === DamagedGoods::DAMAGED ? DamagedGoods::DAMAGED : DamagedGoods::GOOD;
+            $rows[] = ['sort' => $sort, 'sales_invoice_line_id' => $line->id, 'item_id' => $line->item_id, 'unit_id' => $line->unit_id, 'quantity' => $quantity->toScale(4, RoundingMode::HalfUp)->__toString(), 'base_quantity' => $base->__toString(), 'condition' => $condition];
         }
         if ($rows === []) {
             throw new RuntimeException(__('Name at least one line that comes back.'));
@@ -90,11 +92,12 @@ final class ReturnClaims
     }
 
     /** Inventory's key: the sales return is made in the verifier's name; stock comes in and the customer gets the credit. */
-    public function verify(ReturnClaim $claim, User $actor, string|CarbonImmutable $date, ?string $note = null): SalesReturn
+    /** @param  array<int, string>  $conditions  claim line id → good|damaged, the verifier's say over the filer's; missing lines keep the filer's */
+    public function verify(ReturnClaim $claim, User $actor, string|CarbonImmutable $date, ?string $note = null, array $conditions = []): SalesReturn
     {
         $this->twoKeys->assertMayDecide($claim, $actor, CentralScreen::ReturnClaims);
 
-        return DB::transaction(function () use ($claim, $actor, $date, $note): SalesReturn {
+        return DB::transaction(function () use ($claim, $actor, $date, $note, $conditions): SalesReturn {
             $claim = ReturnClaim::query()->lockForUpdate()->findOrFail($claim->id);
             $this->twoKeys->assertMayDecide($claim, $actor, CentralScreen::ReturnClaims);
             $invoice = $claim->invoice;
@@ -116,15 +119,25 @@ final class ReturnClaims
                 'description' => __('Return claim #:id — :reason', ['id' => $claim->id, 'reason' => $claim->reason]),
                 'created_by' => $actor->id,
             ]);
+            $scrap = null;
             foreach ($claim->lines()->with('invoiceLine')->get() as $i => $line) {
                 $source = $line->invoiceLine;
                 if ($source === null) {
                     throw new RuntimeException(__('A line points at a document line that does not exist.'));
                 }
+                $condition = array_key_exists($line->id, $conditions) ? ($conditions[$line->id] === DamagedGoods::DAMAGED ? DamagedGoods::DAMAGED : DamagedGoods::GOOD) : $line->condition;
+                if ($condition !== $line->condition) {
+                    $line->forceFill(['condition' => $condition])->saveQuietly();
+                }
+                $warehouseId = $claim->warehouse_id;
+                if ($condition === DamagedGoods::DAMAGED) {
+                    $scrap ??= DamagedGoods::warehouseFor($invoice->branch_id) ?? throw new RuntimeException(__('No damaged-goods warehouse: add one (flagged "damaged goods") before verifying a damaged return.'));
+                    $warehouseId = $scrap->id;
+                }
                 $return->lines()->create([
                     'sort' => $i, 'item_id' => $line->item_id, 'quantity' => $line->quantity, 'unit_id' => $line->unit_id, 'base_quantity' => $line->base_quantity,
                     'unit_price' => $source->unit_price, 'discount_percent' => $source->discount_percent, 'tax_code_id' => $source->tax_code_id,
-                    'warehouse_id' => $claim->warehouse_id, 'memo' => $source->memo,
+                    'warehouse_id' => $warehouseId, 'memo' => $condition === DamagedGoods::DAMAGED ? trim(__('Damaged').($source->memo ? ' · '.$source->memo : '')) : $source->memo,
                 ]);
             }
             $return->refreshTotal();

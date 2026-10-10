@@ -137,7 +137,7 @@ Menu key `client__return-claims` · module `central-claims`
 
 **Section: What comes back**
 
-**Line grid "Lines":** Invoice line · Quantity
+**Line grid "Lines":** Invoice line · Quantity · Condition
 
 ## Sales Quotations
 

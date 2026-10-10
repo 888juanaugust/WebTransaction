@@ -12,6 +12,7 @@ use App\Client\Domain\Warehouse\WarehouseBinder;
 use App\Client\Domain\Warehouse\WarehouseScope;
 use App\Client\Screens\CentralScreen;
 use App\Client\Seeders\PrintLayoutSeeder;
+use App\Client\Seeders\ScrapWarehouseSeeder;
 use App\Client\Seeders\SystemUserSeeder;
 use App\Domain\Access\Hak;
 use App\Domain\Access\HakAkses;
@@ -39,7 +40,7 @@ final class WarehouseModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [CentralScreen::Fulfilment, CentralScreen::WarehouseAccounts, CentralScreen::StockAge, CentralScreen::ProductAnalytics, CentralScreen::CountSheets];
+        return [CentralScreen::Fulfilment, CentralScreen::WarehouseAccounts, CentralScreen::StockAge, CentralScreen::ProductAnalytics, CentralScreen::CountSheets, CentralScreen::DamagedGoods];
     }
 
     public static function boot(ModuleContext $context): void
@@ -77,7 +78,7 @@ final class WarehouseModule extends BaseModule
 
     public static function defaultSeeders(): array
     {
-        return [PrintLayoutSeeder::class, SystemUserSeeder::class];
+        return [PrintLayoutSeeder::class, SystemUserSeeder::class, ScrapWarehouseSeeder::class];
     }
 
     public static function commands(): array

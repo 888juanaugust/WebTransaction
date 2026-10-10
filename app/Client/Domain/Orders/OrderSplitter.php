@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client\Domain\Orders;
 
+use App\Client\Domain\Stock\DamagedGoods;
 use App\Client\Domain\Stock\Reservations;
 use App\Domain\Approval\ApprovalEngine;
 use App\Domain\Audit\Auditor;
@@ -158,7 +159,7 @@ final class OrderSplitter
     {
         $home = $this->homeWarehouseId($order);
         $branchId = $order->customer?->branch_id ?? $order->branch_id;
-        $warehouses = Warehouse::query()->where('is_system', false)->where('is_active', true)->get();
+        $warehouses = DamagedGoods::saleable(Warehouse::query())->get(); // never ship from the damaged-goods warehouse
         $local = $warehouses->filter(fn (Warehouse $w) => $branchId !== null && (int) $w->branch_id === (int) $branchId && $w->id !== $home)->sortBy('name');
         $foreign = $warehouses->filter(fn (Warehouse $w) => $w->id !== $home && ! $local->contains('id', $w->id))
             ->sortByDesc(fn (Warehouse $w) => $order->lines->reduce(fn (BigDecimal $sum, SalesOrderLine $l) => $sum->plus(BigDecimal::max(BigDecimal::of($this->freeOf($l->item, $w->id)), BigDecimal::zero())), BigDecimal::zero())->toFloat());
