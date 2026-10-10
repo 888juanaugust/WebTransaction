@@ -44,7 +44,7 @@ class PanelBootTest extends TestCase
         $groups = array_column(Menu::forUser(), 'label');
 
         $this->assertSame(array_map(fn (Modul $m) => $m->getLabel(), Modul::cases()), $groups);
-        $this->assertSame(['Settings', 'Company', 'General Ledger', 'Cash & Bank', 'Sales', 'Purchasing', 'Inventory', 'Fixed Assets', 'Tax', 'Reports'], $groups);
+        $this->assertSame(['Company', 'General Ledger', 'Cash & Bank', 'Sales', 'Purchasing', 'Inventory', 'Fixed Assets', 'Tax', 'Reports', 'Settings'], $groups);
     }
 
     public function test_the_panel_speaks_english(): void

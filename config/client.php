@@ -60,6 +60,8 @@ return [
         'colors' => [
             // 'primary' => '#0f766e',
         ],
+        // The company's mark, a file under public/, shown beside the name in the panel's header.
+        'logo' => 'favicon.svg',
     ],
 
 ];

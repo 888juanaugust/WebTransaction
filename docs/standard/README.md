@@ -41,7 +41,6 @@ Confirm with the client's accountant before relying on these figures:
 
 | Module group | Switchable modules in it | Screens | Page |
 |---|---|---|---|
-| Settings | `settings` (always on)<br>`approval` (Preferences → Features → Transaction approval)<br>`central-ops` (always on) | 8 | [settings.md](settings.md) |
 | Company | `company` (always on)<br>`departments` (Preferences → Features → Departments)<br>`projects` (Preferences → Features → Projects)<br>`payroll` (Preferences → Features → Payroll entries and salary components)<br>`central-site` (always on) | 18 | [company.md](company.md) |
 | General Ledger | `general-ledger` (always on)<br>`payroll` (Preferences → Features → Payroll entries and salary components)<br>`budgets` (Preferences → Features → Budgets and targets) | 9 | [general-ledger.md](general-ledger.md) |
 | Cash & Bank | `central-claims` (always on)<br>`cash-bank` (always on) | 7 | [cash-bank.md](cash-bank.md) |
@@ -51,6 +50,7 @@ Confirm with the client's accountant before relying on these figures:
 | Fixed Assets | `fixed-assets` (Preferences → Features → Fixed assets) | 7 | [fixed-assets.md](fixed-assets.md) |
 | Tax | `tax` (Preferences → Features → Tax) | 3 | [tax.md](tax.md) |
 | Reports | `reports` (always on)<br>`tax` (Preferences → Features → Tax)<br>`payroll` (Preferences → Features → Payroll entries and salary components) | 4 | [reports.md](reports.md) |
+| Settings | `settings` (always on)<br>`approval` (Preferences → Features → Transaction approval)<br>`central-ops` (always on) | 8 | [settings.md](settings.md) |
 
 ## How to read a page
 

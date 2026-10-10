@@ -210,12 +210,21 @@ class AccessControlTest extends TestCase
         // The profile page stands alone: reopening it in the workspace would only be sent back here, round and round.
         $this->get(EditProfile::getUrl())->assertOk()->assertDontSee('#open=', false);
 
+        // The installer's password was just typed to sign in; the first setup does not ask for it again.
         Livewire::test(EditProfile::class)
-            ->fillForm(['password' => 'my-own-password-1', 'passwordConfirmation' => 'my-own-password-1', 'currentPassword' => 'chosen-by-installer'])
+            ->assertFormFieldHidden('currentPassword')
+            ->fillForm(['password' => 'my-own-password-1', 'passwordConfirmation' => 'my-own-password-1'])
             ->call('save')
             ->assertHasNoFormErrors()
             ->assertRedirect(Workspace::getUrl());
         $this->assertFalse($admin->fresh()->password_change_required, 'changed: the screens open again');
+
+        // From then on a password change confirms the current one.
+        $this->freshRequest();
+        Livewire::test(EditProfile::class)
+            ->fillForm(['password' => 'another-one-2', 'passwordConfirmation' => 'another-one-2'])
+            ->call('save')
+            ->assertHasFormErrors(['currentPassword']);
     }
 
     public function test_administrators_can_be_held_to_a_second_factor(): void

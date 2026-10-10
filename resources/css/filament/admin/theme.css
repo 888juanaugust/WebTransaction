@@ -836,6 +836,11 @@
     height: 22px;
 }
 
+/* Settings stands apart at the foot of the rail. */
+.ae-rail-btn[data-group-btn="settings"] {
+    margin-top: auto;
+}
+
 .ae-rail-sep {
     width: 24px;
     height: 1px;
@@ -1189,7 +1194,30 @@ html.ae-framed .fi-main {
     padding-top: 6px;
 }
 
-/* ---------- Topbar: approvals bell, who is signed in ---------- */
+/* ---------- Topbar: the brand, approvals bell, who is signed in ---------- */
+
+/* The company's mark beside its name (filament.shell.brand). */
+.ae-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+}
+
+.ae-brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    flex: none;
+}
+
+.ae-brand-name {
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ae-ink);
+}
 
 .fi-topbar-end {
     gap: 8px;

@@ -8,7 +8,9 @@ use App\Domain\Shared\Locales;
 use App\Filament\Pages\Workspace;
 use Filament\Auth\Pages\EditProfile as BaseEditProfile;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /** The user's own profile: name, email, password, and the language of their screens. */
@@ -31,6 +33,20 @@ class EditProfile extends BaseEditProfile
             $this->getPasswordConfirmationFormComponent(),
             $this->getCurrentPasswordFormComponent(),
         ]);
+    }
+
+    /**
+     * The current password confirms a change, except at first sign-in: the password someone else chose is
+     * being replaced, and the person just typed it to get here.
+     */
+    protected function getCurrentPasswordFormComponent(): Component
+    {
+        $firstSetup = fn (): bool => (bool) $this->getUser()->getAttribute('password_change_required');
+
+        return parent::getCurrentPasswordFormComponent()
+            ->required(fn (): bool => ! $firstSetup())
+            ->visible(fn (Get $get): bool => ! $firstSetup()
+                && (filled($get('password')) || $get('email') !== $this->getUser()->getAttributeValue('email')));
     }
 
     protected function afterSave(): void

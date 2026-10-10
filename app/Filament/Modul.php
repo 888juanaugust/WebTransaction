@@ -8,12 +8,12 @@ use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
 /**
- * The ten modules of the sidebar, in the order the standard shows them.
+ * The ten modules of the sidebar, in the order the standard shows them: the
+ * books first, Settings last.
  * Every screen (App\Domain\Access\MenuKey) belongs to exactly one.
  */
 enum Modul: string implements HasIcon, HasLabel
 {
-    case Settings = 'settings';
     case Company = 'company';
     case GeneralLedger = 'general-ledger';
     case CashBank = 'cash-bank';
@@ -23,6 +23,7 @@ enum Modul: string implements HasIcon, HasLabel
     case FixedAssets = 'fixed-assets';
     case Tax = 'tax';
     case Reports = 'reports';
+    case Settings = 'settings';
 
     public function getLabel(): string
     {

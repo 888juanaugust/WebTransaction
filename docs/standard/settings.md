@@ -186,19 +186,6 @@ Menu key `company__access-privilege` · module `settings`
 
 #### Tab: Screen rights
 
-**Section: Settings**
-
-| Field | Column | Type | Required |
-|---|---|---|---|
-| Preferences | `rights.company__preferences` | checkbox list |  |
-| Access Groups | `rights.company__access-privilege` | checkbox list |  |
-| Users | `rights.company__user-company` | checkbox list |  |
-| Numbering | `rights.company__auto-number` | checkbox list |  |
-| Print Layouts | `rights.company__print-layout` | checkbox list |  |
-| Transaction Approvers | `rights.company__user-approval` | checkbox list |  |
-| Operations | `rights.client__operations` | checkbox list |  |
-| Launch Readiness | `rights.client__launch-readiness` | checkbox list |  |
-
 **Section: Company**
 
 | Field | Column | Type | Required |
@@ -341,6 +328,19 @@ Menu key `company__access-privilege` · module `settings`
 | VAT Return | `rights.report__spt-masa` | checkbox list |  |
 | Income Tax Art. 21 Return | `rights.report__formulir-1721-induk` | checkbox list |  |
 | Withholding Slips | `rights.report__formulir-1721-bukti-potong` | checkbox list |  |
+
+**Section: Settings**
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Preferences | `rights.company__preferences` | checkbox list |  |
+| Access Groups | `rights.company__access-privilege` | checkbox list |  |
+| Users | `rights.company__user-company` | checkbox list |  |
+| Numbering | `rights.company__auto-number` | checkbox list |  |
+| Print Layouts | `rights.company__print-layout` | checkbox list |  |
+| Transaction Approvers | `rights.company__user-approval` | checkbox list |  |
+| Operations | `rights.client__operations` | checkbox list |  |
+| Launch Readiness | `rights.client__launch-readiness` | checkbox list |  |
 
 #### Tab: Special rights
 

@@ -142,6 +142,9 @@ class AdminPanelProvider extends PanelProvider
                 AppAuthentication::make()->recoverable(),
             ])
             ->brandName(fn (): string => self::brandName())
+            // The company's mark beside its name; the file is config('client.theme.logo') under public/.
+            ->brandLogo(fn (): View => view('filament.shell.brand', ['logo' => (string) config('client.theme.logo', 'favicon.svg'), 'name' => self::brandName()]))
+            ->brandLogoHeight('1.75rem')
             ->colors(array_merge([
                 'primary' => '#2f5bea',
                 'gray' => Color::Slate,
