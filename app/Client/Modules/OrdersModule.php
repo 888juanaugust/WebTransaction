@@ -63,7 +63,7 @@ final class OrdersModule extends BaseModule
         $context->postings->onUnpost(fn ($posting) => $context->app->make(Reservations::class)->unpost($posting));
 
         // The calendar shows the day an accepted order crosses the watch days while its goods have not all gone out.
-        CalendarFeed::extend('delivery-watch', __('Delivery over :days days', ['days' => (int) config('orders.watch_days', 30)]), 'bg-orange-50 text-orange-800',
+        CalendarFeed::extend('delivery-watch', fn () => __('Delivery over :days days', ['days' => (int) config('orders.watch_days', 30)]), 'bg-orange-50 text-orange-800',
             function (CarbonImmutable $from, CarbonImmutable $until, callable $add) use ($context): void {
                 $user = auth()->user();
                 if ($user !== null && ! app(HakAkses::class)->allows($user, MenuKey::SalesOrders, Hak::View)) {

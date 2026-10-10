@@ -101,13 +101,13 @@ class CentralGroupSeeder extends Seeder
                 [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
             ],
             CentralGroups::PURCHASING => [
-                $this->grant([...$this->byModule(Modul::Inventory), ...$purchasingChain, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::Fulfilment, CentralScreen::StockAge, CentralScreen::ProductAnalytics], self::ALL)
+                $this->grant([...$this->byModule(Modul::Inventory), ...$purchasingChain, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::Fulfilment, CentralScreen::StockAge, CentralScreen::ProductAnalytics, CentralScreen::CountSheets], self::ALL)
                     + $this->grant([MenuKey::DeliveryOrders, MenuKey::SalesReturns, CentralScreen::ReturnClaims], self::WORK)
                     + $this->grant([MenuKey::SalesOrders], self::READ),
                 [HakKhusus::SeeCost, HakKhusus::ApproveTransactions], // approves stock counts, transfers and purchases, never a sale
             ],
             CentralGroups::WAREHOUSE => [
-                $this->grant([CentralScreen::Fulfilment, MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse, CentralScreen::StockAge], self::READ),
+                $this->grant([CentralScreen::Fulfilment, CentralScreen::CountSheets, MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse, CentralScreen::StockAge], self::READ),
                 [],
             ],
             CentralGroups::FINANCE => [
