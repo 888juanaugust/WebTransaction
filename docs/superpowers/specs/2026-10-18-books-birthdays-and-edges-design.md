@@ -1,6 +1,6 @@
 # Sub-project 10 — Books, birthdays and edges
 
-Status: in progress.
+Status: built (2026-10-18): year-end lock, month-close reminder, birthdays, the .xls refusal.
 
 ## Why
 

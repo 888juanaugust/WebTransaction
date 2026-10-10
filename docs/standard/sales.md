@@ -26,6 +26,7 @@ Module group `sales`. 25 screens in the standard menu.
 - An invoice ages (Central) from the day its order was accepted: the approval of the order by the customer's marketing seat or an administrator, stamped on the invoice when it is made from its order or its delivery's order; an invoice with no order behind it ages from its own date. The due date is the payment term counted from that day, and the notice, the freeze, the collection desk, the AR aging report and the invoice list's age all count from it.
 - Delivery Watch (Central): thirty days after an order was accepted (`client.orders.watch_days`), `central:delivery-watch` reports it once, in one morning digest to every active administrator and the customer's marketing seat, by bell and by mail: delivered, partly delivered with the delivery numbers, or not yet delivered and which warehouse holds the goods. Nothing is released; the admin rejects or edits the order. The screen lists every accepted order past the watch days with what became of its goods and when it was reported; the calendar marks the day an undelivered order crosses the line.
 - Prints (Central): the delivery prints as the Surat Jalan (item code, quantity, unit, item name, the expedition and the delivery's note in the box, Collected by / Checked and packed by / Warehouse head signature, who printed it and when; no price; three labelled copies) or as the Surat Pengantar slip (the mark and phone, number and date, Tuan/Toko and the delivery address, the vehicle and its plate, the package counts by kind, the goods, Penerima / Hormat kami); the Invoice Exchange prints as the Tanda Terima Faktur (the invoices handed over, their dates, due dates and amounts, the collect date, Handed over by / Received by). A print layout may name its own template; the base's page stays the default. The warehouse enters the expedition (Ekspedisi, the Shipping Methods master), the vehicle, the plate, the package counts, a note and a goods description at Deliver; the delivery keeps the order's expedition, FOB and ship date. Deliveries number SJ-.
+- Birthdays (Central): a customer's contact person carries a birth date, personal data under UU PDP, exported with the customer's other data and never mailed to the customer. Three days before and on the day, `central:birthdays` sends the customer's team and the administrators a bell and a mail, once per contact and year for each; the calendar shows the birthday to whoever may open Customers, within their branches.
 
 ## Screens
 
@@ -630,7 +631,7 @@ Menu key `customer__customer` · module `sales`
 
 #### Tab: Contacts
 
-**Line grid "Contacts":** Full name · Position · Email · Mobile
+**Line grid "Contacts":** Full name · Position · Email · Mobile · Birthday
 
 #### Tab: Shipping
 

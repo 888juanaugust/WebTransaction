@@ -12,7 +12,7 @@ client's legal adviser before relying on it.
 |---|---|---|---|
 | Users (staff) | name, email, mobile, password (hashed), two-factor secret, language | `users` | password hashing; the secret encrypted with the application key |
 | Users | sign-in sessions and the IP address of each logged action | `sessions`, `audit_logs.ip` | sessions expire; the log is read on the Activity Log screen only |
-| Customers, vendors | names, contact people, phone numbers, email, addresses, tax ID (NPWP, NITKU) and tax name | `customers`, `vendors`, contacts and addresses | screen rights and branch limits |
+| Customers, vendors | names, contact people (with a birth date, Central), phone numbers, email, addresses, tax ID (NPWP, NITKU) and tax name | `customers`, `vendors`, contacts and addresses | screen rights and branch limits |
 | Buyer logins | name, email, phone, language, sign-in times | `customer_users` (the buyer portal) | Buyer Accounts rights; a buyer sees their own only |
 | Vendors | bank account numbers | `vendor_bank_accounts.bank_account` | **encrypted** with the application key |
 | Employees | name, national ID (NIK), tax ID (NPWP), bank account number, tax status and dependants, pay setup, BPJS participation | `employees`, `employee_salary_components` | NIK, NPWP and bank account **encrypted**; the payroll screens need their rights |

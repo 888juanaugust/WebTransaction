@@ -33,6 +33,7 @@ use App\Models\Sales\CustomerCategory;
 use App\Models\Sales\PriceCategory;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -99,12 +100,14 @@ class CustomerResource extends MasterResource
                                 TableColumn::make(__('Position')),
                                 TableColumn::make(__('Email')),
                                 TableColumn::make(__('Mobile')),
+                                TableColumn::make(__('Birthday')),
                             ])
                             ->schema([
                                 TextInput::make('name')->required()->maxLength(150),
                                 TextInput::make('position')->maxLength(100),
                                 TextInput::make('email')->email()->maxLength(150),
                                 TextInput::make('mobile_phone')->tel()->maxLength(30),
+                                DatePicker::make('birth_date')->native(false)->maxDate(today()),
                             ])
                             ->addActionLabel(__('Add contact'))
                             ->defaultItems(0),

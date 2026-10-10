@@ -228,4 +228,22 @@ class PriceListImportTest extends TestCase
         $this->assertSame(['error' => 0, 'harga_berubah' => 1, 'sku_baru' => 0, 'tidak_ada_di_file' => 0, 'tidak_berubah' => 6], $this->buckets($import));
         $this->assertFalse($import->diff['brake_tripped']);
     }
+
+    public function test_a_legacy_xls_workbook_is_refused_with_advice(): void
+    {
+        $path = sys_get_temp_dir().'/legacy-'.uniqid().'.xls';
+        file_put_contents($path, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".str_repeat("\0", 512));
+
+        try {
+            $this->import($path, PriceListImport::CANONICAL);
+            $this->fail('a legacy workbook is refused');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('.xlsx', $e->getMessage());
+        }
+
+        $import = PriceListImport::query()->latest('id')->firstOrFail();
+        $this->assertSame(PriceListImport::FAILED, $import->status);
+        $this->assertStringContainsString('.xlsx', (string) $import->parse_error);
+        @unlink($path);
+    }
 }

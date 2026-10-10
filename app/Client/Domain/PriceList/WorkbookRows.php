@@ -19,6 +19,9 @@ final class WorkbookRows
         if (! is_file($path)) {
             throw new RuntimeException(__('The file could not be read.'));
         }
+        if (self::isLegacyWorkbook($path)) {
+            throw new RuntimeException(__('This is an Excel 97-2003 workbook (.xls); save it as .xlsx first and upload that.'));
+        }
         if (self::isWorkbook($path)) {
             $reader = new XlsxReader;
             $reader->open($path);
@@ -55,6 +58,19 @@ final class WorkbookRows
     }
 
     /** By extension, else by the zip signature every .xlsx starts with. */
+    /** An OLE compound file: the Excel 97-2003 format OpenSpout cannot read. */
+    public static function isLegacyWorkbook(string $path): bool
+    {
+        $handle = @fopen($path, 'r');
+        if ($handle === false) {
+            return false;
+        }
+        $head = (string) fread($handle, 8);
+        fclose($handle);
+
+        return $head === "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1";
+    }
+
     public static function isWorkbook(string $path): bool
     {
         if (str_ends_with(strtolower($path), '.xlsx')) {
