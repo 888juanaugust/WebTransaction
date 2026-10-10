@@ -1,6 +1,6 @@
 # Sub-project 8 — Prints, the 30-day watch and the notification channel
 
-Status: in progress.
+Status: built (2026-10-16): the prints, the watch, the bell and the calendar seam.
 
 ## Why
 

@@ -102,7 +102,7 @@ class SalesScreensTest extends TestCase
             ->assertHasNoFormErrors();
 
         $delivery = Delivery::query()->firstOrFail();
-        $this->assertSame('DO-PST-2611-0001', $delivery->number);
+        $this->assertSame('SJ-PST-2611-0001', $delivery->number);
         $this->assertSame('10.0000', $delivery->lines()->first()->base_quantity);
         $this->assertSame('sales_order_line', $delivery->lines()->first()->source_line_type);
         $this->assertSame('10.0000', StockQuery::onHand($this->item->id), 'goods left the warehouse at delivery');
