@@ -1,6 +1,6 @@
 # Sub-project 7 — Roles, customer types and the acceptance clock
 
-Status: built in steps; see the roadmap row.
+Status: built (2026-10-15). Commits: roles by key, the acceptance clock, customer types, the portal ship-to.
 
 ## Why
 
