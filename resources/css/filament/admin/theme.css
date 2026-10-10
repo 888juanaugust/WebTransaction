@@ -1194,6 +1194,18 @@ html.ae-framed .fi-main {
     padding-top: 6px;
 }
 
+/* ---------- Product Analytics: the top-ten bars (dataviz tokens, one series) ---------- */
+
+.ae-bars { margin: 0 0 16px; }
+.ae-bars-title { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ae-muted, #6b7280); margin: 0 0 8px; }
+.ae-bars-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ae-bars-row { display: grid; grid-template-columns: 120px 1fr 90px; align-items: center; gap: 10px; font-size: 12px; }
+.ae-bars-label { font-family: var(--font-mono, ui-monospace, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ae-bars-track { height: 10px; border-radius: 5px; background: var(--ae-rail-hover, #e5e7eb); overflow: hidden; }
+.ae-bars-fill { display: block; height: 100%; border-radius: 5px; background: var(--ae-accent-fill, #2f5bea); transition: width var(--ae-dur-slow, 320ms) var(--ae-ease-out, ease-out); }
+.ae-bars-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .ae-bars-fill { transition: none; } }
+
 /* ---------- Topbar: the brand, approvals bell, who is signed in ---------- */
 
 /* The company's mark alone (filament.shell.brand), sized to the topbar. */

@@ -27,7 +27,7 @@ final class WarehouseModule extends BaseModule
 
     public static function menuKeys(): array
     {
-        return [CentralScreen::Fulfilment, CentralScreen::WarehouseAccounts];
+        return [CentralScreen::Fulfilment, CentralScreen::WarehouseAccounts, CentralScreen::StockAge, CentralScreen::ProductAnalytics];
     }
 
     public static function boot(ModuleContext $context): void

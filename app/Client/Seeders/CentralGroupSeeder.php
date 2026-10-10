@@ -85,7 +85,7 @@ class CentralGroupSeeder extends Seeder
         $salesFiles = [CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::ReturnClaims];
         // The purchasing chain is Purchasing's; the money of it (bills, payments, down payments, payment orders) stays Finance's.
         $purchasingChain = [MenuKey::PurchaseOrders, MenuKey::GoodsReceipts, MenuKey::PurchaseReturns, MenuKey::VendorClaims, MenuKey::VendorPrices, MenuKey::VendorCategories, MenuKey::Vendors, MenuKey::VendorTransfers];
-        $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::CustomerTypes, CentralScreen::BuyerAccounts, MenuKey::Calendar, MenuKey::Contacts];
+        $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::CustomerTypes, CentralScreen::BuyerAccounts, CentralScreen::ProductAnalytics, MenuKey::Calendar, MenuKey::Contacts];
 
         return [
             self::ADMINISTRATOR => [
@@ -101,19 +101,19 @@ class CentralGroupSeeder extends Seeder
                 [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
             ],
             CentralGroups::PURCHASING => [
-                $this->grant([...$this->byModule(Modul::Inventory), ...$purchasingChain, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::Fulfilment], self::ALL)
+                $this->grant([...$this->byModule(Modul::Inventory), ...$purchasingChain, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::Fulfilment, CentralScreen::StockAge, CentralScreen::ProductAnalytics], self::ALL)
                     + $this->grant([MenuKey::DeliveryOrders, MenuKey::SalesReturns, CentralScreen::ReturnClaims], self::WORK)
                     + $this->grant([MenuKey::SalesOrders], self::READ),
                 [HakKhusus::SeeCost, HakKhusus::ApproveTransactions], // approves stock counts, transfers and purchases, never a sale
             ],
             CentralGroups::WAREHOUSE => [
-                $this->grant([CentralScreen::Fulfilment, MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse], self::READ),
+                $this->grant([CentralScreen::Fulfilment, MenuKey::DeliveryOrders], self::WORK) + $this->grant([MenuKey::StockByWarehouse, CentralScreen::StockAge], self::READ),
                 [],
             ],
             CentralGroups::FINANCE => [
                 $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports, Modul::FixedAssets), MenuKey::MonthEndProcess, MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::Collections, CentralScreen::BuyerAccounts, CentralScreen::CustomerTypes], self::ALL)
                     + $this->grant([MenuKey::Customers], self::WORK)
-                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams, CentralScreen::DeliveryWatch], self::READ),
+                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams, CentralScreen::DeliveryWatch, CentralScreen::ProductAnalytics], self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],
             ],
         ];

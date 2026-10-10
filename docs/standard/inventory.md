@@ -1,6 +1,6 @@
 # Inventory
 
-Module group `inventory`. 16 screens in the standard menu.
+Module group `inventory`. 17 screens in the standard menu.
 
 ## Behaviours
 
@@ -12,6 +12,7 @@ Module group `inventory`. 16 screens in the standard menu.
 - Order fulfilment shows what is ordered and not yet delivered, and what stock on hand and open purchase orders cannot cover ("need to order", the earliest orders served first); stock by warehouse the quantity and value per item per warehouse.
 - Minimum stock lists the items at or below their minimum: the warehouse's own minimum when one is set on the item, else the item's overall minimum. Beside stock on hand it shows what approved, open purchase orders still bring (on order) and what approved, open requisitions still ask for (requested), and the quantity to order to get back to the minimum. Selected items open a purchase order (their preferred vendor, when they share one) or a requisition with those lines.
 - With departments or projects on, inventory adjustments carry a department and a project on the header and per line, so a write-off reads against the department that made it. Transfers between warehouses carry none.
+- Stock Age (Central) reads how old the stock on hand is from the ledger: every receipt opens a layer dated the day it entered the warehouse (a transfer's goods on the receive date, a return on its date, opening stock on its date; a value adjustment opens none), every issue takes the oldest layers first, and what remains is the stock on hand with its age; one row per item and warehouse with the oldest layer, the quantity in each bucket (0–30, 31–90, 91–180, 181–365, over 365 days) and the value at the average cost. A gudang account sees its own warehouse; the value needs the "see cost" right. Nothing is stored; the books keep their moving average.
 
 ## Screens
 
@@ -30,6 +31,7 @@ Module group `inventory`. 16 screens in the standard menu.
 - [Stock by Warehouse](#stock-by-warehouse)
 - [Minimum Stock](#minimum-stock)
 - [Price List](#price-list)
+- [Stock Age](#stock-age)
 - [Warehouse Accounts](#warehouse-accounts)
 
 ## Fulfilment
@@ -488,6 +490,23 @@ Menu key `client__price-list` · module `central-price-list`
 | Effective from | `effective_from` | date | yes |
 | This file replaces the whole list | `is_full_replacement` | toggle |  |
 | Notes | `note` | textarea |  |
+
+## Stock Age
+
+Menu key `client__stock-age` · module `central-warehouse`
+
+### Filters and inputs
+
+| Field | Column | Type | Required |
+|---|---|---|---|
+| Warehouse | `warehouse_id` | select |  |
+| Category | `category_id` | select |  |
+| Brand | `brand_id` | select |  |
+| Age | `bucket` | select |  |
+
+### List
+
+**Columns:** Item code · Item name · Warehouse · On hand · Oldest since · Age (days) · Bucket · 0–30 days · 31–90 days · 91–180 days · 181–365 days · over 365 days
 
 ## Warehouse Accounts
 

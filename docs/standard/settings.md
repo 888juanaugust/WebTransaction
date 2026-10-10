@@ -301,6 +301,7 @@ Menu key `company__access-privilege` · module `settings`
 | Stock by Warehouse | `rights.inventory__stock-warehouse` | checkbox list |  |
 | Minimum Stock | `rights.inventory__minimum-stock-item` | checkbox list |  |
 | Price List | `rights.client__price-list` | checkbox list |  |
+| Stock Age | `rights.client__stock-age` | checkbox list |  |
 | Warehouse Accounts | `rights.client__warehouse-accounts` | checkbox list |  |
 
 **Section: Fixed Assets**
@@ -327,6 +328,7 @@ Menu key `company__access-privilege` · module `settings`
 
 | Field | Column | Type | Required |
 |---|---|---|---|
+| Product Analytics | `rights.client__product-analytics` | checkbox list |  |
 | Report Catalogue | `rights.report__report` | checkbox list |  |
 | VAT Return | `rights.report__spt-masa` | checkbox list |  |
 | Income Tax Art. 21 Return | `rights.report__formulir-1721-induk` | checkbox list |  |

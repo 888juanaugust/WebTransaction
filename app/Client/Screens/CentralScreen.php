@@ -23,6 +23,8 @@ enum CentralScreen: string implements ScreenKey
     case Collections = 'client__collections';
     case WarehouseAccounts = 'client__warehouse-accounts';
     case Fulfilment = 'client__fulfilment';
+    case StockAge = 'client__stock-age';
+    case ProductAnalytics = 'client__product-analytics';
     case BuyerAccounts = 'client__buyer-accounts';
     case Website = 'client__website';
     case SiteImages = 'client__site-images';
@@ -33,7 +35,8 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::Teams, self::OrderApprovals, self::DeliveryWatch, self::CustomerPrices, self::CustomerTypes, self::SettlementClaims, self::ReturnClaims, self::Collections, self::BuyerAccounts => Modul::Sales,
-            self::PriceList, self::WarehouseAccounts, self::Fulfilment => Modul::Inventory,
+            self::PriceList, self::WarehouseAccounts, self::Fulfilment, self::StockAge => Modul::Inventory,
+            self::ProductAnalytics => Modul::Reports,
             self::ExpenseClaims => Modul::CashBank,
             self::Website, self::SiteImages => Modul::Company,
             self::LaunchReadiness, self::Operations => Modul::Settings,
@@ -55,6 +58,8 @@ enum CentralScreen: string implements ScreenKey
             self::Collections => __('Collections'),
             self::WarehouseAccounts => __('Warehouse Accounts'),
             self::Fulfilment => __('Fulfilment'),
+            self::StockAge => __('Stock Age'),
+            self::ProductAnalytics => __('Product Analytics'),
             self::BuyerAccounts => __('Buyer Accounts'),
             self::Website => __('Website'),
             self::SiteImages => __('Website Images'),
@@ -72,6 +77,8 @@ enum CentralScreen: string implements ScreenKey
             self::ReturnClaims => 25,
             self::Collections => 22,
             self::Fulfilment => 20,
+            self::StockAge => 86,
+            self::ProductAnalytics => 90,
             self::WarehouseAccounts => 520,
             self::Website => 530,
             self::SiteImages => 535,
@@ -90,7 +97,7 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::OrderApprovals, self::DeliveryWatch, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
-            self::Operations => ScreenKind::Tool,
+            self::Operations, self::StockAge, self::ProductAnalytics => ScreenKind::Tool,
             self::Teams, self::CustomerPrices, self::CustomerTypes, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness => ScreenKind::Setup,
         };
     }
