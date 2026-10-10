@@ -1,6 +1,6 @@
 # Sub-project 9 — Stock intelligence, counts and damaged goods
 
-Status: in progress.
+Status: built (2026-10-17): stock age, analytics, count sheets, damaged goods.
 
 ## Why
 
