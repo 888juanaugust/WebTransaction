@@ -30,6 +30,7 @@ enum CentralScreen: string implements ScreenKey
     case BuyerAccounts = 'client__buyer-accounts';
     case Website = 'client__website';
     case SiteImages = 'client__site-images';
+    case YearEnd = 'client__year-end';
     case LaunchReadiness = 'client__launch-readiness';
     case Operations = 'client__operations';
 
@@ -40,7 +41,7 @@ enum CentralScreen: string implements ScreenKey
             self::PriceList, self::WarehouseAccounts, self::Fulfilment, self::StockAge, self::CountSheets, self::DamagedGoods => Modul::Inventory,
             self::ProductAnalytics => Modul::Reports,
             self::ExpenseClaims => Modul::CashBank,
-            self::Website, self::SiteImages => Modul::Company,
+            self::Website, self::SiteImages, self::YearEnd => Modul::Company,
             self::LaunchReadiness, self::Operations => Modul::Settings,
         };
     }
@@ -67,6 +68,7 @@ enum CentralScreen: string implements ScreenKey
             self::BuyerAccounts => __('Buyer Accounts'),
             self::Website => __('Website'),
             self::SiteImages => __('Website Images'),
+            self::YearEnd => __('Year-end Close'),
             self::LaunchReadiness => __('Launch Readiness'),
             self::Operations => __('Operations'),
         };
@@ -88,6 +90,7 @@ enum CentralScreen: string implements ScreenKey
             self::WarehouseAccounts => 520,
             self::Website => 530,
             self::SiteImages => 535,
+            self::YearEnd => 540,
             self::LaunchReadiness => 41,
             self::Operations => 40,
             self::BuyerAccounts => 515,
@@ -104,7 +107,7 @@ enum CentralScreen: string implements ScreenKey
         return match ($this) {
             self::OrderApprovals, self::DeliveryWatch, self::PriceList, self::CountSheets, self::DamagedGoods, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
             self::Operations, self::StockAge, self::ProductAnalytics => ScreenKind::Tool,
-            self::Teams, self::CustomerPrices, self::CustomerTypes, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness => ScreenKind::Setup,
+            self::Teams, self::CustomerPrices, self::CustomerTypes, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness, self::YearEnd => ScreenKind::Setup,
         };
     }
 

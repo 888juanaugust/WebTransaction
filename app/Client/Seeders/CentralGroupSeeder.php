@@ -113,7 +113,7 @@ class CentralGroupSeeder extends Seeder
             CentralGroups::FINANCE => [
                 $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports, Modul::FixedAssets), MenuKey::MonthEndProcess, MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::Collections, CentralScreen::BuyerAccounts, CentralScreen::CustomerTypes], self::ALL)
                     + $this->grant([MenuKey::Customers], self::WORK)
-                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams, CentralScreen::DeliveryWatch, CentralScreen::ProductAnalytics, CentralScreen::DamagedGoods], self::READ),
+                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams, CentralScreen::DeliveryWatch, CentralScreen::ProductAnalytics, CentralScreen::DamagedGoods, CentralScreen::YearEnd], self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],
             ],
         ];

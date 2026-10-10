@@ -209,6 +209,7 @@ Menu key `company__access-privilege` · module `settings`
 | Activity Log | `rights.company__audit` | checkbox list |  |
 | Website | `rights.client__website` | checkbox list |  |
 | Website Images | `rights.client__site-images` | checkbox list |  |
+| Year-end Close | `rights.client__year-end` | checkbox list |  |
 
 **Section: General Ledger**
 

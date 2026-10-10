@@ -1,6 +1,6 @@
 # Company
 
-Module group `company`. 18 screens in the standard menu.
+Module group `company`. 19 screens in the standard menu.
 
 ## Behaviours
 
@@ -18,6 +18,8 @@ Module group `company`. 18 screens in the standard menu.
 - Website (Central) is where the Owner overrides what the public site says: contact details, the about texts, the partners, the roadmap and the values the legal pages cite, each in Bahasa Indonesia and English. A value left as written in the client config is not stored; a changed one is, and every change is audited with the value before and after. The public site reads the stored value first and the config otherwise; the two legal pages stay Indonesian whatever the visitor chose.
 - Website Images (Central) holds the pictures the public home page shows: a promo is a slide of the carousel with a title, a text and a link; a photo goes in the gallery with its caption. An image shows while active and within its dates, in its order; the file lives on the public disk under promo/.
 - The bell (Central): the staff panel shows database notifications, polled every minute; a module's reminders (the delivery watch, counts due, birthdays, the month to close) arrive there and by mail in the company's language, to the administrators, a customer's team or a role. A module may add its own kinds of event to the Calendar; they join the legend.
+- Year-end Close (Central) is a lock, not a posted closing entry. The Owner closes a fiscal year once its checklist stands: every month of the year is closed, depreciation is posted for every month an active asset was in use, the year's two semester count sheets are approved, and the ledger integrity sweep finds nothing; the screen shows each item's state and what is still open. A month inside a closed year never reopens on the Month-end Process; the Owner reopens the year first, with a reason, latest year first. Closing and reopening are audited. The balance sheet keeps computing retained earnings from the books as the base does, so no jurnal penutup is posted. Finance reads the screen.
+- The month to close (Central): when the next month to close is more than ten days past (`central:books-reminder`, every morning), Finance and the administrators get a bell and a mail pointing at the Month-end Process, once per month. The calendar marks the fiscal year's end for whoever may open the Month-end Process.
 
 ## Screens
 
@@ -39,6 +41,7 @@ Module group `company`. 18 screens in the standard menu.
 - [Activity Log](#activity-log)
 - [Website](#website)
 - [Website Images](#website-images)
+- [Year-end Close](#year-end-close)
 
 ## Currencies
 
@@ -577,4 +580,10 @@ Menu key `client__site-images` · module `central-site`
 | Show from | `show_from` | date |  |
 | Show until | `show_until` | date |  |
 | Active | `is_active` | toggle |  |
+
+## Year-end Close
+
+Menu key `client__year-end` · module `central-books`
+
+A read-only screen with its own layout.
 

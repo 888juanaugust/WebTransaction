@@ -1,5 +1,6 @@
 <?php
 
+use App\Client\Modules\BooksModule;
 use App\Client\Modules\ClaimsModule;
 use App\Client\Modules\CollectionsModule;
 use App\Client\Modules\CustomersModule;
@@ -37,6 +38,7 @@ return [
         PortalModule::class,
         SiteModule::class,
         OpsModule::class,
+        BooksModule::class,
     ],
 
     // Central's own screen keys: string-backed enums implementing

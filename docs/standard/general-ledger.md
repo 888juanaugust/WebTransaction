@@ -12,6 +12,7 @@ Module group `general-ledger`. 9 screens in the standard menu.
 - An expense accrual or a payroll entry is paid by a payment (Cash & Bank) whose line settles it: "Pay" on the list opens one, or "Pull open accruals and payroll" on the payment. The line debits the document's own payable account, never more than is open; the document's paid amount and status follow the allocations, and a paid one is locked until its payments are undone.
 - Budgets hold an amount per account per month; the monitor compares them with the books; transfers move budget between accounts and months.
 - Account history is the ledger of one account with a running balance; the journal activity log is the trail of changes to journals.
+- Buku besar (Central) is the General Ledger report of the Reports group and the account history of one account; neraca is the Balance Sheet. Finance holds both with every report; nothing is rebuilt.
 
 ## Screens
 

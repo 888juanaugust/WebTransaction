@@ -12,6 +12,7 @@ Module group `reports`. 6 screens in the standard menu.
 - Aging and the customer and vendor statements include opening balances, aged from their own invoice date. A statement shows the balance brought forward, then every invoice or bill, down payment, opening balance, return and receipt or payment in the period, with the running balance owed; a bounced giro counts for nothing.
 - Receivable and payable aging and the customer and vendor statements take a Currency filter while foreign currencies are in use: left empty, every document in rupiah (as without currencies); a currency, only its documents in its own amounts.
 - Product Analytics (Central) is six views over one set of filters (period, branch, warehouse, category, brand), read from the invoice lines, the return lines, the stock movements and the stock cache: most sold (ranked by quantity, net value or distinct customers, with the cost of what left and the margin), least taken (stock on hand with no delivery in the last 30, 90, 180 or 365 days), never sold, oldest stock, most returned (returned against sold, the rate), turnover (units sold against the stock on hand, months of cover). Cost and margin need the "see cost" right; Excel export needs the export right; the top ten of the view draws as bars.
+- Neraca and buku besar (Central) are the Balance Sheet and the General Ledger of this catalogue, with the account history; Finance holds every report. The customer's debt in every report ages from the day the order was accepted (the acceptance clock, Sales).
 
 ## Screens
 

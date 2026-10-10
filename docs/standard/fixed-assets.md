@@ -9,6 +9,7 @@ Module group `fixed-assets`. 7 screens in the standard menu.
 - Depreciation is posted monthly by `erp:depreciate` (scheduled for the month's last day) by the straight-line or declining-balance method, down to the salvage value.
 - The tax books are a report, never posted: a fiscal asset depreciates by its fiscal group's method and yearly rate, for the months in use in each fiscal year, the last year of the useful life taking whatever is left. The asset's Fiscal tab shows the years; the depreciation schedule switches between the commercial and the fiscal books.
 - Changes revalue an asset or add cost; disposals remove it with the gain or loss; transfers move it between locations and branches. Assets by location lists them where they stand.
+- Aset tetap (Central): Finance holds the fixed-assets screens with the Month-end Process; the Owner alone reopens a month. Depreciation posted for every month an asset was in use is one of the items the year-end close checks.
 
 ## Screens
 
