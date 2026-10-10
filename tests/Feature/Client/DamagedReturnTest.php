@@ -12,6 +12,7 @@ use App\Client\Seeders\ScrapWarehouseSeeder;
 use App\Domain\Inventory\StockQuery;
 use App\Models\GeneralLedger\Account;
 use App\Models\Inventory\InventoryAdjustment;
+use App\Models\Inventory\ItemCost;
 use App\Models\Inventory\Warehouse;
 use App\Models\Sales\SalesInvoice;
 use Livewire\Livewire;
@@ -103,7 +104,7 @@ class DamagedReturnTest extends TestCase
         $adjustment = InventoryAdjustment::query()->where('description', 'like', 'Damaged goods written off%')->sole();
         $this->assertSame($this->inventory->id, $adjustment->created_by);
         $this->assertSame(DamagedGoods::lossAccount()->id, $adjustment->lines()->first()->adjustment_account_id);
-        $this->assertSame(100_000, (int) \App\Models\Inventory\ItemCost::query()->where('item_id', $this->item->id)->where('warehouse_id', $this->rusak->id)->value('total_value'), 'two left at the average cost');
+        $this->assertSame(100_000, (int) ItemCost::query()->where('item_id', $this->item->id)->where('warehouse_id', $this->rusak->id)->value('total_value'), 'two left at the average cost');
         $this->assertTrue(Account::query()->where('no', '6600')->exists());
     }
 }
