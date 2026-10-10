@@ -122,6 +122,8 @@ class CustomerResource extends MasterResource
                     ]),
                     Tab::make(__('Sales'))->schema([
                         Grid::make(2)->schema([
+                            Select::make('customer_type_id')->label(__('Customer type'))->relationship('customerType', 'name', fn ($query) => $query->where('is_active', true))->preload()->native(false)
+                                ->helperText(__('The type\'s tier, payment term and credit age limit are copied onto the customer when it is set.')),
                             Select::make('price_category_id')->label(__('Price category'))->relationship('priceCategory', 'name')->preload()->native(false)
                                 ->default(fn () => PriceCategory::query()->where('is_default', true)->value('id')),
                             Select::make('discount_price_category_id')->label(__('Discount category'))->relationship('discountPriceCategory', 'name')->preload()->native(false)
@@ -197,6 +199,7 @@ class CustomerResource extends MasterResource
                 TextColumn::make('primary_contact')->label(__('Primary contact'))->state(fn (Customer $r) => $r->contacts->first()?->name)->placeholder('—'),
                 TextColumn::make('number')->label(__('Customer ID'))->searchable()->sortable()->fontFamily('mono'),
                 TextColumn::make('category.name')->label(__('Category'))->placeholder('—'),
+                TextColumn::make('customerType.name')->label(__('Customer type'))->placeholder('—')->toggleable(),
                 TextColumn::make('priceCategory.name')->label(__('Price category'))->placeholder('—'),
                 TextColumn::make('discountCategory.name')->label(__('Discount category'))->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('tax_address')->label(__('Tax address'))->state(fn (Customer $r) => $r->taxAddress())->limit(40)->placeholder('—')->toggleable(isToggledHiddenByDefault: true),

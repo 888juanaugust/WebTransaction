@@ -85,7 +85,7 @@ class CentralGroupSeeder extends Seeder
         $salesFiles = [CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::ReturnClaims];
         // The purchasing chain is Purchasing's; the money of it (bills, payments, down payments, payment orders) stays Finance's.
         $purchasingChain = [MenuKey::PurchaseOrders, MenuKey::GoodsReceipts, MenuKey::PurchaseReturns, MenuKey::VendorClaims, MenuKey::VendorPrices, MenuKey::VendorCategories, MenuKey::Vendors, MenuKey::VendorTransfers];
-        $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::BuyerAccounts, MenuKey::Calendar, MenuKey::Contacts];
+        $salesRead = [MenuKey::DeliveryOrders, MenuKey::SalesInvoices, MenuKey::SalesReceipts, MenuKey::SalesReturns, MenuKey::ItemsAndServices, MenuKey::StockByWarehouse, MenuKey::OrderFulfilment, MenuKey::PriceCategories, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::PriceList, CentralScreen::CustomerPrices, CentralScreen::CustomerTypes, CentralScreen::BuyerAccounts, MenuKey::Calendar, MenuKey::Contacts];
 
         return [
             self::ADMINISTRATOR => [
@@ -111,7 +111,7 @@ class CentralGroupSeeder extends Seeder
                 [],
             ],
             CentralGroups::FINANCE => [
-                $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports, Modul::FixedAssets), MenuKey::MonthEndProcess, MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::Collections, CentralScreen::BuyerAccounts], self::ALL)
+                $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports, Modul::FixedAssets), MenuKey::MonthEndProcess, MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::Collections, CentralScreen::BuyerAccounts, CentralScreen::CustomerTypes], self::ALL)
                     + $this->grant([MenuKey::Customers], self::WORK)
                     + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams], self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],

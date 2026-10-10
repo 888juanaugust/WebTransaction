@@ -2,6 +2,7 @@
 
 use App\Client\Modules\ClaimsModule;
 use App\Client\Modules\CollectionsModule;
+use App\Client\Modules\CustomersModule;
 use App\Client\Modules\OpsModule;
 use App\Client\Modules\OrdersModule;
 use App\Client\Modules\PortalModule;
@@ -29,6 +30,7 @@ return [
     'modules' => [
         OrdersModule::class,
         PriceListModule::class,
+        CustomersModule::class,
         ClaimsModule::class,
         CollectionsModule::class,
         WarehouseModule::class,

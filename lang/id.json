@@ -2391,5 +2391,19 @@
     "Your portal account at :company": "Akun portal Anda di :company",
     "Your price": "Harga Anda",
     "Zakat or religious donations through the employer": "Zakat atau sumbangan keagamaan melalui pemberi kerja",
-    "Zero drops a line. Prices are set when the order is placed; it goes to your marketing for approval.": "Nol menghapus baris. Harga ditetapkan saat pesanan diajukan; pesanan menunggu persetujuan marketing Anda."
+    "Zero drops a line. Prices are set when the order is placed; it goes to your marketing for approval.": "Nol menghapus baris. Harga ditetapkan saat pesanan diajukan; pesanan menunggu persetujuan marketing Anda.",
+    "Customer type": "Jenis pelanggan",
+    "The type's tier, payment term and credit age limit are copied onto the customer when it is set.": "Tingkat harga, syarat pembayaran, dan batas umur piutang jenis ini disalin ke pelanggan saat jenis dipilih.",
+    "Price tier (the promo)": "Tingkat harga (promonya)",
+    "Its adjustments and blanket discount are the type's promo; blank keeps each customer's own tier.": "Penyesuaian dan diskon menyeluruhnya adalah promo jenis ini; kosong berarti tingkat harga masing-masing pelanggan tetap.",
+    "The due days of the type's invoices; blank keeps each customer's own term.": "Jatuh tempo faktur jenis ini; kosong berarti syarat masing-masing pelanggan tetap.",
+    "Block when an invoice is older than (days)": "Blokir bila ada faktur lebih tua dari (hari)",
+    "The type's own limit before the company's freeze; blank or 0 means none.": "Batas jenis ini sendiri sebelum pembekuan perusahaan; kosong atau 0 berarti tidak ada.",
+    "Price tier": "Tingkat harga",
+    "Age limit (days)": "Batas umur (hari)",
+    "Re-apply type terms": "Terapkan ulang syarat jenis",
+    "Re-apply the type's terms?": "Terapkan ulang syarat jenis ini?",
+    "The tier, the payment term and the credit age limit of this type overwrite those of every customer of it. Each change is logged.": "Tingkat harga, syarat pembayaran, dan batas umur piutang jenis ini menimpa milik setiap pelanggannya. Setiap perubahan dicatat.",
+    ":n customer(s) updated": ":n pelanggan diperbarui",
+    "Customer Types": "Jenis Pelanggan"
 }
