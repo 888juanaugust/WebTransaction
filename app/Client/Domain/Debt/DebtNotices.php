@@ -7,6 +7,7 @@ namespace App\Client\Domain\Debt;
 use App\Client\Mail\DebtNoticeMessage;
 use App\Client\Models\DebtNotice;
 use App\Domain\Approval\ApprovalEngine;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Sales\CreditCheck;
 use App\Domain\Shared\Locales;
 use App\Models\Sales\SalesInvoice;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Mail;
  */
 final class DebtNotices
 {
-    public function __construct(private readonly CreditCheck $credit, private readonly ApprovalEngine $approvals) {}
+    public function __construct(private readonly CreditCheck $credit, private readonly ApprovalEngine $approvals, private readonly AgingDate $aging) {}
 
     /** The invoices due a notice today: approved, unpaid, old enough, not noticed yet. */
     public function due(): Collection
@@ -37,7 +38,7 @@ final class DebtNotices
 
         return SalesInvoice::query()->with('customer')
             ->where('payment_status', '!=', 'paid')
-            ->whereDate('trans_date', '<=', today()->subDays($days)->toDateString())
+            ->whereRaw($this->aging->issuedColumn().' <= ?', [today()->subDays($days)->toDateString()])
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('debt_notices')->whereColumn('debt_notices.sales_invoice_id', 'sales_invoices.id'))
             ->orderBy('trans_date')
             ->get()
@@ -48,7 +49,7 @@ final class DebtNotices
     /** Sends the notice for one invoice, once: returns the notice, or null when it was sent before. */
     public function send(SalesInvoice $invoice): ?DebtNotice
     {
-        $days = (int) $invoice->trans_date->diffInDays(today(), false);
+        $days = (int) $this->aging->issued($invoice)->diffInDays(today(), false);
         $inserted = DebtNotice::query()->insertOrIgnore([
             'sales_invoice_id' => $invoice->id, 'customer_id' => $invoice->customer_id, 'days' => max(0, $days), 'created_at' => now(),
         ]);

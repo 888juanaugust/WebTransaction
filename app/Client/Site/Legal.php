@@ -148,10 +148,10 @@ final class Legal
 
         $aging = [];
         if ($notice > 0) {
-            $aging[] = "Atas faktur yang belum dilunasi {$notice} hari sejak tanggal terbit, kami mengirim pemberitahuan tertulis kepada pembeli dan tim penjualan yang menangani.";
+            $aging[] = "Atas faktur yang belum dilunasi {$notice} hari sejak pesanan disetujui (tanggal penerimaan pesanan), kami mengirim pemberitahuan tertulis kepada pembeli dan tim penjualan yang menangani.";
         }
         if ($freeze > 0) {
-            $aging[] = "Bila faktur tertua yang belum dilunasi melewati {$freeze} hari sejak tanggal terbit, pesanan baru tidak dikonfirmasi sampai faktur itu dilunasi. Pembatasan ini dicabut seketika saat pelunasan diterima.";
+            $aging[] = "Bila faktur tertua yang belum dilunasi melewati {$freeze} hari sejak pesanan disetujui, pesanan baru tidak dikonfirmasi sampai faktur itu dilunasi. Pembatasan ini dicabut seketika saat pelunasan diterima.";
         }
 
         return [

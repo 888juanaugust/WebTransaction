@@ -6,6 +6,7 @@ namespace App\Domain\Reports;
 
 use App\Domain\Currency\Currencies;
 use App\Domain\Fulfilment\StatusDeriver;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Settlement\SettlementService;
 use App\Models\Company\OpeningBalance;
 use App\Models\Purchasing\PurchaseDownPayment;
@@ -266,7 +267,7 @@ final class TradeReports
                 continue;
             }
             $opening = $invoice instanceof OpeningBalance;
-            $issued = $opening ? $invoice->agingDate() : $invoice->trans_date;
+            $issued = $opening ? $invoice->agingDate() : ($invoice instanceof SalesInvoice ? app(AgingDate::class)->issued($invoice) : $invoice->trans_date);
             $reference = CarbonImmutable::parse($basis === 'due_date' && $invoice->due_date ? $invoice->due_date : $issued);
             $days = (int) $reference->diffInDays($asOf, false);
             $bucket = AgingBuckets::keyFor($days, $columns);

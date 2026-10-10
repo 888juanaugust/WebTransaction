@@ -13,6 +13,7 @@ use App\Domain\Posting\Contracts\Postable;
 use App\Domain\Posting\PostingBuilder;
 use App\Domain\Posting\PostsToLedger;
 use App\Domain\Posting\Tags;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Settlement\SettlementService;
 use App\Domain\Shared\Money;
 use App\Models\Company\Branch;
@@ -102,7 +103,8 @@ class SalesInvoice extends Model implements Postable
         $this->forceFill([
             'fc_down_payment_total' => $foreign ? (int) $this->downPayments()->sum('fc_amount') : null,
             'down_payment_total' => $dp,
-            'due_date' => $this->due_date ?? ($this->payment_term_id ? PaymentTerm::query()->find($this->payment_term_id)?->dueDate($this->trans_date) : $this->trans_date),
+            // The term counts from the day the invoice ages from (the base: its date; an installation may bind the acceptance).
+            'due_date' => $this->due_date ?? ($this->payment_term_id ? PaymentTerm::query()->find($this->payment_term_id)?->dueDate(app(AgingDate::class)->issued($this)) : app(AgingDate::class)->issued($this)),
         ])->saveQuietly();
         foreach ($this->downPayments()->with('downPayment')->get() as $use) {
             $use->downPayment?->refreshStatus();

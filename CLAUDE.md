@@ -253,7 +253,10 @@ records money. Whoever files a claim (pelunasan, return, expense) never verifies
 keys, two people, the Owner included. Every override is logged with actor, old value, new
 value, timestamp.
 
-**Debt terms.** Invoice due date defaults to 30 days. Aging counts from the issue date:
+**Debt terms.** Invoice due date defaults to 30 days. Aging counts from the acceptance: the day
+the order behind the invoice was approved (`sales_invoices.accepted_at`, stamped from
+`sales_orders.approved_at` through the `AgingDate` seam; an invoice with no order ages from its
+own date), and the due date is the term counted from it:
 notice to customer and team at 120 days, hard freeze — no new transactions — strictly
 after 150 days, lifted the moment the aged invoice settles. Derived arithmetic through
 the base's `CreditCheck` preferences, never stored state.

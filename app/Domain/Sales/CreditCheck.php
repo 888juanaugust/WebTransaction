@@ -8,6 +8,7 @@ use App\Domain\Access\HakAkses;
 use App\Domain\Access\HakKhusus;
 use App\Domain\Pengaturan\Preferensi;
 use App\Domain\Pengaturan\PreferensiKey;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Settlement\SettlementService;
 use App\Domain\Shared\Format;
 use App\Models\Company\OpeningBalance;
@@ -18,6 +19,7 @@ use App\Models\Sales\SalesOrder;
 use App\Models\Sales\SalesReturn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -30,7 +32,7 @@ use RuntimeException;
  */
 final class CreditCheck
 {
-    public function __construct(private readonly SettlementService $settlement, private readonly HakAkses $akses, private readonly Preferensi $prefs) {}
+    public function __construct(private readonly SettlementService $settlement, private readonly HakAkses $akses, private readonly Preferensi $prefs, private readonly AgingDate $aging) {}
 
     /** Days after which an unpaid invoice flags the customer; 0 when the rule is off. */
     public function noticeDays(): int
@@ -81,9 +83,9 @@ final class CreditCheck
     public function oldestUnpaidDays(Customer $customer): int
     {
         $basis = $this->prefs->get(PreferensiKey::AgingBasis);
-        $column = $basis === 'due_date' ? 'due_date' : 'trans_date';
+        $column = $basis === 'due_date' ? 'due_date' : $this->aging->issuedColumn();
         $oldest = collect([
-            SalesInvoice::query()->whereIn('customer_id', $this->groupIds($customer))->where('payment_status', '!=', 'paid')->min($column),
+            SalesInvoice::query()->whereIn('customer_id', $this->groupIds($customer))->where('payment_status', '!=', 'paid')->min(DB::raw($column)),
             $this->openings($this->groupIds($customer))->min($basis === 'due_date' ? 'due_date' : 'document_date'),
         ])->filter()->min();
 

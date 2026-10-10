@@ -13,6 +13,7 @@ use App\Client\Screens\CentralScreen;
 use App\Domain\Access\Hak;
 use App\Domain\Access\HakAkses;
 use App\Domain\Access\HakKhusus;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Sales\CreditCheck;
 use App\Domain\Shared\Format;
 use App\Filament\Support\Columns\Rupiah;
@@ -67,7 +68,7 @@ class Collections extends ErpPage implements HasTable
                 Tanggal::make('trans_date')->label(__('fields.trans_date')),
                 Tanggal::make('due_date')->label(__('Due')),
                 TextColumn::make('age')->label(__('Age'))->alignEnd()
-                    ->state(fn (SalesInvoice $record) => __(':n days', ['n' => (int) $record->trans_date->diffInDays(today(), false)])),
+                    ->state(fn (SalesInvoice $record) => __(':n days', ['n' => (int) app(AgingDate::class)->issued($record)->diffInDays(today(), false)])),
                 Rupiah::make('balance')->label(__('Balance'))->state(fn (SalesInvoice $record) => $record->balance()),
                 TextColumn::make('aging')->label(__('Aging'))->badge()
                     ->state(fn (SalesInvoice $record) => $this->agingLabel($record))
@@ -162,7 +163,7 @@ class Collections extends ErpPage implements HasTable
     private function agingLabel(SalesInvoice $invoice): string
     {
         $credit = app(CreditCheck::class);
-        $age = (int) $invoice->trans_date->diffInDays(today(), false);
+        $age = (int) app(AgingDate::class)->issued($invoice)->diffInDays(today(), false);
         if ($credit->freezeDays() > 0 && $age > $credit->freezeDays()) {
             return __('frozen');
         }

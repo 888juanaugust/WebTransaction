@@ -8,6 +8,7 @@ use App\Domain\Access\HakAkses;
 use App\Domain\Access\HakKhusus;
 use App\Domain\Access\MenuKey;
 use App\Domain\Numbering\TransactionType;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Sales\CreditCheck;
 use App\Filament\Resources\Sales\SalesInvoices\Pages\CreateSalesInvoice;
 use App\Filament\Resources\Sales\SalesInvoices\Pages\EditSalesInvoice;
@@ -117,8 +118,8 @@ class SalesInvoiceResource extends ErpResource
                     ->color(fn (string $state) => match ($state) {
                         'paid' => 'success', 'partial' => 'warning', default => 'gray'
                     }),
-                TextColumn::make('age')->label(__('Age (days)'))->state(fn (SalesInvoice $r) => $r->payment_status === 'paid' ? '' : (string) $r->trans_date->diffInDays(today()))->alignEnd()
-                    ->color(fn (SalesInvoice $r) => HakAkses::canSpecial(HakKhusus::SeeCreditData) && ($notice = app(CreditCheck::class)->noticeDays()) > 0 && $r->payment_status !== 'paid' && $r->trans_date->diffInDays(today()) > $notice ? 'danger' : null),
+                TextColumn::make('age')->label(__('Age (days)'))->state(fn (SalesInvoice $r) => $r->payment_status === 'paid' ? '' : (string) app(AgingDate::class)->issued($r)->diffInDays(today()))->alignEnd()
+                    ->color(fn (SalesInvoice $r) => HakAkses::canSpecial(HakKhusus::SeeCreditData) && ($notice = app(CreditCheck::class)->noticeDays()) > 0 && $r->payment_status !== 'paid' && app(AgingDate::class)->issued($r)->diffInDays(today()) > $notice ? 'danger' : null),
                 Rupiah::make('total')->label(__('fields.total')),
                 ...InCurrency::make('fc_total'),
                 TextColumn::make('nsfp')->label(__('NSFP'))->placeholder('—')->toggleable(isToggledHiddenByDefault: true),

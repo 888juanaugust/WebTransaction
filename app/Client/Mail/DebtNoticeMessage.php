@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Client\Mail;
 
 use App\Domain\Company\CompanyIdentity;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Shared\Format;
 use App\Models\Sales\SalesInvoice;
 use Illuminate\Mail\Mailable;
@@ -23,7 +24,7 @@ class DebtNoticeMessage extends Mailable
 
     public function content(): Content
     {
-        $freezesOn = $this->freezeDays > 0 ? $this->invoice->trans_date->copy()->addDays($this->freezeDays + 1) : null;
+        $freezesOn = $this->freezeDays > 0 ? app(AgingDate::class)->issued($this->invoice)->copy()->addDays($this->freezeDays + 1) : null;
 
         return new Content(text: 'client.mail.debt-notice', with: [
             'company' => app(CompanyIdentity::class)->letterhead()['name'],

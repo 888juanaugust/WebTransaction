@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Client;
 
+use App\Client\Domain\Debt\AcceptanceAging;
 use App\Client\Domain\Ops\Backup\BackupCipher;
 use App\Client\Domain\Ops\Backup\DatabaseDumper;
 use App\Client\Domain\Ops\Backup\FileArchiver;
@@ -14,6 +15,7 @@ use App\Client\Portal\PortalPanelProvider;
 use App\Client\Site\Http\SiteContentSecurityPolicy;
 use App\Client\Site\Http\SiteLocale;
 use App\Client\Site\SiteSettings;
+use App\Domain\Sales\Contracts\AgingDate;
 use App\Domain\Sales\Contracts\Prices;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -56,6 +58,7 @@ class ClientServiceProvider extends ServiceProvider
         $this->app->bind(FileArchiver::class, fn () => FileArchiver::fromConfig());
         // Every selling line is priced by Central's rules: customer deals, the tier, the list in force.
         $this->app->bind(Prices::class, CentralPrices::class);
+        $this->app->bind(AgingDate::class, AcceptanceAging::class); // an invoice ages from its order's approval
     }
 
     public function boot(): void
