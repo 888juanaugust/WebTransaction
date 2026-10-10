@@ -1,0 +1,90 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  products {
+    string kode PK
+    string merk
+    string kategori
+    string part_number
+    int qty_per_ctn
+    string satuan_dasar
+    bool aktif
+    string golongan
+  }
+  price_list_imports {
+    bigint id PK
+    string original_filename
+    string status
+    bool is_full_replacement
+    date effective_from
+    bigint price_list_version_id FK
+  }
+  price_list_import_rows {
+    bigint id PK
+    bigint import_id FK
+    string kode FK
+    bigint harga
+    string status
+    string diff_bucket
+    bigint harga_lama
+  }
+  price_list_versions {
+    bigint id PK
+    date effective_from
+    timestamp published_at
+    string status
+  }
+  price_list_items {
+    bigint id PK
+    bigint version_id FK
+    string kode FK
+    bigint harga
+    int qty_per_ctn
+    bool aktif
+  }
+  price_tiers {
+    bigint id PK
+    string kode
+    string nama
+    int discount_bps
+  }
+  price_tier_items {
+    bigint id PK
+    bigint price_tier_id FK
+    string kode FK
+    bigint min_qty_base
+    bigint harga
+    int discount_bps
+  }
+  companies {
+    bigint id PK
+    string kode
+    string nama
+    string npwp
+    bigint price_tier_id FK
+    bigint credit_limit_rupiah
+    int payment_terms_days
+    string status
+    bigint sales_user_id FK
+    bigint marketing_user_id FK
+    bigint region_id FK
+  }
+  company_price_overrides {
+    bigint id PK
+    bigint company_id FK
+    string kode FK
+    bigint min_qty_base
+    bigint harga
+    date effective_from
+    date effective_until
+  }
+  price_list_versions ||--o{ price_list_imports : "price_list_version_id"
+  price_list_imports ||--o{ price_list_import_rows : "import_id"
+  products ||--o{ price_list_import_rows : "kode"
+  price_list_versions ||--o{ price_list_items : "version_id"
+  products ||--o{ price_list_items : "kode"
+  price_tiers ||--o{ price_tier_items : "price_tier_id"
+  products ||--o{ price_tier_items : "kode"
+  price_tiers ||--o{ companies : "price_tier_id"
+  companies ||--o{ company_price_overrides : "company_id"
+  products ||--o{ company_price_overrides : "kode"

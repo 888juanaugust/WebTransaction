@@ -1,0 +1,18 @@
+%% Use cases of actor: Sistem. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Sistem"))
+  subgraph G0["Otomatis"]
+    direction TB
+    U1(["Parse berkas harga (antrian)"])
+    U2(["Lepas reservasi basi, tiap 15 menit"])
+    U3(["Sapu umur piutang 120 / 150 hari, 00:30"])
+    U4(["Tandai order lunas / selesai dari ledger"])
+    U5(["Cek keutuhan buku 01:30, backup 02:15"])
+    U6(["Hapus foto kunjungan, keranjang basi"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5
+  A --- U6

@@ -1,0 +1,25 @@
+%% Use cases of actor: Owner. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Owner"))
+  subgraph G0["Persetujuan dan kredit"]
+    direction TB
+    U1(["Atur tim sales + marketing pelanggan"])
+  end
+  subgraph G1["Akuntansi dan pajak"]
+    direction TB
+    U2(["Buka kembali periode"])
+  end
+  subgraph G2["Laporan dan admin"]
+    direction TB
+    U3(["Staf, cabang, rekening bank, pengaturan, log audit"])
+  end
+  subgraph G3["Semua peran"]
+    direction TB
+    U4(["Semua hak Sales, Marketing, Inventori, Gudang, Finance"])
+    U5(["Kecuali memverifikasi klaim yang diajukannya sendiri"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5

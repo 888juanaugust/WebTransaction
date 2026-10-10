@@ -1,0 +1,27 @@
+%% Order to cash, one credit sale end to end.
+sequenceDiagram
+  autonumber
+  actor B as Pembeli / Sales
+  actor M as Marketing
+  participant OSM as OrderStateMachine
+  participant DB as Ledger (stok, kredit)
+  actor G as Gudang
+  actor F as Finance
+  participant PL as PaymentLedger
+
+  B->>OSM: Ajukan order (draft → submitted)
+  M->>OSM: Setujui
+  activate OSM
+  OSM->>OSM: OrderSplitter.plan: satu gudang atau pecah?
+  OSM->>DB: resolvePrice, snapshot harga, DPP, PPN per baris
+  OSM->>DB: CreditChecker: limit, umur piutang > 150 hari = beku
+  OSM->>DB: SELECT ... FOR UPDATE, reservasi stok
+  OSM-->>M: confirmed (semua potongan, atau tidak sama sekali)
+  deactivate OSM
+  M->>OSM: Tagihkan (→ awaiting_payment)
+  OSM->>DB: Terbitkan faktur, jatuh tempo 30 hari
+  G->>OSM: Cetak surat jalan, Tandai dikirim (→ shipped)
+  OSM->>DB: stock_movements: reservasi jadi pengurangan, HPP diposting
+  F->>PL: Catat pembayaran (transfer / tunai / giro cair)
+  PL->>DB: payment_entries, payment_allocations (append-only)
+  PL->>OSM: Faktur tertutup penuh → shipped → completed (aktor null)

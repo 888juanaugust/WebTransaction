@@ -1,0 +1,18 @@
+%% Use cases of actor: Pembeli. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Pembeli"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+  end
+  subgraph G1["Pemesanan"]
+    direction TB
+    U2(["Keranjang, ajukan pesanan, pesan ulang"])
+  end
+  subgraph G2["Pembayaran dan piutang"]
+    direction TB
+    U3(["Lihat tagihan, kredit tersedia, umur tagihan"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3

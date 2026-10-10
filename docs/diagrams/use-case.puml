@@ -1,0 +1,145 @@
+' Use case diagram in real UML notation. Render with PlantUML
+' (https://www.plantuml.com/plantuml, the VS Code / PhpStorm PlantUML plugin,
+' or `plantuml use-case.puml`). Same content as use-case.mmd.
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Pengunjung" as Visitor
+actor "Pembeli (portal)" as Buyer
+actor "Sales" as Sales
+actor "Marketing" as Marketing
+actor "Inventori" as Inventori
+actor "Gudang" as Gudang
+actor "Finance" as Finance
+actor "Owner" as Owner
+actor "Sistem terjadwal" as System <<system>>
+
+rectangle "Portal grosir suku cadang" {
+  package "Situs publik" {
+    usecase "Lihat profil, mitra, kontak" as UC1
+    usecase "Ganti bahasa id / en" as UC2
+  }
+  package "Katalog dan daftar harga" {
+    usecase "Lihat katalog" as UC10
+    usecase "Unggah berkas harga" as UC12
+    usecase "Tinjau diff dan publikasikan versi" as UC13
+  }
+  package "Pemesanan" {
+    usecase "Keranjang dan ajukan pesanan" as UC20
+    usecase "Pesan ulang" as UC21
+    usecase "Buat order untuk pelanggan" as UC22
+    usecase "Penawaran" as UC23
+  }
+  package "Persetujuan dan kredit" {
+    usecase "Setujui order" as UC30
+    usecase "Cek kredit" as UC31
+    usecase "Reservasi stok" as UC32
+    usecase "Pecah gudang" as UC33
+    usecase "Tolak / hapus order" as UC34
+    usecase "Atur tim pelanggan" as UC36
+  }
+  package "Gudang dan pengiriman" {
+    usecase "Cetak surat jalan" as UC41
+    usecase "Tandai dikirim / selesai" as UC42
+    usecase "Stock opname: hitung" as UC44
+    usecase "Setujui selisih opname" as UC45
+  }
+  package "Pembayaran dan piutang" {
+    usecase "Tagihkan (terbitkan faktur)" as UC50
+    usecase "Catat / cocokkan pembayaran" as UC51
+    usecase "Ajukan pelunasan piutang" as UC54
+    usecase "Verifikasi pelunasan" as UC55
+    usecase "Giro" as UC56
+    usecase "Lihat tagihan dan kredit" as UC57
+  }
+  package "Retur" {
+    usecase "Buat nota kredit / retur" as UC60
+    usecase "Posting retur" as UC61
+  }
+  package "Pembelian" {
+    usecase "PO dan penerimaan barang" as UC70
+    usecase "Tagihan dan bayar pemasok" as UC71
+  }
+  package "Akuntansi dan pajak" {
+    usecase "Laporan keuangan" as UC80
+    usecase "Tutup buku" as UC81
+    usecase "Buka kembali periode" as UC82
+    usecase "Ekspor faktur pajak Coretax" as UC85
+  }
+  package "Sales lapangan" {
+    usecase "Catat kunjungan toko" as UC90
+    usecase "Ajukan klaim biaya" as UC91
+    usecase "Verifikasi klaim biaya" as UC92
+    usecase "Atur komisi dan target" as UC93
+  }
+  package "Admin" {
+    usecase "Staf, cabang, pengaturan" as UC100
+    usecase "Log audit" as UC101
+  }
+  package "Otomatis" {
+    usecase "Parse berkas harga" as UC110
+    usecase "Lepas reservasi basi" as UC111
+    usecase "Sapu umur piutang" as UC112
+    usecase "Tandai lunas dari ledger" as UC113
+  }
+}
+
+UC30 ..> UC31 : <<include>>
+UC30 ..> UC32 : <<include>>
+UC33 ..> UC30 : <<extend>>
+UC12 ..> UC110 : <<include>>
+UC51 ..> UC113 : <<include>>
+
+Visitor --> UC1
+Visitor --> UC2
+Buyer --> UC10
+Buyer --> UC20
+Buyer --> UC21
+Buyer --> UC57
+Sales --> UC22
+Sales --> UC23
+Sales --> UC50
+Sales --> UC54
+Sales --> UC60
+Sales --> UC90
+Sales --> UC91
+Marketing --> UC22
+Marketing --> UC23
+Marketing --> UC30
+Marketing --> UC34
+Marketing --> UC50
+Marketing --> UC54
+Inventori --> UC10
+Inventori --> UC12
+Inventori --> UC13
+Inventori --> UC41
+Inventori --> UC42
+Inventori --> UC44
+Inventori --> UC61
+Gudang --> UC41
+Gudang --> UC42
+Finance --> UC45
+Finance --> UC50
+Finance --> UC51
+Finance --> UC55
+Finance --> UC56
+Finance --> UC70
+Finance --> UC71
+Finance --> UC80
+Finance --> UC81
+Finance --> UC85
+Finance --> UC92
+Finance --> UC93
+Owner --> UC30
+Owner --> UC36
+Owner --> UC82
+Owner --> UC100
+Owner --> UC101
+System --> UC111
+System --> UC112
+System --> UC113
+
+note bottom of UC55 : Dua kunci: yang mengajukan\ntidak boleh memverifikasi.
+@enduml

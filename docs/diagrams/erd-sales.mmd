@@ -1,0 +1,205 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  regions {
+    bigint id PK
+    string kode
+    string nama
+  }
+  warehouses {
+    bigint id PK
+    string kode
+    string nama
+    bigint region_id FK
+  }
+  users {
+    bigint id PK
+    string name
+    string role
+    bool is_active
+    bigint region_id FK
+    bigint warehouse_id FK
+  }
+  companies {
+    bigint id PK
+    string kode
+    string nama
+    string npwp
+    bigint price_tier_id FK
+    bigint credit_limit_rupiah
+    int payment_terms_days
+    string status
+    bigint sales_user_id FK
+    bigint marketing_user_id FK
+    bigint region_id FK
+  }
+  customer_users {
+    bigint id PK
+    bigint company_id FK
+    string email
+    bool is_active
+  }
+  carts {
+    bigint id PK
+    bigint company_id FK
+    bigint customer_user_id FK
+    bigint warehouse_id FK
+    bigint region_id FK
+  }
+  cart_items {
+    bigint id PK
+    bigint cart_id FK
+    string sku FK
+    string ordered_unit
+    int ordered_qty
+  }
+  quotations {
+    bigint id PK
+    string nomor
+    bigint company_id FK
+    string status
+    date valid_until
+    bigint total_rupiah
+    bigint order_id FK
+    bigint region_id FK
+  }
+  quotation_lines {
+    bigint id PK
+    bigint quotation_id FK
+    string sku FK
+    int qty_base
+    bigint unit_price_rupiah
+    bigint line_total_rupiah
+  }
+  orders {
+    bigint id PK
+    string nomor
+    bigint company_id FK
+    bigint warehouse_id FK
+    string status
+    bigint sales_user_id FK
+    bigint total_rupiah
+    bigint price_list_version_id FK
+    timestamp confirmed_at
+    timestamp reservation_expires_at
+    bigint placed_by_customer_user_id FK
+    bigint split_parent_id FK
+    bigint region_id FK
+  }
+  order_lines {
+    bigint id PK
+    bigint order_id FK
+    string sku FK
+    string ordered_unit
+    bigint qty_base
+    bigint line_total_rupiah
+    bigint dpp_rupiah
+    bigint ppn_rupiah
+    bigint price_list_version_id FK
+    string price_reason
+  }
+  order_events {
+    bigint id PK
+    bigint order_id FK
+    string from_status
+    string to_status
+    bigint actor_id FK
+    text alasan
+    bigint customer_actor_id FK
+  }
+  stock_reservations {
+    bigint id PK
+    bigint order_id FK
+    bigint order_line_id FK
+    string sku FK
+    bigint warehouse_id FK
+    bigint qty_base
+    string status
+    bigint region_id FK
+  }
+  invoices {
+    bigint id PK
+    string nomor
+    bigint order_id FK
+    bigint company_id FK
+    bigint total_rupiah
+    date issued_on
+    date due_date
+    string status
+    string nsfp
+    bigint region_id FK
+  }
+  payment_entries {
+    bigint id PK
+    bigint company_id FK
+    bigint invoice_id FK
+    bigint order_id FK
+    bigint amount_rupiah
+    string kind
+    bigint actor_id FK
+    bigint reverses_entry_id FK
+    timestamp paid_at
+    bigint bank_account_id FK
+    bigint region_id FK
+  }
+  payment_allocations {
+    bigint id PK
+    bigint payment_entry_id FK
+    bigint invoice_id FK
+    bigint amount_rupiah
+    bigint actor_id FK
+    bigint reverses_allocation_id FK
+    bigint region_id FK
+  }
+  price_list_versions {
+    bigint id PK
+    date effective_from
+    timestamp published_at
+    string status
+  }
+  regions ||--o{ warehouses : "region_id"
+  regions ||--o{ users : "region_id"
+  warehouses ||--o{ users : "warehouse_id"
+  users ||--o{ companies : "sales_user_id"
+  users ||--o{ companies : "marketing_user_id"
+  regions ||--o{ companies : "region_id"
+  companies ||--o{ customer_users : "company_id"
+  companies ||--o{ carts : "company_id"
+  customer_users ||--o{ carts : "customer_user_id"
+  warehouses ||--o{ carts : "warehouse_id"
+  regions ||--o{ carts : "region_id"
+  carts ||--o{ cart_items : "cart_id"
+  companies ||--o{ quotations : "company_id"
+  orders ||--o{ quotations : "order_id"
+  regions ||--o{ quotations : "region_id"
+  quotations ||--o{ quotation_lines : "quotation_id"
+  companies ||--o{ orders : "company_id"
+  warehouses ||--o{ orders : "warehouse_id"
+  users ||--o{ orders : "sales_user_id"
+  price_list_versions ||--o{ orders : "price_list_version_id"
+  customer_users ||--o{ orders : "placed_by_customer_user_id"
+  orders ||--o{ orders : "split_parent_id"
+  regions ||--o{ orders : "region_id"
+  orders ||--o{ order_lines : "order_id"
+  price_list_versions ||--o{ order_lines : "price_list_version_id"
+  orders ||--o{ order_events : "order_id"
+  users ||--o{ order_events : "actor_id"
+  customer_users ||--o{ order_events : "customer_actor_id"
+  orders ||--o{ stock_reservations : "order_id"
+  order_lines ||--o{ stock_reservations : "order_line_id"
+  warehouses ||--o{ stock_reservations : "warehouse_id"
+  regions ||--o{ stock_reservations : "region_id"
+  orders ||--o{ invoices : "order_id"
+  companies ||--o{ invoices : "company_id"
+  regions ||--o{ invoices : "region_id"
+  companies ||--o{ payment_entries : "company_id"
+  invoices ||--o{ payment_entries : "invoice_id"
+  orders ||--o{ payment_entries : "order_id"
+  users ||--o{ payment_entries : "actor_id"
+  payment_entries ||--o{ payment_entries : "reverses_entry_id"
+  regions ||--o{ payment_entries : "region_id"
+  payment_entries ||--o{ payment_allocations : "payment_entry_id"
+  invoices ||--o{ payment_allocations : "invoice_id"
+  users ||--o{ payment_allocations : "actor_id"
+  payment_allocations ||--o{ payment_allocations : "reverses_allocation_id"
+  regions ||--o{ payment_allocations : "region_id"

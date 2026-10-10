@@ -1,0 +1,44 @@
+%% Use cases of actor: Marketing. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Marketing"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+  end
+  subgraph G1["Pemesanan"]
+    direction TB
+    U2(["Buat order untuk pelanggan"])
+    U3(["Penawaran: buat, kirim, jadikan order"])
+  end
+  subgraph G2["Persetujuan dan kredit"]
+    direction TB
+    U4(["Setujui / tolak / hapus order (hanya marketing pemegang pelanggan)"])
+    U4x0(["Cek kredit"])
+    U4x1(["Reservasi stok FOR UPDATE"])
+    U4x2(["Pecah gudang"])
+    U5(["Lihat dan ubah pelanggan, akun portal"])
+    U6(["Wawasan pelanggan"])
+  end
+  subgraph G3["Pembayaran dan piutang"]
+    direction TB
+    U7(["Tagihkan: terbitkan faktur"])
+    U8(["Penagihan: catat kontak dan janji bayar"])
+    U9(["Ajukan pelunasan piutang"])
+  end
+  subgraph G4["Laporan dan admin"]
+    direction TB
+    U10(["Laporan penjualan, KPI, umur piutang"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  U4 -. include .-> U4x0
+  U4 -. include .-> U4x1
+  U4x2 -. extend .-> U4
+  A --- U5
+  A --- U6
+  A --- U7
+  A --- U8
+  A --- U9
+  A --- U10

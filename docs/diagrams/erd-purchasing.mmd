@@ -1,0 +1,191 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  suppliers {
+    bigint id PK
+    string kode
+    string nama
+    int payment_terms_days
+    bigint region_id FK
+  }
+  warehouses {
+    bigint id PK
+    string kode
+    string nama
+    bigint region_id FK
+  }
+  purchase_orders {
+    bigint id PK
+    string nomor
+    bigint supplier_id FK
+    bigint warehouse_id FK
+    string status
+    bigint total_value_rupiah
+    bigint region_id FK
+  }
+  purchase_order_lines {
+    bigint id PK
+    bigint purchase_order_id FK
+    string sku FK
+    int qty_base
+    bigint unit_cost_rupiah
+    int qty_base_received
+  }
+  goods_receipts {
+    bigint id PK
+    string nomor
+    bigint supplier_id FK
+    bigint warehouse_id FK
+    string status
+    date tanggal_terima
+    bigint purchase_order_id FK
+    bigint region_id FK
+  }
+  goods_receipt_lines {
+    bigint id PK
+    bigint goods_receipt_id FK
+    string sku FK
+    int qty_base
+    bigint unit_cost_rupiah
+    bigint purchase_order_line_id FK
+  }
+  supplier_bills {
+    bigint id PK
+    string nomor
+    bigint supplier_id FK
+    bigint purchase_order_id FK
+    date due_date
+    string status
+    bigint total_rupiah
+    bigint region_id FK
+  }
+  supplier_bill_lines {
+    bigint id PK
+    bigint supplier_bill_id FK
+    bigint goods_receipt_line_id FK
+    string sku FK
+    bigint line_total_rupiah
+    string jenis
+  }
+  landed_costs {
+    bigint id PK
+    string nomor
+    bigint supplier_bill_line_id FK
+    string dasar
+    bigint amount_rupiah
+    string status
+    bigint region_id FK
+  }
+  landed_cost_lines {
+    bigint id PK
+    bigint landed_cost_id FK
+    bigint goods_receipt_line_id FK
+    string sku FK
+    bigint warehouse_id FK
+    bigint amount_rupiah
+  }
+  purchase_returns {
+    bigint id PK
+    string nomor
+    bigint supplier_id FK
+    bigint goods_receipt_id FK
+    bigint warehouse_id FK
+    bigint total_rupiah
+    string status
+    bigint region_id FK
+  }
+  purchase_return_lines {
+    bigint id PK
+    bigint purchase_return_id FK
+    bigint goods_receipt_line_id FK
+    bigint supplier_bill_id FK
+    string sku FK
+    int qty_base
+  }
+  supplier_credit_notes {
+    bigint id PK
+    string nomor
+    bigint supplier_id FK
+    bigint supplier_bill_id FK
+    bigint account_id FK
+    bigint total_rupiah
+    string status
+    bigint region_id FK
+  }
+  supplier_payment_entries {
+    bigint id PK
+    bigint supplier_id FK
+    bigint supplier_bill_id FK
+    bigint amount_rupiah
+    string kind
+    bigint actor_id FK
+    bigint reverses_entry_id FK
+    timestamp paid_at
+    bigint bank_account_id FK
+    bigint region_id FK
+  }
+  supplier_payment_allocations {
+    bigint id PK
+    bigint supplier_payment_entry_id FK
+    bigint supplier_bill_id FK
+    bigint amount_rupiah
+    bigint actor_id FK
+    bigint reverses_allocation_id FK
+    bigint region_id FK
+  }
+  giros {
+    bigint id PK
+    string nomor
+    string arah
+    bigint company_id FK
+    bigint supplier_id FK
+    bigint invoice_id FK
+    bigint supplier_bill_id FK
+    bigint nilai_rupiah
+    date tanggal_jatuh_tempo
+    string status
+    bigint payment_entry_id FK
+    bigint supplier_payment_entry_id FK
+    bigint region_id FK
+  }
+  bank_accounts {
+    bigint id PK
+    string nama
+    string atas_nama
+    bigint account_id FK
+    bool is_default
+  }
+  suppliers ||--o{ purchase_orders : "supplier_id"
+  warehouses ||--o{ purchase_orders : "warehouse_id"
+  purchase_orders ||--o{ purchase_order_lines : "purchase_order_id"
+  suppliers ||--o{ goods_receipts : "supplier_id"
+  warehouses ||--o{ goods_receipts : "warehouse_id"
+  purchase_orders ||--o{ goods_receipts : "purchase_order_id"
+  goods_receipts ||--o{ goods_receipt_lines : "goods_receipt_id"
+  purchase_order_lines ||--o{ goods_receipt_lines : "purchase_order_line_id"
+  suppliers ||--o{ supplier_bills : "supplier_id"
+  purchase_orders ||--o{ supplier_bills : "purchase_order_id"
+  supplier_bills ||--o{ supplier_bill_lines : "supplier_bill_id"
+  goods_receipt_lines ||--o{ supplier_bill_lines : "goods_receipt_line_id"
+  supplier_bill_lines ||--o{ landed_costs : "supplier_bill_line_id"
+  landed_costs ||--o{ landed_cost_lines : "landed_cost_id"
+  goods_receipt_lines ||--o{ landed_cost_lines : "goods_receipt_line_id"
+  warehouses ||--o{ landed_cost_lines : "warehouse_id"
+  suppliers ||--o{ purchase_returns : "supplier_id"
+  goods_receipts ||--o{ purchase_returns : "goods_receipt_id"
+  warehouses ||--o{ purchase_returns : "warehouse_id"
+  purchase_returns ||--o{ purchase_return_lines : "purchase_return_id"
+  goods_receipt_lines ||--o{ purchase_return_lines : "goods_receipt_line_id"
+  supplier_bills ||--o{ purchase_return_lines : "supplier_bill_id"
+  suppliers ||--o{ supplier_credit_notes : "supplier_id"
+  supplier_bills ||--o{ supplier_credit_notes : "supplier_bill_id"
+  suppliers ||--o{ supplier_payment_entries : "supplier_id"
+  supplier_bills ||--o{ supplier_payment_entries : "supplier_bill_id"
+  supplier_payment_entries ||--o{ supplier_payment_entries : "reverses_entry_id"
+  bank_accounts ||--o{ supplier_payment_entries : "bank_account_id"
+  supplier_payment_entries ||--o{ supplier_payment_allocations : "supplier_payment_entry_id"
+  supplier_bills ||--o{ supplier_payment_allocations : "supplier_bill_id"
+  supplier_payment_allocations ||--o{ supplier_payment_allocations : "reverses_allocation_id"
+  suppliers ||--o{ giros : "supplier_id"
+  supplier_bills ||--o{ giros : "supplier_bill_id"
+  supplier_payment_entries ||--o{ giros : "supplier_payment_entry_id"

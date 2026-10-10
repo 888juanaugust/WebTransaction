@@ -1,0 +1,65 @@
+%% Use cases of actor: Finance. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Finance"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+  end
+  subgraph G1["Persetujuan dan kredit"]
+    direction TB
+    U2(["Lihat dan ubah pelanggan, akun portal"])
+  end
+  subgraph G2["Gudang dan pengiriman"]
+    direction TB
+    U3(["Setujui selisih opname (bukan penghitung)"])
+    U4(["Titik pesan ulang, buat draf PO"])
+  end
+  subgraph G3["Pembayaran dan piutang"]
+    direction TB
+    U5(["Tagihkan: terbitkan faktur"])
+    U6(["Catat / cocokkan pembayaran"])
+    U7(["Uang muka pelanggan"])
+    U8(["Penagihan: catat kontak dan janji bayar"])
+    U9(["Verifikasi pelunasan (bukan pengaju)"])
+    U10(["Giro: terima, terbitkan, cair, tolak"])
+  end
+  subgraph G4["Pembelian"]
+    direction TB
+    U11(["PO, penerimaan barang, tagihan, bayar pemasok"])
+    U12(["Retur pembelian, nota kredit pemasok, biaya angkut"])
+  end
+  subgraph G5["Akuntansi dan pajak"]
+    direction TB
+    U13(["Jurnal, neraca, laba rugi, rekonsiliasi bank"])
+    U14(["Beban, aktiva tetap"])
+    U15(["Tutup buku"])
+    U16(["Ekspor faktur pajak, catat NSFP"])
+  end
+  subgraph G6["Sales lapangan"]
+    direction TB
+    U17(["Verifikasi klaim biaya"])
+    U18(["Atur komisi dan target"])
+  end
+  subgraph G7["Laporan dan admin"]
+    direction TB
+    U19(["Laporan penjualan, KPI, umur piutang"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5
+  A --- U6
+  A --- U7
+  A --- U8
+  A --- U9
+  A --- U10
+  A --- U11
+  A --- U12
+  A --- U13
+  A --- U14
+  A --- U15
+  A --- U16
+  A --- U17
+  A --- U18
+  A --- U19

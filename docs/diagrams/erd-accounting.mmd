@@ -1,0 +1,161 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  accounts {
+    bigint id PK
+    string kode
+    string nama
+    string tipe
+    string saldo_normal
+    bigint parent_id FK
+  }
+  journal_entries {
+    bigint id PK
+    string nomor
+    date tanggal
+    string source_type
+    string source_id
+    string jenis
+    bigint reversed_by_entry_id FK
+    bigint reverses_entry_id FK
+    bigint region_id FK
+  }
+  journal_lines {
+    bigint id PK
+    bigint journal_entry_id FK
+    bigint account_id FK
+    bigint debit_rupiah
+    bigint kredit_rupiah
+    bigint company_id FK
+    bigint supplier_id FK
+  }
+  accounting_periods {
+    bigint id PK
+    int tahun
+    int bulan
+    timestamp closed_at
+    bigint closing_entry_id FK
+    bigint region_id FK
+  }
+  accounting_period_reopenings {
+    bigint id PK
+    int tahun
+    int bulan
+    text alasan
+    bigint reversal_entry_id FK
+  }
+  bank_accounts {
+    bigint id PK
+    string nama
+    string atas_nama
+    bigint account_id FK
+    bool is_default
+  }
+  bank_reconciliations {
+    bigint id PK
+    string nomor
+    date tanggal_rekening
+    bigint selisih_rupiah
+    string status
+    bigint bank_account_id FK
+    bigint region_id FK
+  }
+  bank_reconciliation_items {
+    bigint id PK
+    bigint bank_reconciliation_id FK
+    bigint account_id FK
+    string arah
+    bigint amount_rupiah
+    bigint journal_entry_id FK
+  }
+  bank_reconciliation_lines {
+    bigint id PK
+    bigint bank_reconciliation_id FK
+    bigint journal_line_id FK
+  }
+  bank_statement_imports {
+    bigint id PK
+    bigint bank_reconciliation_id FK
+    string original_name
+    string status
+  }
+  bank_statement_lines {
+    bigint id PK
+    bigint bank_statement_import_id FK
+    date tanggal
+    string arah
+    string status
+    bigint journal_line_id FK
+    bigint payment_entry_id FK
+  }
+  payment_entries {
+    bigint id PK
+    bigint company_id FK
+    bigint invoice_id FK
+    bigint order_id FK
+    bigint amount_rupiah
+    string kind
+    bigint actor_id FK
+    bigint reverses_entry_id FK
+    timestamp paid_at
+    bigint bank_account_id FK
+    bigint region_id FK
+  }
+  expenses {
+    bigint id PK
+    string nomor
+    date tanggal
+    bigint account_id FK
+    bigint amount_rupiah
+    bigint supplier_id FK
+    bigint reverses_expense_id FK
+    bigint region_id FK
+  }
+  fixed_assets {
+    bigint id PK
+    string nomor
+    string nama
+    bigint harga_perolehan_rupiah
+    string status
+    bigint region_id FK
+  }
+  fixed_asset_depreciations {
+    bigint id PK
+    bigint fixed_asset_id FK
+    string periode
+    bigint amount_rupiah
+    bigint journal_entry_id FK
+  }
+  suppliers {
+    bigint id PK
+    string kode
+    string nama
+    int payment_terms_days
+    bigint region_id FK
+  }
+  accounts ||--o{ accounts : "parent_id"
+  journal_entries ||--o{ journal_entries : "reversed_by_entry_id"
+  journal_entries ||--o{ journal_entries : "reverses_entry_id"
+  journal_entries ||--o{ journal_lines : "journal_entry_id"
+  accounts ||--o{ journal_lines : "account_id"
+  suppliers ||--o{ journal_lines : "supplier_id"
+  journal_entries ||--o{ accounting_periods : "closing_entry_id"
+  journal_entries ||--o{ accounting_period_reopenings : "reversal_entry_id"
+  accounts ||--o{ bank_accounts : "account_id"
+  bank_accounts ||--o{ bank_reconciliations : "bank_account_id"
+  bank_reconciliations ||--o{ bank_reconciliation_items : "bank_reconciliation_id"
+  accounts ||--o{ bank_reconciliation_items : "account_id"
+  journal_entries ||--o{ bank_reconciliation_items : "journal_entry_id"
+  bank_reconciliations ||--o{ bank_reconciliation_lines : "bank_reconciliation_id"
+  journal_lines ||--o{ bank_reconciliation_lines : "journal_line_id"
+  bank_reconciliations ||--o{ bank_statement_imports : "bank_reconciliation_id"
+  bank_statement_imports ||--o{ bank_statement_lines : "bank_statement_import_id"
+  journal_lines ||--o{ bank_statement_lines : "journal_line_id"
+  payment_entries ||--o{ bank_statement_lines : "payment_entry_id"
+  payment_entries ||--o{ payment_entries : "reverses_entry_id"
+  bank_accounts ||--o{ payment_entries : "bank_account_id"
+  accounts ||--o{ expenses : "account_id"
+  suppliers ||--o{ expenses : "supplier_id"
+  expenses ||--o{ expenses : "reverses_expense_id"
+  fixed_assets ||--o{ fixed_asset_depreciations : "fixed_asset_id"
+  journal_entries ||--o{ fixed_asset_depreciations : "journal_entry_id"

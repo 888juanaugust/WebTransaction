@@ -1,0 +1,13 @@
+%% Use cases of actor: Gudang. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Gudang"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+  end
+  subgraph G1["Gudang dan pengiriman"]
+    direction TB
+    U2(["Antrian pengiriman, surat jalan, tandai dikirim, selesaikan"])
+  end
+  A --- U1
+  A --- U2

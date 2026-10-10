@@ -1,0 +1,46 @@
+%% Use cases of actor: Sales. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Sales"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+  end
+  subgraph G1["Pemesanan"]
+    direction TB
+    U2(["Buat order untuk pelanggan"])
+    U3(["Penawaran: buat, kirim, jadikan order"])
+  end
+  subgraph G2["Persetujuan dan kredit"]
+    direction TB
+    U4(["Lihat dan ubah pelanggan, akun portal"])
+    U5(["Wawasan pelanggan"])
+  end
+  subgraph G3["Pembayaran dan piutang"]
+    direction TB
+    U6(["Tagihkan: terbitkan faktur"])
+    U7(["Penagihan: catat kontak dan janji bayar"])
+    U8(["Ajukan pelunasan piutang"])
+  end
+  subgraph G4["Retur"]
+    direction TB
+    U9(["Buat nota kredit / retur"])
+  end
+  subgraph G5["Sales lapangan"]
+    direction TB
+    U10(["Catat kunjungan toko, ajukan klaim biaya"])
+  end
+  subgraph G6["Laporan dan admin"]
+    direction TB
+    U11(["Laporan penjualan, KPI, umur piutang"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5
+  A --- U6
+  A --- U7
+  A --- U8
+  A --- U9
+  A --- U10
+  A --- U11

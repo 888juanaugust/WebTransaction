@@ -1,0 +1,26 @@
+%% Use cases of actor: Inventori. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Inventori"))
+  subgraph G0["Katalog dan harga"]
+    direction TB
+    U1(["Lihat katalog"])
+    U2(["Ubah barang, impor barang"])
+    U3(["Unggah berkas harga, publikasikan versi"])
+  end
+  subgraph G1["Gudang dan pengiriman"]
+    direction TB
+    U4(["Antrian pengiriman, surat jalan, tandai dikirim, selesaikan"])
+    U5(["Transfer stok"])
+    U6(["Stock opname: buat lembar, isi hitungan"])
+  end
+  subgraph G2["Retur"]
+    direction TB
+    U7(["Posting retur: barang kembali (bukan pembuat)"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5
+  A --- U6
+  A --- U7

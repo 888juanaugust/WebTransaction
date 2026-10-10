@@ -1,0 +1,20 @@
+%% Order state machine: app/Domain/Orders/OrderStatus.php, OrderStateMachine.php.
+%% Every transition writes an order_events row and an audit_logs row.
+stateDiagram-v2
+  direction LR
+  [*] --> draft : Sales / Marketing / Owner<br/>membuat order
+  draft --> submitted : Ajukan<br/>Pembeli, S, M, O
+  submitted --> confirmed : Setujui (M pemegang pelanggan / O)<br/>harga dibekukan, cek kredit,<br/>reservasi stok, pecah gudang
+  submitted --> rejected : Tolak<br/>M / O
+  confirmed --> rejected : Tolak M / O,<br/>atau reservasi basi (Sistem)
+  confirmed --> awaiting_payment : Tagihkan<br/>S / M / F / O, faktur terbit
+  awaiting_payment --> shipped : Tandai dikirim<br/>Inventori / Gudang / O<br/>jual kredit, jalur normal
+  awaiting_payment --> paid : Pelunasan<br/>Sistem, dari ledger pembayaran
+  awaiting_payment --> expired : Reservasi basi<br/>Sistem
+  paid --> shipped : Tandai dikirim<br/>Inventori / Gudang / O
+  shipped --> completed : Selesaikan I / G / O,<br/>atau Sistem saat faktur lunas
+  completed --> [*]
+  rejected --> [*]
+  expired --> [*]
+  draft --> [*] : Hapus (M / O)
+  submitted --> [*] : Hapus (M / O)

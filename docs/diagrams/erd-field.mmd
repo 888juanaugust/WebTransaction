@@ -1,0 +1,159 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  regions {
+    bigint id PK
+    string kode
+    string nama
+  }
+  users {
+    bigint id PK
+    string name
+    string role
+    bool is_active
+    bigint region_id FK
+    bigint warehouse_id FK
+  }
+  companies {
+    bigint id PK
+    string kode
+    string nama
+    string npwp
+    bigint price_tier_id FK
+    bigint credit_limit_rupiah
+    int payment_terms_days
+    string status
+    bigint sales_user_id FK
+    bigint marketing_user_id FK
+    bigint region_id FK
+  }
+  store_visits {
+    bigint id PK
+    bigint region_id FK
+    bigint sales_user_id FK
+    bigint company_id FK
+    decimal latitude
+    decimal longitude
+    timestamp visited_at
+  }
+  sales_expense_claims {
+    bigint id PK
+    bigint region_id FK
+    bigint sales_user_id FK
+    bigint amount_rupiah
+    string status
+    bigint expense_id FK
+  }
+  expenses {
+    bigint id PK
+    string nomor
+    date tanggal
+    bigint account_id FK
+    bigint amount_rupiah
+    bigint supplier_id FK
+    bigint reverses_expense_id FK
+    bigint region_id FK
+  }
+  commission_rates {
+    bigint id PK
+    bigint user_id FK
+    int basis_poin
+    date berlaku_mulai
+    string jenis
+    bigint cabang_id FK
+  }
+  sales_targets {
+    bigint id PK
+    bigint user_id FK
+    int tahun
+    string bulan
+    bigint target_rupiah
+    string jenis
+  }
+  collection_contacts {
+    bigint id PK
+    bigint invoice_id FK
+    bigint company_id FK
+    bigint user_id FK
+    string cara
+    bigint janji_rupiah
+    timestamp dihubungi_pada
+    bigint region_id FK
+  }
+  invoices {
+    bigint id PK
+    string nomor
+    bigint order_id FK
+    bigint company_id FK
+    bigint total_rupiah
+    date issued_on
+    date due_date
+    string status
+    string nsfp
+    bigint region_id FK
+  }
+  audit_logs {
+    bigint id PK
+    bigint actor_id FK
+    string actor_role
+    string action
+    string subject_type
+    string subject_id
+    json old_value
+    json new_value
+    bigint region_id FK
+  }
+  saved_views {
+    bigint id PK
+    bigint user_id FK
+    string nama
+    string dataset
+  }
+  pengaturan {
+    bigint id PK
+    string kunci
+    text nilai
+  }
+  launch_attestations {
+    bigint id PK
+    string kunci
+    timestamp attested_at
+  }
+  document_counters {
+    bigint id PK
+    string scope
+    string period
+    bigint next_value
+    bigint region_id FK
+  }
+  backup_runs {
+    bigint id PK
+    timestamp started_at
+    string status
+    bool offsite
+  }
+  regions ||--o{ users : "region_id"
+  users ||--o{ companies : "sales_user_id"
+  users ||--o{ companies : "marketing_user_id"
+  regions ||--o{ companies : "region_id"
+  regions ||--o{ store_visits : "region_id"
+  users ||--o{ store_visits : "sales_user_id"
+  companies ||--o{ store_visits : "company_id"
+  regions ||--o{ sales_expense_claims : "region_id"
+  users ||--o{ sales_expense_claims : "sales_user_id"
+  expenses ||--o{ sales_expense_claims : "expense_id"
+  expenses ||--o{ expenses : "reverses_expense_id"
+  regions ||--o{ expenses : "region_id"
+  users ||--o{ commission_rates : "user_id"
+  regions ||--o{ commission_rates : "cabang_id"
+  users ||--o{ sales_targets : "user_id"
+  invoices ||--o{ collection_contacts : "invoice_id"
+  companies ||--o{ collection_contacts : "company_id"
+  users ||--o{ collection_contacts : "user_id"
+  regions ||--o{ collection_contacts : "region_id"
+  companies ||--o{ invoices : "company_id"
+  regions ||--o{ invoices : "region_id"
+  users ||--o{ audit_logs : "actor_id"
+  regions ||--o{ audit_logs : "region_id"
+  users ||--o{ saved_views : "user_id"
+  regions ||--o{ document_counters : "region_id"

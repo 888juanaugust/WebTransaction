@@ -1,0 +1,133 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  products {
+    string kode PK
+    string merk
+    string kategori
+    string part_number
+    int qty_per_ctn
+    string satuan_dasar
+    bool aktif
+    string golongan
+  }
+  warehouses {
+    bigint id PK
+    string kode
+    string nama
+    bigint region_id FK
+  }
+  stock_levels {
+    bigint id PK
+    string sku FK
+    bigint warehouse_id FK
+    bigint qty_on_hand
+    bigint qty_reserved
+    bigint region_id FK
+  }
+  stock_movements {
+    bigint id PK
+    string sku FK
+    bigint warehouse_id FK
+    bigint qty_signed
+    string reason
+    string reference_type
+    string reference_id
+    bigint actor_id FK
+    bigint unit_cost_rupiah
+    bigint region_id FK
+  }
+  stock_reservations {
+    bigint id PK
+    bigint order_id FK
+    bigint order_line_id FK
+    string sku FK
+    bigint warehouse_id FK
+    bigint qty_base
+    string status
+    bigint region_id FK
+  }
+  orders {
+    bigint id PK
+    string nomor
+    bigint company_id FK
+    bigint warehouse_id FK
+    string status
+    bigint sales_user_id FK
+    bigint total_rupiah
+    bigint price_list_version_id FK
+    timestamp confirmed_at
+    timestamp reservation_expires_at
+    bigint placed_by_customer_user_id FK
+    bigint split_parent_id FK
+    bigint region_id FK
+  }
+  order_lines {
+    bigint id PK
+    bigint order_id FK
+    string sku FK
+    string ordered_unit
+    bigint qty_base
+    bigint line_total_rupiah
+    bigint dpp_rupiah
+    bigint ppn_rupiah
+    bigint price_list_version_id FK
+    string price_reason
+  }
+  stock_transfers {
+    bigint id PK
+    string nomor
+    bigint from_warehouse_id FK
+    bigint to_warehouse_id FK
+    string status
+    bigint region_id FK
+  }
+  stock_transfer_lines {
+    bigint id PK
+    bigint stock_transfer_id FK
+    string sku FK
+    int qty_base
+  }
+  stock_opnames {
+    bigint id PK
+    string nomor
+    bigint warehouse_id FK
+    string status
+    int selisih_qty
+    bigint region_id FK
+  }
+  stock_opname_lines {
+    bigint id PK
+    bigint stock_opname_id FK
+    string sku FK
+    int qty_system
+    int qty_counted
+  }
+  product_costs {
+    bigint id PK
+    string sku FK
+    bigint qty_base
+    bigint value_rupiah
+    bigint last_cost_rupiah
+    bigint region_id FK
+  }
+  products ||--o{ stock_levels : "sku"
+  warehouses ||--o{ stock_levels : "warehouse_id"
+  products ||--o{ stock_movements : "sku"
+  warehouses ||--o{ stock_movements : "warehouse_id"
+  orders ||--o{ stock_reservations : "order_id"
+  order_lines ||--o{ stock_reservations : "order_line_id"
+  products ||--o{ stock_reservations : "sku"
+  warehouses ||--o{ stock_reservations : "warehouse_id"
+  warehouses ||--o{ orders : "warehouse_id"
+  orders ||--o{ orders : "split_parent_id"
+  orders ||--o{ order_lines : "order_id"
+  products ||--o{ order_lines : "sku"
+  warehouses ||--o{ stock_transfers : "from_warehouse_id"
+  warehouses ||--o{ stock_transfers : "to_warehouse_id"
+  stock_transfers ||--o{ stock_transfer_lines : "stock_transfer_id"
+  products ||--o{ stock_transfer_lines : "sku"
+  warehouses ||--o{ stock_opnames : "warehouse_id"
+  stock_opnames ||--o{ stock_opname_lines : "stock_opname_id"
+  products ||--o{ stock_opname_lines : "sku"
+  products ||--o{ product_costs : "sku"

@@ -1,0 +1,16 @@
+%% Use cases of actor: Pengunjung. From app/Domain/Access/Role.php and app/Filament/**.
+flowchart LR
+  A(("Pengunjung"))
+  subgraph G0["Situs publik"]
+    direction TB
+    U1(["Lihat beranda, tentang kami, mitra, kontak"])
+    U2(["Cari cabang terdekat"])
+    U3(["Ganti bahasa id / en"])
+    U4(["Baca kebijakan privasi, syarat penjualan"])
+    U5(["Pilih masuk portal / panel"])
+  end
+  A --- U1
+  A --- U2
+  A --- U3
+  A --- U4
+  A --- U5

@@ -1,0 +1,198 @@
+%% ERD generated from database/migrations. Key columns only; created_by / posted_by
+%% style user columns are left out to keep the picture readable.
+erDiagram
+  companies {
+    bigint id PK
+    string kode
+    string nama
+    string npwp
+    bigint price_tier_id FK
+    bigint credit_limit_rupiah
+    int payment_terms_days
+    string status
+    bigint sales_user_id FK
+    bigint marketing_user_id FK
+    bigint region_id FK
+  }
+  orders {
+    bigint id PK
+    string nomor
+    bigint company_id FK
+    bigint warehouse_id FK
+    string status
+    bigint sales_user_id FK
+    bigint total_rupiah
+    bigint price_list_version_id FK
+    timestamp confirmed_at
+    timestamp reservation_expires_at
+    bigint placed_by_customer_user_id FK
+    bigint split_parent_id FK
+    bigint region_id FK
+  }
+  invoices {
+    bigint id PK
+    string nomor
+    bigint order_id FK
+    bigint company_id FK
+    bigint total_rupiah
+    date issued_on
+    date due_date
+    string status
+    string nsfp
+    bigint region_id FK
+  }
+  payment_entries {
+    bigint id PK
+    bigint company_id FK
+    bigint invoice_id FK
+    bigint order_id FK
+    bigint amount_rupiah
+    string kind
+    bigint actor_id FK
+    bigint reverses_entry_id FK
+    timestamp paid_at
+    bigint bank_account_id FK
+    bigint region_id FK
+  }
+  payment_allocations {
+    bigint id PK
+    bigint payment_entry_id FK
+    bigint invoice_id FK
+    bigint amount_rupiah
+    bigint actor_id FK
+    bigint reverses_allocation_id FK
+    bigint region_id FK
+  }
+  credit_notes {
+    bigint id PK
+    string nomor
+    bigint invoice_id FK
+    bigint company_id FK
+    string jenis
+    bigint warehouse_id FK
+    bigint total_rupiah
+    string status
+    bigint region_id FK
+  }
+  credit_note_lines {
+    bigint id PK
+    bigint credit_note_id FK
+    bigint order_line_id FK
+    string sku FK
+    int qty_base
+    bigint line_total_rupiah
+  }
+  customer_deposits {
+    bigint id PK
+    string nomor
+    bigint company_id FK
+    bigint order_id FK
+    bigint jumlah_rupiah
+    string status
+    bigint region_id FK
+  }
+  customer_deposit_movements {
+    bigint id PK
+    bigint customer_deposit_id FK
+    string jenis
+    bigint jumlah_rupiah
+    bigint invoice_id FK
+    bigint payment_entry_id FK
+    bigint actor_id FK
+  }
+  giros {
+    bigint id PK
+    string nomor
+    string arah
+    bigint company_id FK
+    bigint supplier_id FK
+    bigint invoice_id FK
+    bigint supplier_bill_id FK
+    bigint nilai_rupiah
+    date tanggal_jatuh_tempo
+    string status
+    bigint payment_entry_id FK
+    bigint supplier_payment_entry_id FK
+    bigint region_id FK
+  }
+  debt_removals {
+    bigint id PK
+    bigint region_id FK
+    bigint invoice_id FK
+    bigint company_id FK
+    bigint amount_rupiah
+    text alasan
+    string status
+    bigint payment_entry_id FK
+  }
+  collection_contacts {
+    bigint id PK
+    bigint invoice_id FK
+    bigint company_id FK
+    bigint user_id FK
+    string cara
+    bigint janji_rupiah
+    timestamp dihubungi_pada
+    bigint region_id FK
+  }
+  faktur_exports {
+    bigint id PK
+    string nomor
+    int masa_pajak
+    int tahun_pajak
+    string format
+    bigint region_id FK
+  }
+  faktur_export_lines {
+    bigint id PK
+    bigint faktur_export_id FK
+    bigint invoice_id FK
+    string nsfp
+  }
+  bank_accounts {
+    bigint id PK
+    string nama
+    string atas_nama
+    bigint account_id FK
+    bool is_default
+  }
+  bank_statement_lines {
+    bigint id PK
+    bigint bank_statement_import_id FK
+    date tanggal
+    string arah
+    string status
+    bigint journal_line_id FK
+    bigint payment_entry_id FK
+  }
+  companies ||--o{ orders : "company_id"
+  orders ||--o{ orders : "split_parent_id"
+  orders ||--o{ invoices : "order_id"
+  companies ||--o{ invoices : "company_id"
+  companies ||--o{ payment_entries : "company_id"
+  invoices ||--o{ payment_entries : "invoice_id"
+  orders ||--o{ payment_entries : "order_id"
+  payment_entries ||--o{ payment_entries : "reverses_entry_id"
+  bank_accounts ||--o{ payment_entries : "bank_account_id"
+  payment_entries ||--o{ payment_allocations : "payment_entry_id"
+  invoices ||--o{ payment_allocations : "invoice_id"
+  payment_allocations ||--o{ payment_allocations : "reverses_allocation_id"
+  invoices ||--o{ credit_notes : "invoice_id"
+  companies ||--o{ credit_notes : "company_id"
+  credit_notes ||--o{ credit_note_lines : "credit_note_id"
+  companies ||--o{ customer_deposits : "company_id"
+  orders ||--o{ customer_deposits : "order_id"
+  customer_deposits ||--o{ customer_deposit_movements : "customer_deposit_id"
+  invoices ||--o{ customer_deposit_movements : "invoice_id"
+  payment_entries ||--o{ customer_deposit_movements : "payment_entry_id"
+  companies ||--o{ giros : "company_id"
+  invoices ||--o{ giros : "invoice_id"
+  payment_entries ||--o{ giros : "payment_entry_id"
+  invoices ||--o{ debt_removals : "invoice_id"
+  companies ||--o{ debt_removals : "company_id"
+  payment_entries ||--o{ debt_removals : "payment_entry_id"
+  invoices ||--o{ collection_contacts : "invoice_id"
+  companies ||--o{ collection_contacts : "company_id"
+  faktur_exports ||--o{ faktur_export_lines : "faktur_export_id"
+  invoices ||--o{ faktur_export_lines : "invoice_id"
+  payment_entries ||--o{ bank_statement_lines : "payment_entry_id"
