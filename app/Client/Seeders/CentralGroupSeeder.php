@@ -97,7 +97,7 @@ class CentralGroupSeeder extends Seeder
                 [HakKhusus::SeeCreditData],
             ],
             CentralGroups::MARKETING => [
-                $this->grant([MenuKey::SalesOrders, CentralScreen::BuyerAccounts, CentralScreen::SiteImages], self::ALL) + $this->grant([...$salesWork, CentralScreen::OrderApprovals], self::WORK) + $this->grant([CentralScreen::SettlementClaims], self::FILE) + $this->grant($salesRead, self::READ),
+                $this->grant([MenuKey::SalesOrders, CentralScreen::BuyerAccounts, CentralScreen::SiteImages], self::ALL) + $this->grant([...$salesWork, CentralScreen::OrderApprovals, CentralScreen::DeliveryWatch], self::WORK) + $this->grant([CentralScreen::SettlementClaims], self::FILE) + $this->grant($salesRead, self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::ApproveTransactions],
             ],
             CentralGroups::PURCHASING => [
@@ -113,7 +113,7 @@ class CentralGroupSeeder extends Seeder
             CentralGroups::FINANCE => [
                 $this->grant([...$this->byModule(Modul::CashBank, Modul::GeneralLedger, Modul::Tax, Modul::Reports, Modul::FixedAssets), MenuKey::MonthEndProcess, MenuKey::SalesReceipts, MenuKey::SalesInvoices, MenuKey::SalesDownPayments, MenuKey::InvoiceExchanges, MenuKey::PurchaseInvoices, MenuKey::PurchasePayments, MenuKey::PurchaseDownPayments, MenuKey::PaymentOrders, MenuKey::ExpenseAccruals, MenuKey::SalesTargets, MenuKey::SalesmanCommissions, CentralScreen::SettlementClaims, CentralScreen::ExpenseClaims, CentralScreen::Collections, CentralScreen::BuyerAccounts, CentralScreen::CustomerTypes], self::ALL)
                     + $this->grant([MenuKey::Customers], self::WORK)
-                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams], self::READ),
+                    + $this->grant([MenuKey::Vendors, MenuKey::SalesOrders, MenuKey::PurchaseOrders, MenuKey::DeliveryOrders, MenuKey::GoodsReceipts, MenuKey::SalesReturns, MenuKey::Calendar, MenuKey::Contacts, CentralScreen::Teams, CentralScreen::DeliveryWatch], self::READ),
                 [HakKhusus::SeeCreditData, HakKhusus::OverrideCreditLimit, HakKhusus::ExportData],
             ],
         ];

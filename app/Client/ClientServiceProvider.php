@@ -46,6 +46,7 @@ class ClientServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/config/claims.php', 'claims');
         $this->mergeConfigFrom(__DIR__.'/config/portal.php', 'portal');
         $this->mergeConfigFrom(__DIR__.'/config/site.php', 'site');
+        $this->mergeConfigFrom(__DIR__.'/config/orders.php', 'orders');
         $this->mergeConfigFrom(__DIR__.'/config/ops.php', 'ops');
         // The buyer portal: a second panel on the customer guard (sub-project 4).
         $this->app->register(PortalPanelProvider::class);

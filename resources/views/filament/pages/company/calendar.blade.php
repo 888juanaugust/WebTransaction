@@ -18,6 +18,10 @@
             'note' => __('Note'),
             'period' => __('Month end'),
         ];
+        foreach (\App\Domain\Company\CalendarFeed::extraKinds() as $kind => $extra) {
+            $colours[$kind] = $extra['colour'];
+            $legend[$kind] = $extra['label'];
+        }
     @endphp
 
     <div class="flex flex-wrap items-center justify-between gap-3">

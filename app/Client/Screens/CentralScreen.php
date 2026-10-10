@@ -13,6 +13,7 @@ enum CentralScreen: string implements ScreenKey
 {
     case Teams = 'client__teams';
     case OrderApprovals = 'client__order-approvals';
+    case DeliveryWatch = 'client__delivery-watch';
     case PriceList = 'client__price-list';
     case CustomerPrices = 'client__customer-prices';
     case CustomerTypes = 'client__customer-types';
@@ -31,7 +32,7 @@ enum CentralScreen: string implements ScreenKey
     public function modul(): Modul
     {
         return match ($this) {
-            self::Teams, self::OrderApprovals, self::CustomerPrices, self::CustomerTypes, self::SettlementClaims, self::ReturnClaims, self::Collections, self::BuyerAccounts => Modul::Sales,
+            self::Teams, self::OrderApprovals, self::DeliveryWatch, self::CustomerPrices, self::CustomerTypes, self::SettlementClaims, self::ReturnClaims, self::Collections, self::BuyerAccounts => Modul::Sales,
             self::PriceList, self::WarehouseAccounts, self::Fulfilment => Modul::Inventory,
             self::ExpenseClaims => Modul::CashBank,
             self::Website, self::SiteImages => Modul::Company,
@@ -44,6 +45,7 @@ enum CentralScreen: string implements ScreenKey
         return match ($this) {
             self::Teams => __('Customer Teams'),
             self::OrderApprovals => __('Order Approvals'),
+            self::DeliveryWatch => __('Delivery Watch'),
             self::PriceList => __('Price List'),
             self::CustomerPrices => __('Customer Prices'),
             self::CustomerTypes => __('Customer Types'),
@@ -65,6 +67,7 @@ enum CentralScreen: string implements ScreenKey
     {
         return match ($this) {
             self::OrderApprovals => 15,
+            self::DeliveryWatch => 17,
             self::SettlementClaims => 20,
             self::ReturnClaims => 25,
             self::Collections => 22,
@@ -86,7 +89,7 @@ enum CentralScreen: string implements ScreenKey
     public function kind(): ScreenKind
     {
         return match ($this) {
-            self::OrderApprovals, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
+            self::OrderApprovals, self::DeliveryWatch, self::PriceList, self::SettlementClaims, self::ExpenseClaims, self::ReturnClaims, self::Collections, self::Fulfilment => ScreenKind::Work,
             self::Operations => ScreenKind::Tool,
             self::Teams, self::CustomerPrices, self::CustomerTypes, self::WarehouseAccounts, self::BuyerAccounts, self::Website, self::SiteImages, self::LaunchReadiness => ScreenKind::Setup,
         };

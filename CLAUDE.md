@@ -185,7 +185,8 @@ If a change appears to require breaking one, stop and ask.
 5. **Stock is per warehouse, costed by moving average, and every movement carries its
    document date.** A back-dated or edited document re-costs what came after it, never
    before the first open period. Stock is **reserved when an order is approved and leaves
-   when it is delivered**; a job releases the reservations of stale unbilled orders.
+   when it is delivered**; nothing expires: thirty days after the acceptance the delivery watch
+   reports an order whose goods have not all gone out, and the admin rejects or edits it.
 6. **Units are modelled.** An item has a base unit (PCS or SET) and any number of other
    units with conversion ratios (`qty_per_ctn` for cartons); document lines store the
    entered unit and quantity and the base quantity; the stock ledger is always in base

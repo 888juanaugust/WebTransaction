@@ -173,6 +173,9 @@ class AdminPanelProvider extends PanelProvider
             ->navigation(false)
             ->maxContentWidth(Width::Full)
             ->spa()
+            // The bell: reminders a module sends (the 30-day delivery watch, counts due, birthdays), polled every minute.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('60s')
             ->databaseTransactions()
             ->unsavedChangesAlerts()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

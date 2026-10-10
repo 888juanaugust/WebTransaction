@@ -241,6 +241,7 @@ Menu key `company__access-privilege` · module `settings`
 | Field | Column | Type | Required |
 |---|---|---|---|
 | Order Approvals | `rights.client__order-approvals` | checkbox list |  |
+| Delivery Watch | `rights.client__delivery-watch` | checkbox list |  |
 | Settlement Claims | `rights.client__settlement-claims` | checkbox list |  |
 | Collections | `rights.client__collections` | checkbox list |  |
 | Return Claims | `rights.client__return-claims` | checkbox list |  |
