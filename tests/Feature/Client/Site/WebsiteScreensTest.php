@@ -56,13 +56,20 @@ class WebsiteScreensTest extends TestCase
         $this->assertContains('created', AuditLog::query()->where('document_type', 'site_image')->pluck('action')->all());
 
         SiteImage::query()->create(['kind' => SiteImage::PHOTO, 'title' => ['id' => 'Gudang Jakarta', 'en' => 'Jakarta warehouse'], 'image_path' => 'promo/gudang.jpg', 'is_active' => true]);
+        SiteImage::query()->create(['kind' => SiteImage::PROMO, 'title' => ['id' => 'Jahat', 'en' => 'Evil'], 'image_path' => 'promo/evil.jpg', 'link' => 'javascript:alert(1)', 'is_active' => true]);
+        Livewire::test(ManageSiteImages::class)
+            ->callAction('create', ['kind' => SiteImage::PROMO, 'title' => ['id' => 'x', 'en' => 'x'], 'link' => 'javascript:alert(1)', 'is_active' => true])
+            ->assertHasActionErrors(['link']);
+        $this->assertTrue(SiteImage::isSafeLink('/kontak') && SiteImage::isSafeLink('https://example.com/x'));
+        $this->assertFalse(SiteImage::isSafeLink('//evil.example') || SiteImage::isSafeLink('javascript:alert(1)') || SiteImage::isSafeLink('data:text/html,x'));
         SiteImage::query()->create(['kind' => SiteImage::PHOTO, 'title' => ['id' => 'Lama', 'en' => 'Old'], 'image_path' => 'promo/old.jpg', 'is_active' => true, 'show_until' => today()->subDay()->toDateString()]);
         SiteImage::query()->create(['kind' => SiteImage::PROMO, 'title' => ['id' => 'Nanti', 'en' => 'Later'], 'image_path' => 'promo/later.jpg', 'is_active' => true, 'show_from' => today()->addDay()->toDateString()]);
 
         auth()->forgetUser();
         $this->get('/')->assertOk()
             ->assertSee('Promo Oktober')->assertSee('Diskon dus.')->assertSee('/storage/'.$promo->image_path, false)
-            ->assertSee('Gudang Jakarta')->assertDontSee('Lama')->assertDontSee('Nanti');
+            ->assertSee('Gudang Jakarta')->assertDontSee('Lama')->assertDontSee('Nanti')
+            ->assertSee('Jahat')->assertDontSee('javascript:', false);
         $this->withCookie('bahasa', 'en')->get('/')->assertOk()->assertSee('October promo')->assertSee('Jakarta warehouse');
         $this->get('/sitemap.xml')->assertOk()->assertSee('<lastmod>'.today()->toDateString().'</lastmod>', false);
     }

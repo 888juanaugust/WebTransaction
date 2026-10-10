@@ -5,8 +5,9 @@
         @foreach ($promos as $i => $promo)
             @php
                 $title = (string) Copy::pick($promo->title);
-                $text = (string) Copy::pick($promo->text ?? []);
-                $link = $promo->link ? (str_starts_with($promo->link, '/') ? url($promo->link) : $promo->link) : null;
+                $picked = Copy::pick($promo->text ?? []);
+                $text = is_string($picked) ? $picked : ''; // a promo without text
+                $link = $promo->safeLink();
             @endphp
             <article @class(['site-promo', 'is-active' => $i === 0]) data-slide aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" aria-roledescription="slide" aria-label="{{ $title }}">
                 <img class="site-promo__image" src="{{ $promo->url() }}" alt="" width="1600" height="640" @if ($i > 0) loading="lazy" @endif>

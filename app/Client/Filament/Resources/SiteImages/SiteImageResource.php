@@ -25,6 +25,8 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
  * Website Images: the promo slides and the photos the public home page
@@ -54,12 +56,19 @@ class SiteImageResource extends MasterResource
                 Select::make('kind')->label(__('Kind'))->options(self::kinds())->required()->native(false)->live()
                     ->helperText(__('A promo is a slide of the carousel with a title, a text and a link; a photo goes in the gallery with its caption.')),
                 FileUpload::make('image_path')->label(__('Image'))->image()->disk('public')->directory('promo')->visibility('public')
-                    ->maxSize(2048)->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->required()->imageEditor()->columnSpanFull(),
+                    ->maxSize(2048)->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->required()->imageEditor()->columnSpanFull()
+                    // The stored name's extension comes from the file's content, never from the name the browser sent.
+                    ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => Str::ulid().'.'.($file->guessExtension() ?: 'bin')),
                 TextInput::make('title.id')->label(__('Title (Bahasa Indonesia)'))->required()->maxLength(120),
                 TextInput::make('title.en')->label(__('Title (English)'))->required()->maxLength(120),
                 Textarea::make('text.id')->label(__('Text (Bahasa Indonesia)'))->rows(2)->maxLength(300)->visible(fn (Get $get) => $get('kind') === SiteImage::PROMO),
                 Textarea::make('text.en')->label(__('Text (English)'))->rows(2)->maxLength(300)->visible(fn (Get $get) => $get('kind') === SiteImage::PROMO),
                 TextInput::make('link')->label(__('Link'))->maxLength(255)->visible(fn (Get $get) => $get('kind') === SiteImage::PROMO)
+                    ->rules([fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                        if (! SiteImage::isSafeLink((string) $value)) {
+                            $fail(__('A link is a path on this site (/kontak) or an http(s) address.'));
+                        }
+                    }])
                     ->helperText(__('Where the slide leads; a path on this site or a full address.')),
                 TextInput::make('sort')->label(__('Order'))->numeric()->default(0)->minValue(0),
                 DatePicker::make('show_from')->label(__('Show from'))->native(false),

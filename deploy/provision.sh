@@ -53,12 +53,24 @@ apt-get install -yq \
     php8.4-gd php8.4-intl php8.4-curl php8.4-bcmath \
     postgresql-16 postgresql-client-16 redis-server supervisor caddy git unzip rsync
 if ! command -v composer >/dev/null; then
-    say "Composer"
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    say "Composer (the installer is checked against its published signature before it runs)"
+    EXPECTED="$(curl -fsS https://composer.github.io/installer.sig)"
+    curl -fsS https://getcomposer.org/installer -o /tmp/composer-setup.php
+    ACTUAL="$(php -r "echo hash_file('sha384', '/tmp/composer-setup.php');")"
+    if [ "$EXPECTED" != "$ACTUAL" ]; then
+        rm -f /tmp/composer-setup.php
+        echo "The Composer installer does not match its signature; not running it." >&2
+        exit 1
+    fi
+    php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    rm -f /tmp/composer-setup.php
 fi
 if ! command -v node >/dev/null; then
-    say "Node 22 (the asset build only)"
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    say "Node 22 (the asset build only), from NodeSource's signed apt repository"
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+    apt-get update -q
     apt-get install -yq nodejs
 fi
 

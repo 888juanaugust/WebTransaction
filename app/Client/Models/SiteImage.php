@@ -50,6 +50,31 @@ class SiteImage extends Model implements HasAuditReference
         return Storage::disk('public')->url($this->image_path);
     }
 
+    /** A path on this site or an http(s) address: nothing a browser would run. */
+    public static function isSafeLink(string $link): bool
+    {
+        $link = trim($link);
+        if ($link === '') {
+            return true;
+        }
+        if (str_starts_with($link, '/') && ! str_starts_with($link, '//') && ! str_starts_with($link, '/\\')) {
+            return true;
+        }
+
+        return preg_match('~^https?://[^\s]+$~i', $link) === 1;
+    }
+
+    /** The slide's href, or null when the stored link is not safe to follow. */
+    public function safeLink(): ?string
+    {
+        $link = trim((string) $this->link);
+        if ($link === '' || ! self::isSafeLink($link)) {
+            return null;
+        }
+
+        return str_starts_with($link, '/') ? url($link) : $link;
+    }
+
     public function auditReference(): string
     {
         return (string) ($this->title['id'] ?? $this->title['en'] ?? $this->image_path);

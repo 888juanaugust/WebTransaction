@@ -29,6 +29,10 @@ class DeployKitTest extends TestCase
         $this->assertStringContainsString('APP_USER=central', $provision);
         $this->assertStringContainsString('maxmemory-policy noeviction', $provision);
         $this->assertStringContainsString('schedule:run', $provision);
+        $this->assertStringNotContainsString('| bash', $provision, 'no installer piped to a shell');
+        $this->assertStringNotContainsString('| php', $provision, 'no installer piped to php');
+        $this->assertStringContainsString('installer.sig', $provision);
+        $this->assertStringContainsString('signed-by=/etc/apt/keyrings/nodesource.gpg', $provision);
 
         $deploy = (string) file_get_contents($this->root.'/deploy/deploy.sh');
         foreach (['git pull --ff-only', 'migrate --force', 'storage:link', 'queue:restart', 'central:launch-check', 'rm -f bootstrap/cache/config.php', 'manifest.json'] as $needle) {
