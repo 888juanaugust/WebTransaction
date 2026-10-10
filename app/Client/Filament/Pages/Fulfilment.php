@@ -12,6 +12,7 @@ use App\Domain\Shared\Format;
 use App\Filament\Resources\Sales\Deliveries\DeliveryResource;
 use App\Filament\Support\Columns\Tanggal;
 use App\Filament\Support\ErpPage;
+use App\Models\Company\Shipment;
 use App\Models\Inventory\Warehouse;
 use App\Models\Sales\SalesOrder;
 use App\Models\Sales\SalesOrderLine;
@@ -19,8 +20,10 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -106,6 +109,19 @@ class Fulfilment extends ErpPage implements HasTable
                             TextInput::make('held')->label(__('Held'))->disabled()->dehydrated(false),
                             TextInput::make('quantity')->label(__('Deliver (base units)'))->numeric()->minValue(0)->required(),
                         ])->columns(4)->addable(false)->deletable(false)->reorderable(false),
+                        Section::make(__('Shipping'))->description(__('What the surat jalan and the surat pengantar print.'))->icon(Heroicon::OutlinedTruck)->collapsible()->schema([
+                            Select::make('shipment_id')->label(__('fields.shipment'))->options(fn () => Shipment::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))->native(false)->searchable()
+                                ->default(fn (SalesOrder $record) => $record->shipment_id),
+                            TextInput::make('shipping_note')->label(__('Note'))->maxLength(255),
+                            TextInput::make('vehicle')->label(__('Vehicle'))->maxLength(60),
+                            TextInput::make('plate_number')->label(__('Plate number'))->maxLength(20),
+                            TextInput::make('packages.koli')->label(__('Boxes'))->numeric()->integer()->minValue(0),
+                            TextInput::make('packages.kresek')->label(__('Bags'))->numeric()->integer()->minValue(0),
+                            TextInput::make('packages.ikat')->label(__('Bundles'))->numeric()->integer()->minValue(0),
+                            TextInput::make('packages.palet')->label(__('Pallets'))->numeric()->integer()->minValue(0),
+                            TextInput::make('goods_description')->label(__('Goods description'))->maxLength(255)->columnSpanFull()
+                                ->helperText(__('Printed on the surat pengantar; blank prints the lines.')),
+                        ])->columns(4),
                     ])
                     ->action(function (SalesOrder $record, array $data) use ($maker): void {
                         $warehouse = $this->warehouse();
@@ -117,7 +133,7 @@ class Fulfilment extends ErpPage implements HasTable
                             $quantities[(int) ($row['line_id'] ?? 0)] = (string) ($row['quantity'] ?? 0);
                         }
                         try {
-                            $delivery = $maker->make($record, $warehouse, $quantities, auth()->user(), (string) $data['trans_date']);
+                            $delivery = $maker->make($record, $warehouse, $quantities, auth()->user(), (string) $data['trans_date'], $data);
                             Notification::make()->title(__('Delivery :number made', ['number' => $delivery->number]))->success()->send();
                             $this->redirect(DeliveryResource::getUrl('edit', ['record' => $delivery]));
                         } catch (RuntimeException $e) {

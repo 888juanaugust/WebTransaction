@@ -16,6 +16,7 @@ use App\Filament\Support\CustomerFields;
 use App\Filament\Support\DocumentListFilters;
 use App\Filament\Support\ErpResource;
 use App\Filament\Support\NumberFields;
+use App\Filament\Support\PrintAction;
 use App\Models\Sales\InvoiceExchange;
 use App\Models\Sales\SalesInvoice;
 use Filament\Actions\EditAction;
@@ -99,7 +100,7 @@ class InvoiceExchangeResource extends ErpResource
             ])
             ->defaultSort('trans_date', 'desc')
             ->filters([DocumentListFilters::dateRange(), DocumentListFilters::dateRange('collect_date', __('Exchange date')), SelectFilter::make('customer_id')->label(__('fields.customer'))->relationship('customer', 'name')->searchable()])
-            ->recordActions([EditAction::make()]);
+            ->recordActions([PrintAction::make(), EditAction::make()]);
     }
 
     public static function getPages(): array

@@ -20,8 +20,9 @@ final class PdfRenderer
     {
         $print = $this->job->data($alias, $id, $user);
         $paper = $print['layout']['paper'] ?? 'A4';
+        $template = (string) ($print['layout']['template'] ?? '');
 
-        return Pdf::loadView('print.document', $print + ['pdf' => true])
+        return Pdf::loadView($template !== '' && view()->exists($template) ? $template : 'print.document', $print + ['pdf' => true])
             ->setPaper(in_array($paper, ['A4', 'A5', 'Letter', 'Legal'], true) ? strtolower($paper) : 'a4', ($print['layout']['orientation'] ?? 'portrait') === 'landscape' ? 'landscape' : 'portrait')
             ->output();
     }

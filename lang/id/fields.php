@@ -17,7 +17,7 @@ return [
     'to_address' => 'Alamat kirim',
     'po_number' => 'Nomor PO',
     'ship_date' => 'Tanggal kirim',
-    'shipment' => 'Metode pengiriman',
+    'shipment' => 'Ekspedisi',
     'fob' => 'FOB',
     'taxable' => 'Kena pajak',
     'inclusive_tax' => 'Harga termasuk pajak',

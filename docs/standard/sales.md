@@ -508,7 +508,7 @@ Menu key `customer__exchange-invoice` · module `sales`
 
 **Filters:** Trans date · Collect date · Customer
 
-**Actions:** Edit
+**Actions:** Print · Edit
 
 ### Form
 

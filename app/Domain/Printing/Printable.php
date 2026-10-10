@@ -17,6 +17,7 @@ use App\Models\Purchasing\PurchaseOrder;
 use App\Models\Purchasing\PurchasePayment;
 use App\Models\Purchasing\PurchaseReturn;
 use App\Models\Sales\Delivery;
+use App\Models\Sales\InvoiceExchange;
 use App\Models\Sales\SalesInvoice;
 use App\Models\Sales\SalesOrder;
 use App\Models\Sales\SalesQuotation;
@@ -37,9 +38,10 @@ final class Printable
         return [
             'sales_quotation' => ['model' => SalesQuotation::class, 'type' => TransactionType::SalesQuotation, 'title' => __('Sales Quotation'), 'shape' => 'priced', 'party' => 'customer'],
             'sales_order' => ['model' => SalesOrder::class, 'type' => TransactionType::SalesOrder, 'title' => __('Sales Order'), 'shape' => 'priced', 'party' => 'customer'],
-            'delivery' => ['model' => Delivery::class, 'type' => TransactionType::DeliveryOrder, 'title' => __('Delivery Order'), 'shape' => 'priced', 'party' => 'customer'],
+            'delivery' => ['model' => Delivery::class, 'type' => TransactionType::DeliveryOrder, 'title' => __('Delivery note'), 'shape' => 'priced', 'party' => 'customer'],
             'sales_invoice' => ['model' => SalesInvoice::class, 'type' => TransactionType::SalesInvoice, 'title' => __('Invoice'), 'shape' => 'priced', 'party' => 'customer'],
             'sales_return' => ['model' => SalesReturn::class, 'type' => TransactionType::SalesReturn, 'title' => __('Sales Return'), 'shape' => 'priced', 'party' => 'customer'],
+            'invoice_exchange' => ['model' => InvoiceExchange::class, 'type' => TransactionType::InvoiceExchange, 'title' => __('Invoice handover receipt'), 'shape' => 'exchange', 'party' => 'customer'],
             'sales_receipt' => ['model' => SalesReceipt::class, 'type' => TransactionType::CashBankVoucher, 'title' => __('Receipt'), 'shape' => 'settlement', 'party' => 'customer'],
             'purchase_order' => ['model' => PurchaseOrder::class, 'type' => TransactionType::PurchaseOrder, 'title' => __('Purchase Order'), 'shape' => 'priced', 'party' => 'vendor'],
             'goods_receipt' => ['model' => GoodsReceipt::class, 'type' => TransactionType::GoodsReceipt, 'title' => __('Goods Receipt'), 'shape' => 'priced', 'party' => 'vendor'],

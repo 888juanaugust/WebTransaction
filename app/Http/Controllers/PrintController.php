@@ -24,6 +24,9 @@ class PrintController extends Controller
             throw new HttpException(403, $e->getMessage());
         }
 
-        return view('print.document', $print);
+        // A layout may name its own template (an installation's surat jalan, say); the base's page is the default.
+        $template = (string) ($print['layout']['template'] ?? '');
+
+        return view($template !== '' && view()->exists($template) ? $template : 'print.document', $print);
     }
 }

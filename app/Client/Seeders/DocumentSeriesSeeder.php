@@ -31,19 +31,24 @@ class DocumentSeriesSeeder extends Seeder
         TransactionType::CashBankVoucher,
     ];
 
+    /** Central's own prefixes where they differ from the base's: the delivery is the surat jalan. */
+    public const PREFIXES = ['delivery_order' => 'SJ'];
+
     public function run(): void
     {
         foreach (self::BRANCHED as $type) {
             $prefix = $type->defaultPrefix();
+            $own = self::PREFIXES[$type->value] ?? $prefix;
             $base = NumberPattern::fromFormat("{$prefix}-YYMM-####")->toArray();
-            $branched = NumberPattern::fromFormat("{$prefix}-BR-YYMM-####")->toArray();
+            $earlier = NumberPattern::fromFormat("{$prefix}-BR-YYMM-####")->toArray(); // a series this seeder shaped before it had its own prefix
+            $branched = NumberPattern::fromFormat("{$own}-BR-YYMM-####")->toArray();
 
             DocumentSeries::query()
                 ->where('transaction_type', $type->value)
                 ->where('name', 'Default')
                 ->where('is_default', true)
                 ->get()
-                ->filter(fn (DocumentSeries $series) => $series->pattern()->toArray() === $base)
+                ->filter(fn (DocumentSeries $series) => in_array($series->pattern()->toArray(), [$base, $earlier], true) && $series->pattern()->toArray() !== $branched)
                 ->each(fn (DocumentSeries $series) => $series->forceFill(['pattern' => $branched, 'reset_rule' => ResetRule::Monthly])->saveQuietly());
         }
     }

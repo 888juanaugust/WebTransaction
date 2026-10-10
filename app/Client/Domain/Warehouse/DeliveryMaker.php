@@ -49,7 +49,11 @@ final class DeliveryMaker
     /**
      * @param  array<int, string|int|float>  $quantities  order line id → base quantity to deliver (every held line in full when empty)
      */
-    public function make(SalesOrder $order, Warehouse $warehouse, array $quantities, User $actor, string|CarbonImmutable|null $date = null): Delivery
+    /**
+     * @param  array<int|string, string|int|float>  $quantities  order line id → base quantity to deliver
+     * @param  array<string, mixed>  $shipping  shipment_id, vehicle, plate_number, packages {koli,kresek,ikat,palet}, shipping_note, goods_description
+     */
+    public function make(SalesOrder $order, Warehouse $warehouse, array $quantities, User $actor, string|CarbonImmutable|null $date = null, array $shipping = []): Delivery
     {
         $held = $this->held($order, $warehouse);
         if ($held === []) {
@@ -78,7 +82,7 @@ final class DeliveryMaker
             throw new RuntimeException(__('Name a quantity on at least one line.'));
         }
 
-        return DB::transaction(function () use ($order, $warehouse, $rows, $actor, $date): Delivery {
+        return DB::transaction(function () use ($order, $warehouse, $rows, $actor, $date, $shipping): Delivery {
             $day = $date === null ? CarbonImmutable::today() : CarbonImmutable::parse((string) ($date instanceof CarbonImmutable ? $date->toDateString() : $date));
             $series = $this->numbers->defaultSeries(TransactionType::DeliveryOrder, $actor)
                 ?? throw new RuntimeException(__('No numbering series for deliveries.'));
@@ -94,6 +98,15 @@ final class DeliveryMaker
                 'po_number' => $order->po_number,
                 'to_address' => $order->to_address,
                 'description' => $order->description,
+                // The order's shipping terms, unless the warehouse names an expedition now; the slip's details come from the warehouse.
+                'shipment_id' => ($shipping['shipment_id'] ?? null) ?: $order->shipment_id,
+                'fob_id' => $order->fob_id,
+                'ship_date' => $order->ship_date,
+                'vehicle' => self::text($shipping['vehicle'] ?? null, 60),
+                'plate_number' => self::text($shipping['plate_number'] ?? null, 20),
+                'packages' => ($packages = self::packages($shipping['packages'] ?? null)) === null ? null : json_encode($packages),
+                'shipping_note' => self::text($shipping['shipping_note'] ?? null, 255),
+                'goods_description' => self::text($shipping['goods_description'] ?? null, 255),
                 'created_by' => $actor->id,
             ]);
             foreach ($rows as $row) {
@@ -104,5 +117,26 @@ final class DeliveryMaker
 
             return $delivery->fresh();
         });
+    }
+
+    private static function text(mixed $value, int $max): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : mb_substr($value, 0, $max);
+    }
+
+    /** The package counts by kind (koli, kresek, ikat, palet), zero and unknown kinds dropped; null when none. @return array<string, int>|null */
+    private static function packages(mixed $value): ?array
+    {
+        $out = [];
+        foreach (['koli', 'kresek', 'ikat', 'palet'] as $kind) {
+            $n = (int) (is_array($value) ? ($value[$kind] ?? 0) : 0);
+            if ($n > 0) {
+                $out[$kind] = $n;
+            }
+        }
+
+        return $out === [] ? null : $out;
     }
 }

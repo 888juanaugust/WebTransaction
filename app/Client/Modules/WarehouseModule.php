@@ -8,6 +8,7 @@ use App\Client\Access\CentralGroups;
 use App\Client\Domain\Warehouse\WarehouseBinder;
 use App\Client\Domain\Warehouse\WarehouseScope;
 use App\Client\Screens\CentralScreen;
+use App\Client\Seeders\PrintLayoutSeeder;
 use App\Models\User;
 use App\Modules\BaseModule;
 use App\Modules\ModuleContext;
@@ -44,5 +45,10 @@ final class WarehouseModule extends BaseModule
                 $context->app->make(WarehouseBinder::class)->assertFree($warehouse, $user);
             }
         });
+    }
+
+    public static function defaultSeeders(): array
+    {
+        return [PrintLayoutSeeder::class];
     }
 }

@@ -33,7 +33,7 @@ return [
         'company__project' => 'Proyek',
         'company__tax' => 'Pajak',
         'company__payment-term' => 'Syarat Pembayaran',
-        'company__shipment' => 'Pengiriman',
+        'company__shipment' => 'Ekspedisi',
         'company__freeonboard' => 'FOB',
         'company__employee-fee' => 'Gaji/Tunjangan',
         'company__employee' => 'Karyawan',

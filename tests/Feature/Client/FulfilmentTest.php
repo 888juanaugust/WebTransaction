@@ -51,7 +51,7 @@ class FulfilmentTest extends TestCase
 
         $delivery = Delivery::query()->sole();
         $this->assertSame($this->gudang->id, $delivery->created_by);
-        $this->assertStringStartsWith('DO-JKT-', $delivery->number);
+        $this->assertStringStartsWith('SJ-JKT-', $delivery->number);
         $this->assertSame('5.0000', $delivery->lines()->first()->base_quantity);
         $this->assertSame('sales_order_line', $delivery->lines()->first()->source_line_type);
         $this->assertSame('0.0000', app(Reservations::class)->heldSum($this->item->id, $this->gudangJakarta->id), 'the holds are consumed');
